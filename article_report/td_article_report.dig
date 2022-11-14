@@ -61,7 +61,7 @@ _error:
   if>: ${list_type == 'googlesheet'}
   _do:
     +install_list:
-      td_load>: google_sheets_import_1664693574
+      td_load>: google_sheets_import_YOUR_ID
       database: ${td.database}
       table: install_list_article_report
 
