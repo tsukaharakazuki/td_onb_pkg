@@ -21,3 +21,10 @@ WorkflowファイルをTreasureData環境にインストールするためには
 2. API KEYのセット`td apikey:set YOUR_API_KEY`
 ### Tokyoリージョンにログインした状態からUSリージョン環境にログイン
 `td -e https://api.treasuredata.com account -f`
+
+## チェンジディレクトリ
+アップロードするフォルダに移動する必要があります。  
+`cd AAAA/BBBB`　　
+Macの場合、Userの状態からダウンロードフォルダへの移動は. 
+`cd downloads`. 
+コマンドで移動します。
