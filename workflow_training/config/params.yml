@@ -1,0 +1,24 @@
+#2
+db: td_sandbox
+tbl: agg_weblog_all
+span: 30
+
+#7
+if_type: treasure
+if_val:
+  - 'a'
+  - 'b'
+dow: Tuesday
+
+#8
+for_each_param:
+  - start: 2022-01-01
+    end: 2022-02-01
+    tbl: 2201_2202
+  - start: 2022-02-01
+    end: 2022-03-01
+    tbl: 2202_2203
+
+#12
+py_tbl: python
+name: sample

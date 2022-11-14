@@ -1,0 +1,9 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: td_sandbox #ベースの参照・出力先Database
+
++echo:
+  echo>: Hello!

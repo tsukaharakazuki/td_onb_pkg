@@ -1,0 +1,242 @@
+# 処理実行されるタイムゾーンを設定
+# スケジュールの実行時間などをどのタイムゾーンで実行するかに影響
+timezone: "Asia/Tokyo"
+
+# スケシュール設定ドキュメント　
+# http://docs.digdag.io/scheduling_workflow.html?highlight=schedule
+schedule:
+  cron>: 1 3 1,10,20 1,2,3 0 
+  # cronについて
+  # 0 * * * *
+  # https://docs.treasuredata.com/display/public/PD/Cron+Schedule+Values
+#  daily>: 03:00:00 #日時バッジ
+
+# _exportでの変数設定
+# https://docs.digdag.io/workflow_definition.html#using-export-parameter
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: td_sandbox #ベースの参照・出力先Database
+    endpoint: api.treasuredata.co.jp
+  result_table: result_sql
+  hive:
+    result_table: result_sql_hive
+
+# エラー通知設定
+# Workflowの途中でエラーになった場合、config/error.digに記述した処理が実行されます
+# サンプルではメールでの通知ですが、Slack、Teams、Chatworkなどチャットツールなどに通知することも可能です
+_error:
+  +error_mail:
+    call>: config/error.dig
+
+# task基本形----------------------
++task_template:
+  td>: queries/presto.sql
+  create_table: test_ec
+
++タスク名:
+  オペレーター>: 実行ファイル
+  出力設定: 出力先データベース.テーブル名
+
+# タスク名'task_template:'は同一インデントでユニーク
+
+# オペレータードキュメント
+# http://docs.digdag.io/operators.html
+#--------------------------------
+
+
+#1 td>: Workflow内に存在するsqlファイルを実行
++sql:
+  td>: queries/sample_query.sql
+  create_table: test_ec #(存在するテーブルを削除して作り直す)
+  #insert_into: test_ec #(存在するテーブルに追記で書き込み)
+
+
+#2 td>: _exportで定義した変数を読み込んで処理実行
++sql_variable:
+  td>: queries/sample_query_variable.sql
+  create_table: ${result_table} #(存在するテーブルを削除して作り直す)
+
+
+#3 td>: Hiveでの処理実行
++sql_hive:
+  td>: queries/sample_query_hive.sql
+  insert_into: ${hive.result_table}
+  engine: hive 
+  engine_version: stable #Tez
+## WITH区のSQLの場合、INSERT区を挿入する場所に（-- DIGDAG_INSERT_LINE）を記載
+
+
+#4 td_ddl>: tableの作成やdropなどの処理実行
+# https://docs.digdag.io/operators/td_ddl.html
+
+# tableが存在しない場合は作成、存在する場合はそのまま
++create_tables:
+  td_ddl>:
+  create_tables: 
+    - "my_table_${session_date_compact}"
+
+# tableの削除
++drop_tables:
+  td_ddl>:
+  drop_tables: 
+    - "my_table_${session_date_compact}"
+
+# tableが存在しない場合は作成、存在する場合は削除してから再作成
++empty_tables:
+  td_ddl>:
+  empty_tables: 
+    - "my_table_${session_date_compact}"
+
+# table名の変更
++rename_tables:
+  td_ddl>:
+  rename_tables: 
+    - {from: "my_table_${session_date_compact}", to: "my_table"}
+
+
+#5 ${session_date}など予約変数
+# https://docs.digdag.io/workflow_definition.html#using-variables
+# Workflowには${session_date}->'2023-01-01'(Workflowが実行された日付が代入)
+# など、予約された変数が存在します。s3にデータを出力する際に日付prefixを末尾につける場合などにも使用
+
+
+#6 moment.jsでの日付処理
+# https://docs.digdag.io/workflow_definition.html?highlight=moment%20js#calculating-variables
+# https://momentjs.com/
+#ex. ${moment(session_time).add(1, 'days').format("YYYYMMDD")}
+# たとえば2022/1/1にWorkflow実行された場合、'20220102'が出力されます
+# ファイル名に前日日付を記載したい場合などに使用
+
+
+#7 if>: 処理分岐
++if:
+  if>: true #true or false
+  _do:
+    +if_true:
+      td_ddl>:
+      empty_tables: 
+        - "if_table_true"
+  _else_do:
+    +if_false:
+      td_ddl>:
+      empty_tables: 
+        - "if_table_false"
+# _do: trueの際に処理実行
+# _else_do: falseの際に処理実行
+
+## Advanced
+##A ${if_type == 'treasure'}
+## 変数if_typeで設定したテキストが同じだった場合true
+
+##B ${if_val === '[object Array]')}
+## 変数if_typeが配列だった場合true
+
+##C ${moment().format('dddd') === dow} 
+## 変数dowで設定した曜日と実行日が同じだった場合true
+
+
+#8 for_each>: 変数設定を変更して複数回同一処理実行
++for_each:
+  for_each>:
+    val: 
+      - start: 2022-01-01
+        end: 2022-02-01
+        tbl: 2201_2202
+      - start: 2022-02-01
+        end: 2022-03-01
+        tbl: 2202_2203
+  _do:
+    +proc_for_each:
+      td>: queries/sample_query_for_each.sql
+      create_table: result_${val.tbl}
+
++for_each_param:
+  for_each>:
+    val: ${for_each_param}
+  _do:
+    +proc_for_each:
+      td>: queries/sample_query_for_each.sql
+      create_table: result_${val.tbl}
+
+
+#9 loop>: Loopでの処理実行
++loop:
+  loop>: 10
+  _do:
+    +proc_loop:
+      td>: 
+      query: SELECT '${i + 1}' AS col_${i + 1}
+      insert_into: loop_table
+
+# loop>: 10 この場合後続処理を10回繰り返します
+# ${i}がloop回数で変動する変数になります
+# ${i}は0から始まるので、上記サンプルでは${i + 1}として1からスタートするようにしています
+
+
+#10 call>:/require>: 別のdigファイル呼び出し
+# https://plazma.red/user_engagement/howto/0107
++call_other_dig:
+  call>: other.dig
+
++require_other_dig:
+  require>: other
+  project_name: PROJECT_NAME
+
+#11 td_for_each>: SQLでeach処理の変数取得
+# https://docs.digdag.io/operators/td_for_each.html
+
++td_for_each:
+  td_for_each>: queries/search_td_for_each_params.sql
+  _do:
+    +proc:
+      td>: 
+      query: SELECT '${td.each.key}' AS key , ${td.each.val} AS val FROM ${td.each.tbl}
+      create_table: result_${td.each.name}
+  
+#12 `store_last_results`での変数引き継ぎ  
+# https://plazma.red/user_engagement/howto/0317
++store_last_results:
+  td>: 
+  query: SELECT 'key' AS output_db , 'val' AS output_tbl
+store_last_results: true
+
++results_outpt:
+  td>: 
+  query: SELECT key , val FROM ${td.last_results.output_db}.${td.last_results.output_tbl}  
+  
+
+#13 コネクタでのデータアウトプット
+# Google Sheet出力サンプル
++result_google_sheets:
+  td>: 
+  query: SELECT * FROM google_sheet_table
+  result_connection: YOUR_GOOGLE_SHEETS_CONNECTER_NAME
+  result_settings:
+    spreadsheet_folder: YOUR_GOOGLE_DRIVE_FOLDER_KEY
+    spreadsheet_title: "ファイル名"
+    sheet_title: "シート1"
+    mode: truncate
+
+
+#14 py>: Custom Scripy(Python operator)
+# WorkflowではDockerを立ち上げPython Scriptを実行することが可能です
+# 機械学習、APIを叩いて他ツールからデータを取り込む、SQLでは処理できないデータ処理などを実行することができます
+# https://docs.treasuredata.com/display/public/PD/Introduction+to+Custom+Scripts
+# https://plazma.red/user_engagement/howto/0108
++python:
+  docker:
+    image: "digdag/digdag-python:3.9"
+  _env:
+    TD_API_KEY: ${secret:td.apikey}
+    ENDPOINT: ${td.endpoint}
+    SESSION_UNIXTIME: ${session_unixtime}
+  py>: pyscript.train_predict.main
+  database: ${td.database}
+  timezone: ${timezone}
+  tbl_name: ${py_tbl}
+  train: train_${py_name}
+  preprocessed: preprocessed_${py_name}
+  predicted: predicted_${py_name}
+  n_features: 1000
+  n_split: 10
