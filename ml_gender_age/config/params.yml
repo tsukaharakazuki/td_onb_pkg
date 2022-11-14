@@ -1,0 +1,74 @@
+map_uid_cookie:
+  main:
+    db: database
+    tbl: table
+    cookie: cookie
+    uid: user_id
+    where:
+      - user_id <> 'undefined'
+
+target:
+  main:
+    db: database
+    tbl: table
+    key: user_id
+    sort: time
+    gender: gender
+    age: age
+    male: "'男性'"
+    female: "'女性'"
+
+feature:
+  main:
+    # 説明変数設定
+    feature_time_range: TD_INTERVAL(time, '-60d', 'JST')
+    # 閲覧コンテンツ、リファラなどIDが複数の値を持つカラムの割合計算
+    feature_categorical:
+      - colmuns: td_path
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        negative_condition: td_path <> '/ordercomplete'
+      - colmuns: td_ref_host
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        negative_condition: td_path <> '/ordercomplete'
+      - colmuns: TD_TIME_FORMAT(time, 'HH', 'JST')
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        negative_condition: td_path <> '/ordercomplete'
+    # 都道府県、OSなどIDが複数の値を持つカラムの最大の値
+    feature_max_by_n:
+      - colmuns: td_os
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        negative_condition: td_path <> '/ordercomplete'
+      - colmuns: prefectures
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        negative_condition: td_path <> '/ordercomplete'
+    # 課金額カラムなど数値を合計した値をSUM
+    feature_quantitative:
+      - colmuns: charge
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        negative_condition: td_path <> '/ordercomplete'
+    # 配列カラム内のデータを展開して割合計算
+    feature_categorical_array:
+      - colmuns: sku
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        negative_condition: td_path <> '/ordercomplete'
+    # 配列カラム内のデータを展開して出現回数計算
+    feature_categorical_array_cnt:
+      - colmuns: order
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        negative_condition: td_path <> '/ordercomplete'

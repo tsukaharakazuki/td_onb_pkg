@@ -1,0 +1,48 @@
++id2feature:
+  td>: queries/id2feature.sql
+  create_table: id2feature
+  engine: presto # Hive also works
+
++aggregate_features:
+  td>: queries/aggregate_features.sql
+  create_table: preprocessed
+  engine: presto # Only presto works
+
++training_data:
+  td>: queries/create_train.sql
+  create_table: train
+  engine: presto # Hive also works
+
++retry_py:
+  _retry: 5
+
+  +delete_if_exists:
+    for_each>:
+      table: ["predicted", "result_summary"]
+    _do:
+      +create_if_not_exists:
+        td_ddl>:
+        create_tables: ["${table}"]
+
+      +delete:
+        td>: queries/delete_row.sql
+        engine: presto # Only Presto works
+
+  +train_predict:
+    docker:
+      image: "digdag/digdag-python:3.7"
+    _env:
+      TD_API_KEY: ${secret:td.apikey}
+      ENDPOINT: ${td.endpoint}
+      SPARK_LOCAL_IP: 127.0.0.1
+    py>: pyscript.train_predict.main
+    n_features: ${ml.n_features}
+    database: ${td.database}
+    n_split: ${ml.n_split}
+    date: ${session_date}
+    timezone: ${timezone}
+
++summarize_result:
+  td>: queries/summarize_result.sql
+  engine: presto # Hive also works
+  insert_into: result_summary

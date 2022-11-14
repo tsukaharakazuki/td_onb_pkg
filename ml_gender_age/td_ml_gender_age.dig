@@ -1,0 +1,110 @@
+timezone: Asia/Tokyo
+
+schedule:
+  daily>: 03:00:00
+
+_export:
+  !include : 'config/params.yml'
+  date: ${session_date}
+  td:
+    database: l2_ml_data
+    endpoint: api.treasuredata.com
+    age_range: 10
+  ml:
+    n_days: 14 # ログの使用期間
+    n_features: 1000 # 説明変数の数
+    test_size: 0.2
+    n_split: 30
+
++empty_tables:
+  td_ddl>:
+  empty_tables: 
+    - "base_target"
+    - "features"
+
++map_uid_cookie:
+  for_each>:
+    params: ${Object.keys(map_uid_cookie)}
+  _do:
+    +proc:
+      td>: target/map_uid_cookie.sql
+      create_table: map_uid_cookie
+      engine: presto
+
++target:
+  +insert:
+    for_each>:
+      params: ${Object.keys(target)}
+    _do:
+      +insert_base_user_data:
+        td>: target/target_insert.sql
+        insert_into: base_target
+
+  +target_main:
+    td>: target/target.sql
+    create_table: target
+    engine: presto
+
++features:
+  for_each>:
+    params: ${Object.keys(feature)}
+  _do:
+    +create_data:
+      _parallel: true
+
+      +insert_categorical:
+        if>: ${(Object.prototype.toString.call(feature[params].feature_categorical) === '[object Array]')}
+        _do:
+          for_each>:
+            ftr: ${feature[params].feature_categorical}
+          _do:
+            +proc:
+              td>: feature/features_categorical.sql
+              insert_into: features
+              engine: presto
+
+      +insert_max_by_n:
+        if>: ${(Object.prototype.toString.call(feature[params].feature_max_by_n) === '[object Array]')}
+        _do:
+          for_each>:
+            ftr: ${feature[params].feature_max_by_n}
+          _do:
+            +proc:
+              td>: feature/features_max_by_n.sql
+              insert_into: features
+              engine: presto
+
+      +insert_quantitative:
+        if>: ${(Object.prototype.toString.call(feature[params].feature_quantitative) === '[object Array]')}
+        _do:
+          for_each>:
+            ftr: ${feature[params].feature_quantitative}
+          _do:
+            +proc:
+              td>: feature/features_quantitative.sql
+              insert_into: features
+              engine: presto
+
+      +insert_categorical_array:
+        if>: ${(Object.prototype.toString.call(feature[params].feature_categorical_array) === '[object Array]')}
+        _do:
+          for_each>:
+            ftr: ${feature[params].feature_categorical_array}
+          _do:
+            +proc:
+              td>: feature/features_categorical_array.sql
+              insert_into: features
+              engine: presto
+
+      +insert_categorical_array_cnt:
+        if>: ${(Object.prototype.toString.call(feature[params].feature_categorical_array_cnt) === '[object Array]')}
+        _do:
+          for_each>:
+            ftr: ${feature[params].feature_categorical_array_cnt}
+          _do:
+            +proc:
+              td>: feature/features_categorical_array_cnt.sql
+              insert_into: features
+
++call_ml_template:
+  call>: common/ml_template.dig
