@@ -2,14 +2,13 @@
 このWorkflowは`td_js_sdk`で取得したWebアクセスログを加工し、その後の集計などがしやすいように加工するものです。  
 
 # 変数設定  
-`config/params.yml`で集計する該当データの変数設定をしてください。  
+`config/params_bulk.yml`/`config/params.yml`で集計する該当データの変数設定をしてください。  
 この処理で、`td_cookie`という1stPartyCookieを優先順位で組み直されたカラムが生成されます。サーバーサイドCookieを取得している場合は下記の設定のままでいいですが、取得していない場合は、任意の1stPartyCookieを`primary_cookie`,`sub_cookie`に指定してください。
 ```
 ---
 media:
   sample_1:
     media_name: sample_1
-    firsttime_flag: true #true or false 
     regular_span: 1h
     # Pageviwe設定
     log_db: YOUR_WEB_LOG_DB #set web_log database
@@ -68,11 +67,12 @@ media:
       regular:
 ```
   
-# 初回実行  
+# 初回実行 or サイト追加時
 `agg_weblog_bulk.dig`を実行してください。  
 この処理はHiveベースで書かれていて、大きな大量テーブルに対しても処理が完了します。  
 基本構造として、`agg_weblog`というテーブルに全てのWebログが集約されていきます。別テーブルに書き出したい場合は、digファイルを修正する必要があります。  
-`firsttime_flag: true`この変数が、`agg_weblog`の作り直しを制御しています。大幅にカラム構造を変更したい、過去訴求で処理をやり直したい場合などは、こちらで作り直すことも可能ですが、その場合、全てのサイト設定の`firsttime_flag: true`を`true`で実行し直すことを忘れないでください。
+`config/params_bulk.yml`内の変数が、`agg_weblog`の作り直しを制御しています。大幅にカラム構造を変更したい、過去訴求で処理をやり直したい場合などは、こちらで作り直すことも可能ですが、その場合、全てのサイト設定のファイルを記載した上で実行し直すことを忘れないでください。　　
+サイト追加時は、追加したいサイトの設定のみを変数に記載してください。
   
 # 定期実行
 `agg_weblog.dig`で処理されます。 
