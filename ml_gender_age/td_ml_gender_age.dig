@@ -1,7 +1,7 @@
 timezone: Asia/Tokyo
 
-schedule:
-  daily>: 03:00:00
+#schedule:
+#  daily>: 03:00:00
 
 _export:
   !include : 'config/params.yml'
