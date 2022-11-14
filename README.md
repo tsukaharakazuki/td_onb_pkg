@@ -1,0 +1,2 @@
+# はじめに
+TreasureDataの初期構築において活用できるWorkflowパッケージです。
