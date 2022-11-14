@@ -1,0 +1,54 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: l2_article_report #ベースの参照・出力先Database
+
+_error:
+  +error_mail:
+    call>: config/error.dig
+
++load_list:
+  td_for_each>: config/load_list.sql
+  _do:
+    _parallel: true
+    +info:
+      td>: queries/dist_info.sql
+      insert_into: info
+
+    +pvuu:
+      td>: queries/dist_pvuu.sql
+      insert_into: pvuu
+
+    +pvuu_total:
+      td>: queries/dist_pvuu_total.sql
+      insert_into: pvuu_total
+
+    +pvuu_hour:
+      td>: queries/dist_pvuu_hourly.sql
+      insert_into: pvuu_hourly
+
+    +pvuu_dow:
+      td>: queries/dist_pvuu_dow.sql
+      insert_into: pvuu_dow
+
+    +sppc:
+      td>: queries/dist_sppc.sql
+      insert_into: sppc
+
+    +browser:
+      td>: queries/dist_browser.sql
+      insert_into: browser
+
+    +os:
+      td>: queries/dist_os.sql
+      insert_into: td_os
+
+    +prefectures:
+      td>: queries/dist_prefectures.sql
+      insert_into: prefectures
+
+    +city:
+      td>: queries/dist_city.sql
+      insert_into: city

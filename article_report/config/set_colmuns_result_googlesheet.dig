@@ -1,0 +1,14 @@
++function_columns_googlsheet:
+  td>:
+  query: |
+    SELECT
+      ARRAY_JOIN(ARRAY_AGG(column_name), ',') AS set_columns
+    FROM
+      information_schema.columns
+    WHERE
+      table_schema = '${td.database}'
+      AND table_name = 'dist_${td.each.article_id}_${td.each.article_num}'
+      AND column_name <> 'time'
+    GROUP BY
+      table_name
+  store_last_results: true

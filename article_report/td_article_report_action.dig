@@ -1,0 +1,34 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: l2_article_report #ベースの参照・出力先Database
+
+_error:
+  +error_mail:
+    call>: config/error.dig
+
++load_list:
+  td_for_each>: config/load_list.sql
+  _do:
+    _parallel: true
+    +referrer:
+      td>: queries/dist_referrer.sql
+      insert_into: referrer
+
+    +daily_referrer:
+      td>: queries/dist_referrer_daily.sql
+      insert_into: referrer_daily
+
+    +avg_browsing_time:
+      td>: queries/dist_abt.sql
+      insert_into: abt
+
+    +next_page:
+      td>: queries/dist_next_page.sql
+      insert_into: next_page
+
+    +target_access_page:
+      td>: queries/dist_target_access_page.sql
+      insert_into: target_access_page

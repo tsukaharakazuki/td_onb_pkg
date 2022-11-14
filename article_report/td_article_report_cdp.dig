@@ -1,0 +1,22 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: l2_article_report #ベースの参照・出力先Database
+
+_error:
+  +error_mail:
+    call>: config/error.dig
+
++load_list:
+  td_for_each>: config/load_list.sql
+  _do:
+    _parallel: true
+    +affinity_categorie:
+      td>: queries/dist_affinity_categorie.sql
+      insert_into: affinity_categorie
+
+    +interest_word:
+      td>: queries/dist_interest_word.sql
+      insert_into: interest_word

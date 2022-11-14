@@ -1,0 +1,50 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: l2_article_report #ベースの参照・出力先Database
+
+_error:
+  +error_mail:
+    call>: config/error.dig
+
++for_each_tbl:
+  for_each>:
+    tbl: 
+      - "abt"
+      - "affinity_categorie"
+      - "browser"
+      - "city"
+      - "click"
+      - "gender_age"
+      - "info"
+      - "interest_word"
+      - "next_page"
+      - "prefectures"
+      - "pvuu_dow"
+      - "pvuu_hourly"
+      - "pvuu_total"
+      - "pvuu"
+      - "rat_hourly"
+      - "rat"
+      - "referrer_daily"
+      - "referrer"
+      - "rtr"
+      - "sppc"
+      - "target_access_page"
+      - "td_os"
+  _do:
+    !include : config/set_colmuns_result.dig
+    +to_datatank:
+      td>: 
+      query: SELECT ${td.last_results.set_columns} FROM ${tbl}
+      database: ${td.database}
+      result_connection: datatank
+      result_settings:
+        database: datatank
+        table: td_article_report_${tbl}
+        mode: replace
+        method: copy
+        schema: public
+

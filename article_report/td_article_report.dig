@@ -1,0 +1,138 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  cron>: 1 * * * * #カスタムクーロン
+#  daily>: 03:00:00 #日時バッジ
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: l2_article_report #ベースの参照・出力先Database
+
+_error:
+  +error_mail:
+    call>: config/error.dig
+
++drop_list:
+  td_ddl>:
+  drop_tables: 
+    - "list_article_report"
+
++proc_list_yaml:
+  if>: ${list_type == 'yaml'}
+  _do:
+    +empty_tmp_list:
+      td_ddl>:
+      empty_tables: 
+        - "tmp_list_article_report_base"
+
+    +list_process:
+      for_each>:
+        params: ${Object.keys(media)}
+      _do:
+        +install_tieup_list:
+          td>: config/list_yaml_base.sql
+          insert_into: tmp_list_article_report_base
+
+        +proc_click:
+          for_each>:
+            click: ${media[params].click}
+          _do:
+            +insert_click:
+              td>: config/list_yaml_click.sql
+              insert_into: tmp_list_article_report_base
+
+    +search_query:
+      td>: config/list_yaml_create_list.sql
+      store_last_results: true
+
+    +agg_list_article_report:
+      td>:
+        data: |
+          ${td.last_results.sql_contents}
+      insert_into: list_article_report
+      
+    +drop_tmp_list:
+      td_ddl>:
+      drop_tables: 
+        - "tmp_list_article_report_base"
+
++proc_list_googlesheet:
+  if>: ${list_type == 'googlesheet'}
+  _do:
+    +install_list:
+      td_load>: google_sheets_import_1664693574
+      database: ${td.database}
+      table: install_list_article_report
+
+    +install_article_list:
+      td>: config/install_list.sql
+      insert_into: list_article_report
+
++create_dist_table:
+  td_ddl>:
+  empty_tables:
+    - "abt"
+    - "affinity_categorie"
+    - "browser"
+    - "city"
+    - "click"
+    - "gender_age"
+    - "info"
+    - "interest_word"
+    - "next_page"
+    - "prefectures"
+    - "pvuu_dow"
+    - "pvuu_hourly"
+    - "pvuu_total"
+    - "pvuu"
+    - "rat_hourly"
+    - "rat"
+    - "referrer_daily"
+    - "referrer"
+    - "rtr"
+    - "sppc"
+    - "target_access_page"
+    - "td_os"
+
++main:
+  _parallel: true
+  
+  +proc_basic:
+    require>: td_article_report_basic
+    project_name: td_article_report
+
+  +proc_action:
+    require>: td_article_report_action
+    project_name: td_article_report
+
+  +proc_cdp:
+    require>: td_article_report_cdp
+    project_name: td_article_report
+
+  +check_user_data:
+    if>: ${check_user_data}
+    _do:
+      +proc_user_data:
+        require>: td_article_report_user_data
+        project_name: td_article_report
+
+  +proc_read_through_rate:
+    require>: td_article_report_rtr
+    project_name: td_article_report
+
++proc_click:
+  require>: td_article_report_click
+  project_name: td_article_report
+
++proc_result_datatank:
+  if>: ${result_type == 'datatank'}
+  _do:
+    require>: td_article_report_result_datatank
+    project_name: td_article_report
+
++proc_result_googlesheet:
+  if>: ${result_type == 'googlesheet'}
+  _do:
+    require>: td_article_report_result_googlesheet
+    project_name: td_article_report

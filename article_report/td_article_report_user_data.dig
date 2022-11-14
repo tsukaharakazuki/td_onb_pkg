@@ -1,0 +1,24 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: l2_article_report #ベースの参照・出力先Database
+
+_error:
+  +error_mail:
+    call>: config/error.dig
+
+#この処理は実行環境によって修正が必要です
+#機械学習済みのデータを使用する場合
++ml_data_new:
+  td>: config/new_mst_ml_gender_age.sql
+  create_table: mst_gender_age
+#----------------------------
+
++load_list:
+  td_for_each>: config/load_list.sql
+  _do:
+    +gender_age:
+      td>: queries/dist_gender_age.sql
+      insert_into: gender_age

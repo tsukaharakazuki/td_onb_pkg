@@ -1,0 +1,105 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: l2_article_report #ベースの参照・出力先Database
+
+_error:
+  +error_mail:
+    call>: config/error.dig
+
++each_process:
+  for_each>:
+    params: ${Object.keys(result_google)}
+  _do:
+    +for_each_tbl:
+      for_each>:
+        tbl: 
+          - "abt"
+          - "affinity_categorie"
+          - "browser"
+          - "city"
+          - "click"
+          - "gender_age"
+          - "info"
+          - "interest_word"
+          - "next_page"
+          - "prefectures"
+          - "pvuu_dow"
+          - "pvuu_hourly"
+          - "pvuu_total"
+          - "pvuu"
+          - "rat_hourly"
+          - "rat"
+          - "referrer_daily"
+          - "referrer"
+          - "rtr"
+          - "sppc"
+          - "target_access_page"
+          - "td_os"
+      _do:
+        !include : config/set_colmuns_result.dig
+        +to_google_sheets:
+          td>: 
+          query: SELECT ${td.last_results.set_columns} FROM ${tbl}
+          result_connection: ${result_google[params].connecter}
+          result_settings:
+            spreadsheet_folder: ${result_google[params].folder}
+            spreadsheet_title: 記事レポート
+            sheet_title: ${tbl}
+            mode: truncate
+
++each_process_articles:
+  +load_list:
+    td_for_each>: config/load_list.sql
+    _do:
+      +create_dist_table:
+        td_ddl>:
+        empty_tables:
+            - "dist_${td.each.article_id}_${td.each.article_num}"
+
+      +for_each_tbl:
+        for_each>:
+          tbl: 
+            - "abt"
+            - "affinity_categorie"
+            - "browser"
+            - "city"
+            - "click"
+            - "gender_age"
+            - "info"
+            - "interest_word"
+            - "next_page"
+            - "prefectures"
+            - "pvuu_dow"
+            - "pvuu_hourly"
+            - "pvuu_total"
+            - "pvuu"
+            - "rat_hourly"
+            - "rat"
+            - "referrer_daily"
+            - "referrer"
+            - "rtr"
+            - "sppc"
+            - "target_access_page"
+            - "td_os"
+        _do:
+          +insert_dist_tbl:
+            td>: queries/dist_push_googlesheet.sql
+            insert_into: dist_${td.each.article_id}_${td.each.article_num}
+
+      +each_process_articles:
+        for_each>:
+          params: ${Object.keys(result_google)}
+        _do:
+          !include : config/set_colmuns_result_googlesheet.dig
+          +to_google_sheets:
+            td>: 
+            query: SELECT ${td.last_results.set_columns} FROM dist_${td.each.article_id}_${td.each.article_num} 
+            result_connection: ${result_google[params].connecter}
+            result_settings:
+              spreadsheet_folder: ${result_google[params].folder}
+              spreadsheet_title:  記事レポート_${td.each.article_key}
+              #sheet_title: シート1
+              mode: truncate

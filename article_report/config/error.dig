@@ -1,0 +1,15 @@
+_export:
+  wf_name: 記事レポートWorkflow
+
++send_mail:
+  mail>: 
+    data: |
+      WFでエラーが発生しました。
+      ワークフロー名： ${wf_name}
+      日時： ${session_local_time}
+      https://console.treasuredata.com/app/workflows/${project_id}/sessions/${session_id}
+  subject: 【TD】記事レポートWorkflowエラー
+  to: 
+    - "hoge@treasure-data.com"
+  cc:
+    - "fuga@treasure-data.com"

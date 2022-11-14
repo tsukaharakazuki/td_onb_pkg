@@ -1,0 +1,50 @@
+---
+list_type: yaml # yaml or googlesheet
+log_db: YOUR_AGGWEB_LOG_DB
+log_tbl: YOUR_AGGWEB_LOG_TBL
+key_id: td_cookie
+td_session_id: td_session_id
+td_session_num: td_session_num
+master_segment_id: 11111
+check_user_data: false
+user_data_db: YOUR_USER_DATA_DB
+user_data_tbl: YOUR_USER_DATA_TBL
+click_col: click_url
+click_db: YOUR_AGGCLICK_LOG_DB
+click_tbl: YOUR_AGGCLICK_LOG_TBL
+read_col: read
+read_db: YOUR_AGGREAD_LOG_DB
+read_tbl: YOUR_AGGREAD_LOG_TBL
+
+result_type: datatank
+
+result_google:
+  result_1:
+    connecter: GOOGLESHEET_CONNECTER_NAME
+    folder: GOOGLESHEET_FOLDER_ID
+
+#-----------------------------------------
+#設定で集計記事リストを作る場合 
+media:
+  food:
+    article_id: 11111
+    article_key: 11111
+    target_host: treasure-data.com
+    start_date: 2022-07-01
+    end_date: 2022-10-01
+    list_page_url: https://treasure-data.com
+    list_name_jp: トレジャーデータ
+    list_page_title: ホームページ
+    check_click: true
+    click:
+      - key: click1 
+        valie: hoge
+      - key: click2
+        valie: hoge
+      - key: click3
+        valie: hoge
+      - key: click4
+        valie: hoge
+      - key: click5
+        valie: hoge
+    check_read: false

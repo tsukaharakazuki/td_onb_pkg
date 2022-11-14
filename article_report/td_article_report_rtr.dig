@@ -1,0 +1,36 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: l2_article_report #ベースの参照・出力先Database
+
+_error:
+  +error_mail:
+    call>: config/error.dig
+
++load_list:
+  td_for_each>: config/load_list.sql
+  _do:
+    +check_read:
+      if>: ${td.each.check_read}
+      _do:
+        _parallel: true
+        +check_sppc:
+          for_each>:
+            indicator: 
+              - "pc"
+              - "smartphone"
+          _do:
+            _parallel: true
+            +read_through_rate:
+              td>: queries/dist_rtr.sql
+              insert_into: rtr 
+
+            +read_avg_browsing_time:
+              td>: queries/dist_rat.sql
+              insert_into: rat
+
+        +hourly_read_avg_browsing_time:
+          td>: queries/dist_rat_hourly.sql
+          insert_into: rat_hourly
