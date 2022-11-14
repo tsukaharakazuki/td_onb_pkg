@@ -1,0 +1,50 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  cron>: 1 * * * *
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: l1_agg_weblog
+  session_span: 1800 #秒数→セッショナイズする間隔設定
+
++media_process:
+  for_each>:
+    params: ${Object.keys(media)}
+  _do:
+    +empty_tmp_agg_weblog_regular:
+      td_ddl>:
+      empty_tables: 
+        - "tmp_agg_weblog_regular"
+        
+    +regular_weblog_processing:
+      +pv:
+        td>: query/p21_r_agg_weblog.sql
+        insert_into: tmp_agg_weblog_regular
+
+    +regular_click_processing:
+      if>: ${media.check_click}
+      _do:
+        +regular_agg_clicklog:
+          +click:
+            td>: query/p22_r_agg_clicklog.sql
+            insert_into: tmp_agg_weblog_regular
+
+    +regular_read_processing:
+      if>: ${media.check_read}
+      _do:
+        +regular_agg_readlog:
+          +read:
+            td>: query/p23_r_agg_readlog.sql
+            insert_into: tmp_agg_weblog_regular
+
+    +regular_sessionize_processing:
+      +dist:
+        td>: query/p24_r_sessionize.sql
+        insert_into: agg_weblog
+        
+    +drop_tmp_tbl:
+      td_ddl>:
+      drop_tables: 
+        - "tmp_agg_weblog_regular"
