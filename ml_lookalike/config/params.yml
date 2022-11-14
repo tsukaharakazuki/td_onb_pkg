@@ -1,0 +1,81 @@
+---
+target_type: cdp #cdp or set
+
+cdp:
+  setting:
+    db: td_sandbox
+    tbl: cdp_ml_target
+    negative_db: target_db
+    negative_tbl: target_tbl
+    negative_id: td_ms_id
+    negative_time_range: TD_INTERVAL(time, '-28d', 'JST')
+
+set:
+  ec_conv:
+    firsttime: true
+    name: ec_conv
+    output_db: td_sandbox
+    # 目的変数設定
+    target_db: target_db
+    target_tbl: target_tbl
+    target_id: td_ms_id
+    target_time_range: TD_INTERVAL(time, '-28d', 'JST')
+    target_positive: 
+      condition:
+        - td_path = '/ordercomplete'
+    
+# 説明変数設定
+ftr:
+  feature:
+    feature_time_range: TD_INTERVAL(time, '-60d', 'JST')
+    # 閲覧コンテンツ、リファラなどIDが複数の値を持つカラムの割合計算
+    feature_categorical:
+      - colmuns: td_path
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        negative_condition: td_path <> '/ordercomplete'
+      - colmuns: td_ref_host
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        negative_condition: td_path <> '/ordercomplete'
+      - colmuns: TD_TIME_FORMAT(time, 'HH', 'JST')
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        negative_condition: td_path <> '/ordercomplete'
+    # 都道府県、OSなどIDが複数の値を持つカラムの最大の値
+    feature_max_by_n:
+      - colmuns: td_os
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        negative_condition: td_path <> '/ordercomplete'
+      - colmuns: prefectures
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        negative_condition: td_path <> '/ordercomplete'
+    # 課金額カラムなど数値を合計した値をSUM
+    feature_quantitative:
+      - colmuns: charge
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        negative_condition: td_path <> '/ordercomplete'
+    # 配列カラム内のデータを展開して割合計算
+    feature_categorical_array:
+      - colmuns: sku
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        negative_condition: td_path <> '/ordercomplete'
+    # 配列カラム内のデータを展開して出現回数計算
+    feature_categorical_array_cnt:
+      - colmuns: order
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        negative_condition: td_path <> '/ordercomplete'
+

@@ -1,0 +1,50 @@
++id2feature:
+  +insert:
+    td>: cdp/id2feature.sql
+    create_table: id2feature_${td.each.segment_tbl}
+    engine: presto # Hive also works
+
++aggregate_features:
+  +insert:
+    td>: cdp/aggregate_features.sql
+    create_table: preprocessed_${td.each.segment_tbl}
+    engine: presto # Only presto works
+
++training_data:
+  +insert:
+    td>: cdp/create_train.sql
+    create_table: train_${td.each.segment_tbl}
+    engine: presto # Hive also works
+
++train_predict:
+  +insert:
+    docker:
+      image: "digdag/digdag-python:3.9"
+    _env:
+      TD_API_KEY: ${secret:td.apikey}
+      ENDPOINT: ${td.endpoint}
+      SESSION_UNIXTIME: ${session_unixtime}
+    py>: pyscript.train_predict.main
+    n_features: ${ml.n_features}
+    database: ${td.database}
+    n_split: ${ml.n_split}
+    timezone: ${timezone}
+    tbl_name: ${td.each.segment_tbl}
+    train: train_${td.each.segment_tbl}
+    preprocessed: preprocessed_${td.each.segment_tbl}
+    predicted: predicted_${td.each.segment_tbl}
+
++summarize_result:
+  +insert:
+    _parallel: true
+    +train:
+      td>: cdp/calc_auc_train.sql
+      engine: hive
+      engine_version: stable
+      insert_into: result_summary_${td.each.segment_tbl}
+
+    +test:
+      td>: cdp/calc_auc_test.sql
+      engine: hive
+      engine_version: stable
+      insert_into: result_summary_${td.each.segment_tbl}

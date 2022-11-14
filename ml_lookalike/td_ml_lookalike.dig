@@ -1,0 +1,125 @@
+timezone: Asia/Tokyo
+
+#schedule:
+#  daily>: 02:50:00
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: td_sandbox
+    endpoint: api.treasuredata.co.jp
+  ml:
+    n_features: 1000 # 説明変数の数
+    test_size: 0.2
+    n_split: 3
+
++for_each_features:
+  for_each>:
+    params: ${Object.keys(ftr)}
+  _do:
+    +empty_features:
+      td_ddl>:
+      empty_tables: 
+        - "features"
+
+    +create_data:
+      _parallel: true
+
+      +features:
+        +insert_categorical:
+          if>: ${(Object.prototype.toString.call(ftr[params].feature_categorical) === '[object Array]')}
+          _do:
+            for_each>:
+              ftr: ${ftr[params].feature_categorical}
+            _do:
+              +proc:
+                td>: sql/features_categorical.sql
+                insert_into: features
+                engine: presto
+
+        +insert_max_by_n:
+          if>: ${(Object.prototype.toString.call(ftr[params].feature_max_by_n) === '[object Array]')}
+          _do:
+            for_each>:
+              ftr: ${ftr[params].feature_max_by_n}
+            _do:
+              +proc:
+                td>: sql/features_max_by_n.sql
+                insert_into: features
+                engine: presto
+
+        +insert_quantitative:
+          if>: ${(Object.prototype.toString.call(ftr[params].feature_quantitative) === '[object Array]')}
+          _do:
+            for_each>:
+              ftr: ${ftr[params].feature_quantitative}
+            _do:
+              +proc:
+                td>: sql/features_quantitative.sql
+                insert_into: features
+                engine: presto
+
+        +insert_categorical_array:
+          if>: ${(Object.prototype.toString.call(ftr[params].feature_categorical_array) === '[object Array]')}
+          _do:
+            for_each>:
+              ftr: ${ftr[params].feature_categorical_array}
+            _do:
+              +proc:
+                td>: sql/features_categorical_array.sql
+                insert_into: features
+                engine: presto
+
+        +insert_categorical_array_cnt:
+          if>: ${(Object.prototype.toString.call(ftr[params].feature_categorical_array_cnt) === '[object Array]')}
+          _do:
+            for_each>:
+              ftr: ${ftr[params].feature_categorical_array_cnt}
+            _do:
+              +proc:
+                td>: sql/features_categorical_array_cnt.sql
+                insert_into: features
+
++target_type_set:
+  if>: ${target_type == 'set'}
+  _do: 
+    +for_each_target:
+      for_each>:
+        params: ${Object.keys(set)}
+      _do:
+        +empty_targets:
+          td_ddl>:
+          empty_tables: 
+            - "target_${set[params].name}"
+
+        +target:
+          +insert:
+            td>: sql/target_set.sql
+            insert_into: target_${set[params].name}
+            engine: presto
+
+        +call_ml_template:
+          call>: ml_train_predict_set.dig
+  
++target_type_cdp:
+  if>: ${target_type == 'cdp'}
+  _do: 
+    +get_params:
+      for_each>:
+        params: ${Object.keys(cdp)}
+      _do:
+        +for_each_target:
+          td_for_each>: config/target_cdp.sql
+          _do:
+            +empty_targets:
+              td_ddl>:
+              empty_tables: 
+                - "target_${td.each.segment_tbl}"
+            +target:
+              +insert:
+                td>: sql/target_cdp.sql
+                insert_into: target_${td.each.segment_tbl}
+                engine: presto
+
+            +call_ml_template:
+              call>: ml_train_predict_cdp.dig
