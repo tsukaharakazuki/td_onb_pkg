@@ -9,3 +9,15 @@ WorkflowファイルをTreasureData環境にインストールするためには
  
  - Toolbeltダウンロードリンク
  https://toolbelt.treasuredata.com/
+
+# CLIコマンド
+## TDアカウントへのログイン
+### USリージョン
+`td account -f`
+### Tokyoリージョン
+`td -e https://api.treasuredata.co.jp account -f`
+### SSOログインの場合
+1. 事前のログイン情報を削除`rm ~/.td/td.conf`
+2. API KEYのセット`td apikey:set YOUR_API_KEY`
+### Tokyoリージョンにログインした状態からUSリージョン環境にログイン
+`td -e https://api.treasuredata.com account -f`
