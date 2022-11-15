@@ -22,63 +22,61 @@ _export:
       empty_tables: 
         - "features"
 
-    +create_data:
+    +features:
       _parallel: true
-
-      +features:
-        +insert_categorical:
-          if>: ${(Object.prototype.toString.call(ftr[params].feature_categorical) === '[object Array]')}
+      +insert_categorical:
+        if>: ${(Object.prototype.toString.call(ftr[params].feature_categorical) === '[object Array]')}
+        _do:
+          for_each>:
+            ftr: ${ftr[params].feature_categorical}
           _do:
-            for_each>:
-              ftr: ${ftr[params].feature_categorical}
-            _do:
-              +proc:
-                td>: sql/features_categorical.sql
-                insert_into: features
-                engine: presto
+            +proc:
+              td>: sql/features_categorical.sql
+              insert_into: features
+              engine: presto
 
-        +insert_max_by_n:
-          if>: ${(Object.prototype.toString.call(ftr[params].feature_max_by_n) === '[object Array]')}
+      +insert_max_by_n:
+        if>: ${(Object.prototype.toString.call(ftr[params].feature_max_by_n) === '[object Array]')}
+        _do:
+          for_each>:
+            ftr: ${ftr[params].feature_max_by_n}
           _do:
-            for_each>:
-              ftr: ${ftr[params].feature_max_by_n}
-            _do:
-              +proc:
-                td>: sql/features_max_by_n.sql
-                insert_into: features
-                engine: presto
+            +proc:
+              td>: sql/features_max_by_n.sql
+              insert_into: features
+              engine: presto
 
-        +insert_quantitative:
-          if>: ${(Object.prototype.toString.call(ftr[params].feature_quantitative) === '[object Array]')}
+      +insert_quantitative:
+        if>: ${(Object.prototype.toString.call(ftr[params].feature_quantitative) === '[object Array]')}
+        _do:
+          for_each>:
+            ftr: ${ftr[params].feature_quantitative}
           _do:
-            for_each>:
-              ftr: ${ftr[params].feature_quantitative}
-            _do:
-              +proc:
-                td>: sql/features_quantitative.sql
-                insert_into: features
-                engine: presto
+            +proc:
+              td>: sql/features_quantitative.sql
+              insert_into: features
+              engine: presto
 
-        +insert_categorical_array:
-          if>: ${(Object.prototype.toString.call(ftr[params].feature_categorical_array) === '[object Array]')}
+      +insert_categorical_array:
+        if>: ${(Object.prototype.toString.call(ftr[params].feature_categorical_array) === '[object Array]')}
+        _do:
+          for_each>:
+            ftr: ${ftr[params].feature_categorical_array}
           _do:
-            for_each>:
-              ftr: ${ftr[params].feature_categorical_array}
-            _do:
-              +proc:
-                td>: sql/features_categorical_array.sql
-                insert_into: features
-                engine: presto
+            +proc:
+              td>: sql/features_categorical_array.sql
+              insert_into: features
+              engine: presto
 
-        +insert_categorical_array_cnt:
-          if>: ${(Object.prototype.toString.call(ftr[params].feature_categorical_array_cnt) === '[object Array]')}
+      +insert_categorical_array_cnt:
+        if>: ${(Object.prototype.toString.call(ftr[params].feature_categorical_array_cnt) === '[object Array]')}
+        _do:
+          for_each>:
+            ftr: ${ftr[params].feature_categorical_array_cnt}
           _do:
-            for_each>:
-              ftr: ${ftr[params].feature_categorical_array_cnt}
-            _do:
-              +proc:
-                td>: sql/features_categorical_array_cnt.sql
-                insert_into: features
+            +proc:
+              td>: sql/features_categorical_array_cnt.sql
+              insert_into: features
 
 +target_type_set:
   if>: ${target_type == 'set'}
