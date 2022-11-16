@@ -8,6 +8,7 @@ _export:
   td:
     database: l1_agg_weblog
   session_span: 1800 #秒数→セッショナイズする間隔設定
+  regular_span: -1h
 
 +media_process:
   for_each>:
