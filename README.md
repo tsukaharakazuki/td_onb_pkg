@@ -10,6 +10,12 @@ WorkflowファイルをTreasureData環境にインストールするためには
  - Toolbeltダウンロードリンク
  https://toolbelt.treasuredata.com/
 
+# お役立ちドキュメント集
+[Hadoop利用者ならきっと知ってる、Hive/Prestoクエリ関数の挙動の違い](https://qiita.com/y-ken/items/400b7c70c324ac67af02)
+  
+[TD CS Blog](https://plazma.red/user_engagement/)
+  
+
 # CLIコマンド
 ## TDアカウントへのログイン
 ### USリージョン
