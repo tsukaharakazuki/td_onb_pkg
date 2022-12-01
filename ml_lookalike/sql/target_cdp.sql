@@ -5,6 +5,7 @@ with positive as (
     ${cdp[params].db}.${cdp[params].tbl}
   WHERE
     segment_name = '${td.each.segment_name}'
+    AND TD_DATE_TRUNC('day',time,'JST') = TD_DATE_TRUNC('day',TD_SCHEDULED_TIME(),'JST')
 )
 , negative as (
   select
