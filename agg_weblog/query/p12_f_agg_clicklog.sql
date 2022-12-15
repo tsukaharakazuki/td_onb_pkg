@@ -38,6 +38,12 @@ SELECT
 FROM
 	${media[params].click_db}.${media[params].click_tbl}
 WHERE
+	TD_TIME_RANGE(
+	    time ,
+	    NULL ,
+	    TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd HH:00:00', 'JST') ,
+	    'JST'
+	) AND 
 	TD_PARSE_AGENT(td_user_agent) ['category'] <> 'crawler' AND
 	td_client_id != '00000000-0000-4000-8000-000000000000' AND
 	td_browser NOT RLIKE '^(?:Googlebot(?:-.*)?|BingPreview|bingbot|YandexBot|PingdomBot)$' AND
