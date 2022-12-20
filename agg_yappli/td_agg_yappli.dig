@@ -1,0 +1,24 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  cron>: 20 0 * * * 
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: td_audience_studio #ベースの参照・出力先Database
+
++for_each_apps:
+  for_each>:
+    params: ${Object.keys(apps)}
+  _do:
+    +empty_tmp_agg_weblog_regular:
+      td_ddl>:
+      empty_tables: 
+        - "tmp_agg_applog_regular"
+      database: ${apps[params].output_db}
+
+    +regular:
+      +proc_regular:
+        td>: queries/yappli_behavior.sql
+        insert_into: ${apps[params].output_db}.l1_agg_yappli_behavior

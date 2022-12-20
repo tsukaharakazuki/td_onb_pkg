@@ -1,0 +1,20 @@
+---
+# セッショナイズする時間（秒数）
+session_span: 1800
+apps:
+  sample1:
+    media_name: sample1
+    # MappingしたいIDが入っているDatabase/Table
+    in_db: app_log
+    in_tbl: applog #l1_behavioral_data
+    # 結果出力Database
+    output_db: app_log
+    # 規定値以外のカラム
+    set_columns:
+      columns:
+    # 計算処理やCase文でのカラム作成
+    first_regular_other_process:
+      first: 
+        # - CASE WHEN event RLIKE '^coin_[0-9].*' THEN regexp_replace(event, '^coin_|_.*(a|i)$', '')  ELSE NULL END purchase
+      regular:
+        # - CASE WHEN REGEXP_LIKE(event, '^coin_[0-9].*') THEN regexp_replace(event, '^coin_|_.*(a|i)$', '')  ELSE NULL END purchase

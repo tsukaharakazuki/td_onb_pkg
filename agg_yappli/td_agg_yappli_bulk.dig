@@ -1,0 +1,31 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params_bulk.yml'
+  td:
+    database: td_audience_studio #ベースの参照・出力先Database
+  create_all_tbl: true #このWFの初回実行
+
++for_each_apps:
+  for_each>:
+    params: ${Object.keys(apps)}
+  _do:
+    +empty_store_tables:
+      if>: ${create_all_tbl}
+      _do:
+        +empty_base:
+          td_ddl>:
+          empty_tables: 
+            - "l1_agg_yappli_behavior"
+          database: ${apps[params].output_db}
+
+    +empty_tmp_agg_weblog_regular:
+      td_ddl>:
+      empty_tables: 
+        - "tmp_agg_applog_regular"
+      database: ${apps[params].output_db}
+
+    +bulk:
+      +proc_bulk:
+        td>: queries/yappli_behavior_bulk.sql
+        insert_into: ${apps[params].output_db}.l1_agg_yappli_behavior
