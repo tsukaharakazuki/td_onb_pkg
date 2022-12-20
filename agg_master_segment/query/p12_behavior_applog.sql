@@ -4,6 +4,7 @@ SELECT
   ${media[params].set_td_url_app} AS td_url ,
   ${media[params].engagement_vols_app} AS engagement_vols ,
   'app' AS td_client_id ,
+  'UNKNOWN' AS td_browser ,
   *
 FROM
   ${media[params].applog_db}.${media[params].applog_tbl}
