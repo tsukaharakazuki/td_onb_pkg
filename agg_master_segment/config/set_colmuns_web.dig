@@ -1,0 +1,18 @@
++function_columns_web:
+  td>:
+  query: |
+    SELECT
+      ', '||ARRAY_JOIN(ARRAY_AGG(column_name), ',') AS set_columns
+    FROM
+      information_schema.columns
+    WHERE
+      table_schema = '${media[params].weblog_db}'
+      AND table_name = '${media[params].weblog_tbl}'
+      AND column_name <> 'td_url'
+      AND column_name <> 'utm_source'
+      AND column_name <> 'utm_medium'
+      AND column_name <> 'utm_campaign'
+    GROUP BY
+      table_name
+  store_last_results: true
+

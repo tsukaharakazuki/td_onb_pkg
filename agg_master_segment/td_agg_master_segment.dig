@@ -1,0 +1,95 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  cron>: 1 2 * * *
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: td_audience_studio
+  log_span: 1d #固定
+
++media_process:
+  for_each>:
+    params: ${Object.keys(media)}
+  _do:
+    +empty_dist_tables:
+      td_ddl>:
+      empty_tables: 
+        - "ms_master_table_${media[params].media_name}"
+        - "ms_attribute_engagement_score_${media[params].media_name}"
+      database: ${media[params].output_db}
+
+    +check_weblog:
+      if>: ${media[params].check_web}
+      _do:
+        +behavior_weblog:
+          !include : config/set_colmuns_web.dig
+          +weblog:
+            td>: query/p11_behavior_weblog.sql
+            insert_into: ${media[params].output_db}.ms_behavior_${media[params].media_name}
+
+    +check_applog:
+      if>: ${media[params].check_app}
+      _do:
+        +behavior_applog:
+          +applog:
+            td>: query/p12_behavior_applog.sql
+            insert_into: ${media[params].output_db}.ms_behavior_${media[params].media_name}
+
+    +proc_master_table:
+      +check_weblog:
+        if>: ${media[params].check_web}
+        _do:
+          +check_applog:
+            if>: ${media[params].check_app}
+            _do:
+              +create_master_table_webapp:
+                td>: query/p21_master_table_webapp.sql
+                insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+            
+            _else_do:
+              +create_master_table_web:
+                td>: query/p22_master_table_web.sql
+                insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+
+        _else_do:
+          +check_applog:
+            if>: ${media[params].check_app}
+            _do:
+              +create_master_table_app:
+                td>: query/p23_master_table_app.sql
+                insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+
+    +create_engagement_score:
+      !include : config/engagement_score_date.dig
+      +engagement_score:
+        td>: query/p31_attribute_engagement_score.sql
+        insert_into: ${media[params].output_db}.ms_attribute_engagement_score_${media[params].media_name}
+
+    +check_predict_dataset:
+      if>: ${media[params].check_predict_dataset}
+      _do:
+        +predict_process:
+          for_each>:
+            pred: ${media[params].predict_dataset}
+          _do:
+            +empty_attr_tables:
+              td_ddl>:
+              empty_tables: 
+                - "ms_attribute_${pred.colmuns}_${media[params].media_name}"
+              database: ${media[params].output_db}
+
+            +create_predict_dataset:
+              td>: query/p41_attribute_predict_dataset.sql
+              insert_into: ${media[params].output_db}.ms_attribute_${pred.colmuns}_${media[params].media_name}
+
+    +check_kick_audience_workflow:
+      if>: ${(Object.prototype.toString.call(media[params].master_segment_id) === '[object Number]')}
+      _do:
+        +kick_audience_workflow:
+          http>: "https://api-cdp.treasuredata.com/audiences/${media[params].master_segment_id}/run"
+          method: POST
+          headers:
+            - authorization: "TD1 ${secret:td.apikey}"
+          retry: true
