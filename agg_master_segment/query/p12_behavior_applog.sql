@@ -5,6 +5,7 @@ SELECT
   ${media[params].engagement_vols_app} AS engagement_vols ,
   'app' AS td_client_id ,
   'UNKNOWN' AS td_browser ,
+  'app' AS td_host ,
   *
 FROM
   ${media[params].applog_db}.${media[params].applog_tbl}
