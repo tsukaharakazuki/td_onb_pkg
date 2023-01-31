@@ -47,3 +47,91 @@ slack:
   webhook_url: ${secret:slack.webhook_url}
   channel: '#cdp_alert'
 ```
+
+# その他ツールへのメッセージ送信
+Workflowではさまざまなツールにデータを送信することが可能です。以下の記事を参考に設定してください。
+  
+1. Teams
+```
++teams:
+  http>: https://aaaaa.webhook.office.com/XXXXXXXXX/
+  method: POST
+  content: |
+    {"type":"message","attachments":[
+     {"contentType":"application/vnd.microsoft.card.adaptive","contentUrl":null,"content":
+       {
+         "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+         "type": "AdaptiveCard",
+         "version": "1.0",
+         "body": [
+           {
+             "type": "Container",
+             "items": [
+               {
+                 "type": "TextBlock",
+                 "text": "Workflow Failure Alert",
+                 "weight": "bolder",
+                 "size": "medium"
+               },
+             ]
+           },
+           {
+             "type": "Container",
+             "items": [
+               {
+                 "type": "TextBlock",
+                 "text": "please re run teams_api_test",
+                 "wrap": true
+               },
+               {
+    "type": "FactSet",
+                 "facts": [
+                   {
+                     "title": "workflow_name:",
+                     "value": "teams_api_test"
+                   },
+                   {
+                     "title": "session_time:",
+                     "value": "${session_local_time}"
+                   },
+                   {
+                     "title": "Console Access:",
+                     "value": "[https://console.treasuredata.com/app/workflows/sessions/${session_id}](https://console.treasuredata.com/app/workflows/sessions/${session_id})"
+                   },
+                   {
+                     "title": "Command for Rerun:",
+                     "value": "`td wf retry ${attempt_id} --latest-revision --resume`"
+                   }
+                 ]
+               }
+             ]
+           }
+         ]
+       }
+       }
+       ]
+    }
+  content_format: text
+  content_type: application/json
+```
+
+1. Chatwork
+```
+_export:
+  td:
+    database: chatwork
+  chatwork:
+    endpoint: https://api.chatwork.com/v2
+    room_id: '11111111'
+
++chatwork:
+  http>: ${chatwork.endpoint}/rooms/${chatwork.room_id}/messages
+  method: POST
+  headers:
+    - X-ChatWorkToken: ${secret:chatwork.token}
+  content:
+    body: |
+      ${session_local_time}
+      Chatworkへのデータ送信
+  content_format: form
+```
