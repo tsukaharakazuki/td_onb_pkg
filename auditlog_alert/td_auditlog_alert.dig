@@ -1,0 +1,30 @@
+timezone: Asia/Tokyo
+
+#schedule:
+#  minutes_interval>: 10
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: td_audit_log
+  push_type: mail #mail or slack
+  span: 10m #スケジュール間隔と揃える
+
++auditlog_process:
+  for_each>:
+    params: ${Object.keys(events)}
+  _do:
+    +for_each_events:
+      td_for_each>: queries/check_events.sql
+      _do:
+        +check_mail:
+          if>: ${push_type == 'mail'}
+          _do:
+            +push:
+              call>: config/mail.dig
+
+        +check_slack:
+          if>: ${push_type == 'slack'}
+          _do:
+            +push:
+              call>: config/slack.dig

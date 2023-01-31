@@ -1,0 +1,28 @@
+_export:
+  slack:
+    webhook_url: ${secret:slack.webhook_url}
+    channel: '#cdp_alert'
+
++send_slack:
+  http>: ${slack.webhook_url}
+  method: POST
+  content:
+    username: "TD Audit Monitor"
+    icon_emoji: ':rotating_light:'
+    channel: ${slack.channel}
+    pretext: "${events[params].title}"
+    color: "danger"
+    fields:
+    - title: Email
+      value: "${td.each.user_email}"
+      short: true
+    - title: IP Address
+      value: "${td.each.ip_address}"
+      short: true
+    - title: Event Name
+      value: "${td.each.event_name}"
+      short: true
+    - title: Time
+      value: "${td.each.date}"
+      short: false
+    content_format: json

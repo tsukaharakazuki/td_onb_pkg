@@ -1,0 +1,46 @@
+---
+db: td_audit_log
+tbl: access
+output_db: output_db
+
+events:
+  db_modifications:
+    config:
+      - (event_name = 'database_create' OR event_name = 'database_modify' OR event_name = 'database_permission_modify' OR event_name = 'database_delete')
+    title: "<!TD-AUDITLOG> DBの変更を検知しました"
+  result_export:
+    config:
+      - job_type = 'ResultExport'
+    title: "<!TD-AUDITLOG> データのExportを検知しました"
+  export_download:
+    config:
+      - event_name = 'job_result_download'
+    title: "<!TD-AUDITLOG> データのダウンロードを検知しました"
+  import_connector:
+    config:
+      - (event_name = 'connection_create' OR event_name = 'data_transfer_create')
+    title: "<!TD-AUDITLOG> コネクタによるimportに関する変更が行われました"
+  import_upload:
+    config:
+      - event_name = 'file_upload_import_create'
+    title: "<!TD-AUDITLOG> ローカルファイルのアップロードを検知しました"
+  table_creation:
+    config:
+      - event_name = 'table_create'
+    title: "<!TD-AUDITLOG> テーブルの作成を検知しました"
+  table_deletion:
+    config:
+      - event_name = 'table_delete'
+    title: "<!TD-AUDITLOG> テーブルの削除を検知しました"
+  user_ip_whitelist_modify:
+    config: 
+      - event_name = 'ip_whitelist_modify'
+    title: "<!TD-AUDITLOG> ホワイトリストの変更を検知しました"
+  user_sign_in:
+    config:
+      - event_name = 'sign_in'
+    title: "<!TD-AUDITLOG> ログインを検知しました"
+  user_sign_in_failed:
+    config:
+      - event_name = 'sign_in_failed'
+    title: "<!TD-AUDITLOG> ログイン失敗を検知しました"

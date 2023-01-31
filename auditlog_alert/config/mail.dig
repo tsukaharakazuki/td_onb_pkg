@@ -1,0 +1,18 @@
+_export:
+  wf_name: Workflowテンプレート
+
++send_mail:
+  mail>: 
+    data: |
+      ${events[params].title}
+      User: "${td.each.user_email}"
+      IP Address: "${td.each.ip_address}"
+      Event Name: "${td.each.event_name}"
+      Target Table: "${td.each.target_table}"
+      Resource Name: "${td.each.resource_name}"
+      Time: "${td.each.date}"
+  subject: ${events[params].title}
+  to: 
+    - "hoge@hogehoge.com"
+  cc:
+    - "fuga@treasure-data.com"
