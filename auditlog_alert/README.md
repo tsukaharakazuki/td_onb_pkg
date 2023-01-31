@@ -115,7 +115,7 @@ Workflowではさまざまなツールにデータを送信することが可能
   content_type: application/json
 ```
 
-1. Chatwork
+2. Chatwork
 ```
 _export:
   td:
