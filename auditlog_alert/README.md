@@ -33,10 +33,10 @@ db_modifications:
 ## メール送信設定
 `config/mail.dig` で送信する宛先(to/cc)を設定します
 ```
-  to: 
-    - "hoge@hogehoge.com"
-  cc:
-    - "fuga@treasure-data.com"
+to: 
+  - "hoge@hogehoge.com"
+cc:
+  - "fuga@treasure-data.com"
 ```
 
 ## Slack送信設定
