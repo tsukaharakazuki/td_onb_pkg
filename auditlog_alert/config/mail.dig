@@ -1,6 +1,3 @@
-_export:
-  wf_name: Workflowテンプレート
-
 +send_mail:
   mail>: 
     data: |
