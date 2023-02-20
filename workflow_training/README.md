@@ -155,9 +155,11 @@ ex.
 `${(Object.prototype.toString.call(if_val) === '[object Array]')}`  
 変数`if_val`が配列だった場合`true`
 
-`${moment().format('dddd') === dow} `  
+`${moment().format('dddd') === dow}`  
 変数`dow`で設定した曜日と実行日が同じだった場合`true`
 
+`${moment().format('YYYY-MM-DD') === sche_date}`  
+変数`sche_date`で設定した日付`Ex)2023-02-20`と実行日が同じだった場合`true`
 
 ## `for_each>:` 変数設定を変更して複数回同一処理実行
 ```
