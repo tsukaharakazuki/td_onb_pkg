@@ -28,7 +28,7 @@ _export:
   td:
     database: td_sandbox #ベースの参照・出力先Database
 ```
-タスク内でのみ有効な変数として定義することも可能です。
+タスク内でのみ有効な変数として定義することも可能です
 ```
 +test_job:
   _export:
