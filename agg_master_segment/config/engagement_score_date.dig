@@ -1,8 +1,0 @@
-+function_engagement_score_date:
-  td>:
-  query: |
-    SELECT
-      CAST(TRUNCATE((CAST(TO_UNIXTIME(now()) AS BIGINT) - MIN(time)) / 86400) AS INT) AS progress 
-    FROM
-      ${media[params].output_db}.ms_behavior_${media[params].media_name}
-  store_last_results: true
