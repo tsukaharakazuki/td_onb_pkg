@@ -1,0 +1,84 @@
+set:
+  dataset1:
+    dataset_name: sample
+    feature_time_range: TD_INTERVAL(time, '-60d', 'JST')
+    # 説明変数 : 属性データ
+    attribute:
+      - colmuns: gender
+        null_check_col: gender
+        output: gender
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        where_condition: 
+          - td_path <> '/ordercomplete'
+        insert_groupby: 
+          #- 1
+
+    # 説明変数 : リーセンシーや来訪回数など1カラム内に複数の値が入る
+    feature_col1:
+      - colmuns: gender
+        null_check_col: gender
+        output: gender
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        where_condition: 
+          - td_path <> '/ordercomplete'
+        insert_groupby: 
+          #- 1
+    
+    # 説明変数 : 何回以上・何回以下などでカラムを分けて評価
+    feature_col2:
+      - colmuns: gender
+        output: gender
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        where_condition: 
+          - td_path <> '/ordercomplete'
+        name1: 1 
+        conditions1: "< 50"
+        name2: 2
+        conditions2: ">= 50"
+    feature_col3:
+      - colmuns: gender
+        output: gender
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        where_condition: 
+          - td_path <> '/ordercomplete'
+        name1: 1 
+        conditions1: "< 2"
+        name2: 2
+        conditions2: "BETWEEN 2 and 30"
+        name3: 3
+        conditions3: "> 30"
+    feature_col4:
+      - colmuns: gender
+        output: gender
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        where_condition: 
+          - td_path <> '/ordercomplete'
+        name1: 1 
+        conditions1: "< 2"
+        name2: 2
+        conditions2: "BETWEEN 2 and 30"
+        name3: 3
+        conditions3: "BETWEEN 31 and 50"
+        name4: 4
+        conditions4: "> 50"
+
+    # 説明変数 : 最も多い値を評価
+    feature_maxbyn:
+      - colmuns: td_os
+        null_check_col: td_os
+        output: td_os
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        where_condition: 
+          - td_path <> '/ordercomplete'

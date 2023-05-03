@@ -1,0 +1,12 @@
+timezone: Asia/Tokyo
+
+#schedule:
+#  daily>: 02:50:00
+
+_export:
+  !include : 'config/params_train.yml'
+  td:
+    database: td_sandbox
+
++call_ml_dataset:
+  call>: predictive_scoreing_dataset.dig

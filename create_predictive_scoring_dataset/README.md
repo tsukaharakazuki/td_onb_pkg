@@ -1,0 +1,2 @@
+# このWorkflowについて
+このWorkflowはPREDICTIVE SCORINGで利用する特徴量データをAttributeにセットしやすく加工する処理です。 
