@@ -20,7 +20,7 @@ FROM
       segment_tbl ,
       MAX_BY(segment_name,time) AS segment_name
     FROM
-      ${target_db}.cdp_ml_target
+      ${cdp[params].db}.${cdp[params].tbl}
     GROUP BY
       1
   ) b
