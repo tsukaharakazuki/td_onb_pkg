@@ -121,3 +121,17 @@ _export:
 
             +call_ml_template:
               call>: ml_train_predict_cdp.dig
+
++empty_ms_behavior_tables:
+  td_ddl>:
+  empty_tables: 
+    - "ms_behavior_tdml"
+
++create_ms_pred_list:
+  _export:
+    target_db: td_ml
+  td_for_each>: sql/inquiry_pred_data.sql
+  _do:
+    +proc:
+      td>: sql/create_ml_list.sql
+      insert_into: ms_behavior_tdml
