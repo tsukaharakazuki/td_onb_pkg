@@ -25,7 +25,7 @@ _export:
         insert_into: tmp_agg_weblog_regular
 
     +regular_click_processing:
-      if>: ${media.check_click}
+      if>: ${media[params].check_click}
       _do:
         +regular_agg_clicklog:
           +click:
@@ -33,7 +33,7 @@ _export:
             insert_into: tmp_agg_weblog_regular
 
     +regular_read_processing:
-      if>: ${media.check_read}
+      if>: ${media[params].check_read}
       _do:
         +regular_agg_readlog:
           +read:
