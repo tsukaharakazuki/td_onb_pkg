@@ -1,0 +1,65 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params_bulk.yml'
+  td:
+    database: l1_agg_weblog
+  session_span: 1800 #秒数→セッショナイズする間隔設定
+  proc_firsttime: true #初回のみtrue/それ以降はfalse
+
++empty_tables:
+  if>: ${proc_firsttime}
+  _do:
+    +empty_base:
+      td_ddl>:
+      empty_tables: 
+        - "agg_weblog"
+
++media_process:
+  for_each>:
+    params: ${Object.keys(media)}
+  _do:
+    +empty_tmp_agg_weblog_first:
+      td_ddl>:
+      empty_tables: 
+        - "tmp_agg_weblog_first"
+    
+    +first_weblog_processing:
+      +pv:
+        td>: query/p11_f_agg_weblog.sql
+        insert_into: tmp_agg_weblog_first
+        engine: hive # Only Hive works
+        engine_version: stable
+
+    +first_click_processing:
+      if>: ${media[params].check_click}
+      _do:
+        +first_agg_clicklog:
+          +click:
+            td>: query/p12_f_agg_clicklog.sql
+            insert_into: tmp_agg_weblog_first
+            engine: hive # Only Hive works
+            engine_version: stable
+
+    +first_read_processing:
+      if>: ${media[params].check_read}
+      _do:
+        +first_agg_readlog:
+          +read:
+            td>: query/p13_f_agg_readlog.sql
+            insert_into: tmp_agg_weblog_first
+            engine: hive # Only Hive works
+            engine_version: stable
+
+    +first_sessionize_processing:
+      +dist:
+        td>: query/p14_f_sessionize.sql
+        insert_into: agg_weblog
+        engine: hive # Only Hive works
+        engine_version: stable
+        
+    +drop_tmp_tbl:
+      td_ddl>:
+      drop_tables: 
+        - "tmp_agg_weblog_first"
+
