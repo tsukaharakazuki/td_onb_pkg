@@ -102,20 +102,35 @@ _export:
     +check_predict_dataset:
       if>: ${media[params].check_predict_dataset}
       _do:
+        +empty_attr_tables:
+          td_ddl>:
+          empty_tables: 
+            - "tmp_ms_attribute_pred"
+          database: ${media[params].output_db}
+
         +predict_process:
           for_each>:
             pred: ${media[params].predict_dataset}
           _do:
-            +empty_attr_tables:
-              td_ddl>:
-              empty_tables: 
-                - "ms_attribute_${pred.colmuns}_${media[params].media_name}"
-              database: ${media[params].output_db}
-
-            +create_predict_dataset:
+            +tmp_predict_dataset:
               td>: query/p41_attribute_predict_dataset.sql
-              insert_into: ${media[params].output_db}.ms_attribute_${pred.colmuns}_${media[params].media_name}
+              insert_into: ${media[params].output_db}.tmp_ms_attribute_pred
 
+        +search_query:
+          td>: query/search_agg_sql.sql
+          store_last_results: true
+
+        +create_predict_dataset:
+          td>:
+            data: |
+              ${td.last_results.sql_contents}
+          create_table: ${media[params].output_db}.ms_attribute_pred_${media[params].media_name}
+
+        +drop_tbl:
+          td_ddl>:
+          drop_tables: 
+            - "tmp_ms_attribute_pred"
+          database: ${media[params].output_db}
 
 
 
