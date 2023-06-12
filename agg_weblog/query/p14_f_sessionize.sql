@@ -75,7 +75,7 @@ SELECT
   TD_TIME_FORMAT(time,'yyyy-MM-dd','JST') AS access_date ,
   TD_TIME_FORMAT(time,'HH','JST') AS access_hour ,
   TD_TIME_FORMAT(time,'ww','JST') AS week ,
-  TD_TIME_FORMAT(time,'EEE','JST') AS diw ,
+  TD_TIME_FORMAT(time,'EEE','JST') AS dow ,
   TD_TIME_FORMAT(time,'a','JST') AS ampm ,
   MIN(time) OVER (PARTITION BY session_id) AS session_start_time ,
   MAX(time) OVER (PARTITION BY session_id) AS session_end_time ,
