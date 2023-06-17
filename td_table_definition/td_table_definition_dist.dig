@@ -1,0 +1,31 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params.yml'
+
++dist:
+  td>: sql/dist.sql
+  create_table: td_table_definition
+
++drop_tables:
+  td_ddl>:
+  drop_tables: 
+    - "tmp_information_schema"
+    - "tmp_table_definition_sample_common"
+    - "tmp_table_definition_sample_specific"
+
++if_output:
+  if>: false #true or false
+  _do:
+    #Googleスプレッドシートへの出力サンプル
+    +to_google_sheets:
+      td_for_each>: config/output.sql
+      _do:
+        +dist_table_info:
+          td>: sql/output.sql
+          result_connection: YOUR_GOOGLE_SHEETS_CONNECTER_NAME
+          result_settings:
+            spreadsheet_folder: YOUR_GOOGLE_DRIVE_FOLDER_KEY
+            spreadsheet_title: "TreasureData_テーブル定義書_${td.each.database_name}"
+            sheet_title: "${td.each.table_name}"
+            mode: truncate
