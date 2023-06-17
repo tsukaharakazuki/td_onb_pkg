@@ -1,0 +1,25 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  daily>: 03:00:00
+
+_export:
+  !include : 'config/params.yml'
+
++search_information_schema:
+  td>: sql/search_information_schema.sql
+  create_table: tmp_information_schema
+
++main:
+  _parallel: true
+  +proc_common:
+    require>: td_table_definition_common
+    project_name: td_table_definition
+
+  +proc_specific:
+    require>: td_table_definition_specific
+    project_name: td_table_definition
+
++proc_dist:
+  require>: td_table_definition_dist
+  project_name: td_table_definition
