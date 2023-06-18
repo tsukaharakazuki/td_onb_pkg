@@ -1,0 +1,20 @@
+---
+set:
+  sample:
+    name: sample
+    db: database
+    tbl: table
+    id: user_id
+    where_condition: 
+      #- user_id <> 'undefined'
+    val: td_path
+    param:
+      base_date: ${session_date} # 基準日。
+      interval: 90 # 学習データに利用するログの期間
+      at_least: 1 # 学習データに利用する最低LOG数
+      n_cluster: 10 # クラスタ数を指定
+    tables:
+      train_dataset: train_ds
+      weights: weights
+      pred: pred
+      history: history

@@ -1,0 +1,57 @@
+timezone: Asia/Tokyo
+
+# schedule:
+#   daily>: 01:00:00
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: td_lda
+    endpoint: api.treasuredata.com
+
++for_each_proc:
+  for_each>:
+    params: ${Object.keys(set)}
+  _do:
+    +init: # テーブルの初期化
+      for_each>:
+        table: 
+          - 'train_ds_${set[params].name}'
+          - 'weights_${set[params].name}'
+          - 'pred_${set[params].name}'
+          - 'history_${set[params].name}'
+      _parallel: true
+      _do:
+        +init:
+          +create_if_not_exists:
+            td>:
+            query: |
+              create table if not exists ${table} as select 1 as time with NO DATA
+      
+          +delete_if_records_exists:
+            td>:
+            query: delete from ${table} where time = ${session_unixtime}
+
+    +store_history: # パラメータの保存
+      td>:
+      query: |
+        insert into history_${set[params].name}
+        select ${session_unixtime} as time, '${set[params].param}' as params
+
+    +create_training_dataset: # 学習データの作成
+      td>: sql/create_training_dataset.sql
+      insert_into: train_ds_${set[params].name}
+
+    +build: # モデルの作成
+      py>: pyscript.lda.main
+      n_cluster: ${set[params].param.n_cluster}
+      source_table: train_ds_${set[params].name}
+      dest_weight_table: weights_${set[params].name}
+      dest_pred_table: pred_${set[params].name}
+      _env:
+        TD_API_KEY: ${secret:td.apikey}
+        TD_ENDPOINT: ${td.endpoint}
+        DATABASE: ${td.database}
+        SESSION_UNIXTIME: ${session_unixtime}
+      docker:
+        image: "digdag/digdag-python:3.9"
