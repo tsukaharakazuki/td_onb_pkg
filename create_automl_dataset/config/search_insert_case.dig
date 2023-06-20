@@ -1,0 +1,11 @@
++function_create_case:
+  td>:
+  query: |
+    SELECT
+      ARRAY_JOIN(
+        ARRAY_AGG('MAX(CASE WHEN key = '''||key||''' THEN value END) AS ${set.output}_'||col)
+      ,',')
+      AS set_case
+    FROM
+      tmp_feature_pivot_case
+  store_last_results: true

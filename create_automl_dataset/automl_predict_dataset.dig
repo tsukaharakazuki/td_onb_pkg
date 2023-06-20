@@ -1,0 +1,166 @@
+_export:
+  !include : 'config/params_predict.yml'
+
++for_each_features:
+  for_each>:
+    params: ${Object.keys(set)}
+  _do:
+    +empty_features:
+      td_ddl>:
+      empty_tables: 
+        - "tmp_automl_dataset_predict_${set[params].dataset_name}"
+
+    +features:
+      _parallel: true
+      +attribute:
+        if>: ${(Object.prototype.toString.call(set[params].attribute) === '[object Array]')}
+        _do:
+          for_each>:
+            set: ${set[params].attribute}
+          _do:
+            +proc:
+              td>: sql/attribute.sql
+              insert_into: tmp_automl_dataset_predict_${set[params].dataset_name}
+              engine: presto
+
+      +feature_pivot:
+        if>: ${(Object.prototype.toString.call(set[params].feature_pivot) === '[object Array]')}
+        _do:
+          for_each>:
+            set: ${set[params].feature_pivot}
+          _do:
+            +empty_tbl:
+              td_ddl>:
+              empty_tables: 
+                - "tmp_feature_pivot_case"
+
+            +insert_case:
+              for_each>:
+                val: ${set.config}
+              _do:
+                td>: sql/insert_case.sql
+                insert_into: tmp_feature_pivot_case
+
+            +main:
+              !include : config/search_insert_case.dig
+              +proc:
+                td>: sql/feature_pivot.sql
+                insert_into: tmp_automl_dataset_predict_${set[params].dataset_name}
+                engine: presto
+
+            +drop_tbl:
+              td_ddl>:
+              drop_tables: 
+                - "tmp_feature_pivot_case"
+
+      +feature_top_value:
+        if>: ${(Object.prototype.toString.call(set[params].feature_top_value) === '[object Array]')}
+        _do:
+          for_each>:
+            set: ${set[params].feature_top_value}
+          _do:
+            +empty_tbl:
+              td_ddl>:
+              empty_tables: 
+                - "tmp_feature_top_value"
+
+            +insert_rank:
+              loop>: ${set.rank}
+              _do:
+                td>: sql/insert_rank.sql
+                insert_into: tmp_feature_top_value
+
+            +main:
+              !include : config/search_insert_rank.dig
+              +proc:
+                td>: sql/feature_top_value.sql
+                insert_into: tmp_automl_dataset_predict_${set[params].dataset_name}
+                engine: presto
+
+            +drop_tbl:
+              td_ddl>:
+              drop_tables: 
+                - "tmp_feature_top_value"
+
+      +feature_maxbyn:
+        if>: ${(Object.prototype.toString.call(set[params].feature_maxbyn) === '[object Array]')}
+        _do:
+          for_each>:
+            set: ${set[params].feature_maxbyn}
+          _do:
+            +proc:
+              td>: sql/feature_maxbyn.sql
+              insert_into: tmp_automl_dataset_predict_${set[params].dataset_name}
+              engine: presto
+
+#      +feature_col1:
+#        if>: ${(Object.prototype.toString.call(set[params].feature_col1) === '[object Array]')}
+#        _do:
+#          for_each>:
+#            set: ${set[params].feature_col1}
+#          _do:
+#            +proc:
+#              td>: sql/feature_col1.sql
+#              insert_into: tmp_automl_dataset_predict_${set[params].dataset_name}
+#              engine: presto
+#
+#      +feature_col2:
+#        if>: ${(Object.prototype.toString.call(set[params].feature_col2) === '[object Array]')}
+#        _do:
+#          for_each>:
+#            set: ${set[params].feature_col2}
+#          _do:
+#            +proc:
+#              td>: sql/feature_col2.sql
+#              insert_into: tmp_automl_dataset_predict_${set[params].dataset_name}
+#              engine: presto
+#
+#      +feature_col3:
+#        if>: ${(Object.prototype.toString.call(set[params].feature_col3) === '[object Array]')}
+#        _do:
+#          for_each>:
+#            set: ${set[params].feature_col3}
+#          _do:
+#            +proc:
+#              td>: sql/feature_col3.sql
+#              insert_into: tmp_automl_dataset_predict_${set[params].dataset_name}
+#              engine: presto
+#
+#      +feature_col4:
+#        if>: ${(Object.prototype.toString.call(set[params].feature_col4) === '[object Array]')}
+#        _do:
+#          for_each>:
+#            set: ${set[params].feature_col4}
+#          _do:
+#            +proc:
+#              td>: sql/feature_col4.sql
+#              insert_into: tmp_automl_dataset_predict_${set[params].dataset_name}
+#              engine: presto
+#
+#      +feature_proportion:
+#        if>: ${(Object.prototype.toString.call(set[params].feature_proportion) === '[object Array]')}
+#        _do:
+#          for_each>:
+#            set: ${set[params].feature_proportion}
+#          _do:
+#            +proc:
+#              td>: sql/feature_proportion.sql
+#              insert_into: tmp_automl_dataset_predict_${set[params].dataset_name}
+#              engine: presto
+
+    +search_query:
+      _export:
+        search_tbl: tmp_automl_dataset_predict_${set[params].dataset_name}
+      td>: sql/search_agg_sql.sql
+      store_last_results: true
+
+    +agg_dataset:
+      td>:
+        data: |
+          ${td.last_results.sql_contents}
+      create_table: automl_dataset_predict_${set[params].dataset_name}  
+
+    +drop_tmp_tbl:
+      td_ddl>:
+      drop_tables: 
+        - "tmp_automl_dataset_predict_${set[params].dataset_name}"

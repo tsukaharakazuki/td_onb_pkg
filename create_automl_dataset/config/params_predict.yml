@@ -1,0 +1,208 @@
+set:
+  dataset1:
+    dataset_name: sample
+    feature_time_range: TD_INTERVAL(time, '-30d', 'JST')
+    attribute:
+      - colmuns: MAX_BY(gender,time)
+        null_check_col: gender
+        output: gender
+        id: td_cookie
+        db: DATABASE_NAME
+        tbl: TABLE_NAME
+        where_condition: 
+          - TD_INTERVAL(time,'-30d','JST')
+        insert_groupby: 
+          - 1
+      - colmuns: MAX_BY(usertype,time)
+        null_check_col: usertype
+        output: usertype
+        id: td_cookie
+        db: DATABASE_NAME
+        tbl: TABLE_NAME
+        where_condition: 
+          - TD_INTERVAL(time,'-30d','JST')
+        insert_groupby: 
+          - 1
+      - colmuns: SUM(price)
+        null_check_col: price
+        output: purchase_ltv
+        id: td_cookie
+        db: DATABASE_NAME
+        tbl: TABLE_NAME
+        where_condition: 
+          - TD_INTERVAL(time,'-30d','JST')
+        insert_groupby: 
+          - 1
+    feature_pivot:
+      - colmuns: TD_TIME_FORMAT(time,'HH','JST')
+        val: COUNT(*)
+        null_check_col: time
+        output: access_time
+        id: td_cookie
+        db: DATABASE_NAME
+        tbl: TABLE_NAME
+        where_condition: 
+          - TD_INTERVAL(time,'-30d','JST')
+        insert_groupby: 
+          - 1,2
+        config:
+          - key: 00
+            col: 00
+          - key: 01
+            col: 01
+          - key: 02
+            col: 02
+          - key: 03
+            col: 03
+          - key: 04
+            col: 04
+          - key: 05
+            col: 05
+          - key: 06
+            col: 06
+          - key: 07
+            col: 07
+          - key: 08
+            col: 08
+          - key: 09
+            col: 09
+          - key: 10
+            col: 10
+          - key: 11
+            col: 11
+          - key: 12
+            col: 12
+          - key: 13
+            col: 13
+          - key: 14
+            col: 14
+          - key: 15
+            col: 15
+          - key: 16
+            col: 16
+          - key: 17
+            col: 17
+          - key: 18
+            col: 18
+          - key: 19
+            col: 19
+          - key: 20
+            col: 20
+          - key: 21
+            col: 21
+          - key: 22
+            col: 22
+          - key: 23
+            col: 23
+      - colmuns: td_ref_host
+        val: COUNT(*)
+        null_check_col: td_ref_host
+        output: td_ref
+        id: td_cookie
+        db: DATABASE_NAME
+        tbl: TABLE_NAME
+        where_condition: 
+          - TD_INTERVAL(time,'-30d','JST')
+        insert_groupby: 
+          - 1,2
+        config:
+          - key: www.aaa.com
+            col: aaa
+          - key: www.bbb.com
+            col: bbb
+          - key: ccc.jp
+            col: ccc
+    feature_top_value:
+      - colmuns: td_path
+        val: COUNT(*)
+        rank: 20
+        null_check_col: td_path
+        output: td_path
+        id: td_cookie
+        db: DATABASE_NAME
+        tbl: TABLE_NAME
+        where_condition: 
+          - TD_INTERVAL(time,'-30d','JST')
+        insert_groupby: 
+          - 1,2
+    feature_maxbyn:
+      - colmuns: td_os
+        null_check_col: td_os
+        output: td_os
+        id: td_cookie
+        db: DATABASE_NAME
+        tbl: TABLE_NAME
+        where_condition: 
+          - TD_INTERVAL(time,'-30d','JST')
+        insert_groupby: 
+          - 1,2
+
+#使用要望があれば        
+#    # 説明変数 : リーセンシーや来訪回数など1カラム内に複数の値が入る
+#    feature_col1:
+#      - colmuns: gender
+#        null_check_col: gender
+#        output: gender
+#        id: td_cookie
+#        db: weblog_db
+#        tbl: weblog_tbl
+#        where_condition: 
+#          - td_path <> '/ordercomplete'
+#        insert_groupby: 
+#          #- 1
+#    
+#    # 説明変数 : 何回以上・何回以下などでカラムを分けて評価
+#    feature_col2:
+#      - colmuns: gender
+#        output: gender
+#        id: td_cookie
+#        db: weblog_db
+#        tbl: weblog_tbl
+#        where_condition: 
+#          - td_path <> '/ordercomplete'
+#        name1: 1 
+#        conditions1: "< 50"
+#        name2: 2
+#        conditions2: ">= 50"
+#    feature_col3:
+#      - colmuns: gender
+#        output: gender
+#        id: td_cookie
+#        db: weblog_db
+#        tbl: weblog_tbl
+#        where_condition: 
+#          - td_path <> '/ordercomplete'
+#        name1: 1 
+#        conditions1: "< 2"
+#        name2: 2
+#        conditions2: "BETWEEN 2 and 30"
+#        name3: 3
+#        conditions3: "> 30"
+#    feature_col4:
+#      - colmuns: gender
+#        output: gender
+#        id: td_cookie
+#        db: weblog_db
+#        tbl: weblog_tbl
+#        where_condition: 
+#          - td_path <> '/ordercomplete'
+#        name1: 1 
+#        conditions1: "< 2"
+#        name2: 2
+#        conditions2: "BETWEEN 2 and 30"
+#        name3: 3
+#        conditions3: "BETWEEN 31 and 50"
+#        name4: 4
+#        conditions4: "> 50"
+#
+#    # 説明変数 : 各値の出現割合をJSONで出力
+#    feature_proportion:
+#      - colmuns: td_path
+#        null_check_col: td_path
+#        map_join_key: a.td_path
+#        output: td_path
+#        id: td_cookie
+#        db: weblog_db
+#        tbl: weblog_tbl
+#        where_condition: 
+#          - td_path <> '/ordercomplete'

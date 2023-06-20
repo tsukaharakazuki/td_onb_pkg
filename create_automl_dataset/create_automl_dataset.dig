@@ -1,0 +1,15 @@
+timezone: Asia/Tokyo
+
+#schedule:
+#  daily>: 02:50:00
+
+_export:
+  !include : 'config/params_train.yml'
+  td:
+    database: td_auto_ml
+
++call_ml_train:
+  call>: automl_train_dataset.dig
+
++call_ml_predict:
+  call>: automl_predict_dataset.dig

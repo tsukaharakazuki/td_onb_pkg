@@ -1,0 +1,11 @@
++function_create_rank:
+  td>:
+  query: |
+    SELECT
+      ARRAY_JOIN(
+        ARRAY_AGG('MAX(CASE WHEN key = '''||key||''' THEN value END) AS ${set.output}_'||col)
+      ,',')
+      AS set_rank
+    FROM
+      tmp_feature_top_value
+  store_last_results: true
