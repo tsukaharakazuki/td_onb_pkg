@@ -14,6 +14,12 @@ WITH t1 AS (
     utm_source ,
     utm_term ,
     CASE
+      WHEN utm_source is not NULL AND utm_medium is not NULL
+        THEN CONCAT(utm_source,'/',utm_medium)
+      WHEN utm_source is not NULL AND utm_medium is NULL
+        THEN CONCAT(utm_source,'/(none)')
+      WHEN utm_source is NULL AND utm_medium is not NULL
+        THEN CONCAT('(none)/',utm_medium)
       WHEN td_ref_host = '' OR td_ref_host = td_host OR td_ref_host is NULL
         THEN '(direct)/(none)'
       WHEN td_ref_host RLIKE '(mail)\.(google|yahoo|nifty|excite|ocn|odn|jimdo)\.'
