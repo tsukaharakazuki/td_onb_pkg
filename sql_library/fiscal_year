@@ -1,0 +1,28 @@
+WITH t0 AS (
+  SELECT
+    CASE
+      WHEN CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(),'MM','JST') AS bigint) BETWEEN 4 and 12 
+        THEN CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(),'yyyy','JST') AS BIGINT)
+      WHEN CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(),'MM','JST') AS bigint) BETWEEN 1 and 3 
+        THEN CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(),'yyyy','JST') AS BIGINT) - 1 
+    END this_fiscal_year ,
+    CASE
+      WHEN CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(),'MM','JST') AS bigint) BETWEEN 4 and 12 
+        THEN CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(),'yyyy','JST') AS BIGINT) - 1 
+      WHEN CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(),'MM','JST') AS bigint) BETWEEN 1 and 3 
+        THEN CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(),'yyyy','JST') AS BIGINT) - 2
+    END last_fiscal_year ,
+    CASE
+      WHEN CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(),'MM','JST') AS bigint) BETWEEN 4 and 12 
+        THEN CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(),'yyyy','JST') AS BIGINT) + 1
+      WHEN CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(),'MM','JST') AS bigint) BETWEEN 1 and 3 
+        THEN CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(),'yyyy','JST') AS BIGINT)
+    END next_fiscal_year 
+)
+
+SELECT
+  CAST(this_fiscal_year AS VARCHAR) AS this_fiscal_year ,
+  CAST(last_fiscal_year AS VARCHAR) AS last_fiscal_year ,
+  CAST(next_fiscal_year AS VARCHAR) AS next_fiscal_year 
+FROM
+  t0
