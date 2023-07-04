@@ -1,0 +1,28 @@
+---
+set:
+  sample:
+    name: sample
+    main:
+      - val: td_item
+        db: l1_web
+        tbl: agg_weblog
+        id: user_id
+        where_condition: 
+          - td_item is not NULL
+    sub:
+      - val: td_source
+        db: l1_web
+        tbl: agg_weblog
+        id: user_id
+        where_condition: 
+          - td_item_variant is not NULL
+    param:
+      base_date: ${session_date} # 基準日。
+      interval: 90 # 学習データに利用するログの期間
+      at_least: 1 # 学習データに利用する最低LOG数
+      n_cluster: 10 # クラスタ数を指定
+    tables:
+      train_dataset: train_ds
+      weights: weights
+      pred: pred
+      history: history
