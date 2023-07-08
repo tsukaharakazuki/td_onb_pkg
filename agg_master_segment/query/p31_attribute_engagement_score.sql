@@ -13,6 +13,7 @@ WITH base AS (
 
 SELECT
   * ,
+  recency * -1 AS recency_pn ,
   ntile(10) OVER (ORDER BY engagement_score DESC) AS decile
 FROM (
   SELECT
