@@ -41,7 +41,7 @@ WHERE
 	TD_TIME_RANGE(
 	    time ,
 	    NULL ,
-	    TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd HH:00:00', 'JST') ,
+	    TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd 00:00:00', 'JST') ,
 	    'JST'
 	) AND 
 	TD_PARSE_AGENT(td_user_agent) ['category'] <> 'crawler' AND
