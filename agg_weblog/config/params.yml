@@ -17,7 +17,7 @@ media:
       regular:
         #- IF(regexp_like(a,'aa'),1,0) AS col1
     # Click設定
-    check_click: true
+    check_click: false
     click_db: YOUR_CLICK_LOG_DB
     click_tbl: YOUR_CLICK_LOG_TB
     click_col: click_url
@@ -32,7 +32,7 @@ media:
       first: 
       regular:
     # 読了設定
-    check_read: true
+    check_read: false
     read_db: YOUR_READ_LOG_DB
     read_tbl: YOUR_READ_LOG_TB
     read_col: scroll_depth_threshold
