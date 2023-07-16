@@ -96,6 +96,12 @@ _export:
                 td>: query/p23_master_table_app.sql
                 insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
 
+    +comp_recovery_msttbl_user_id:
+      if>: ${media[params].comp_user_id}
+      _do:
+        td>: comp/recovery_user_id.sql
+        insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+
     +create_engagement_score:
       !include : config/engagement_score_date.dig
       +engagement_score:
