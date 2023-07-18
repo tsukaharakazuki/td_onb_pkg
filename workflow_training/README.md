@@ -165,7 +165,7 @@ ex.
 `${moment().format('dddd') === dow}`  
 変数`dow`で設定した曜日と実行日が同じだった場合`true`
 
-`${set[params].dow.indexOf(moment().format('dddd')) > -1} `
+`${set[params].dow.indexOf(moment().format('dddd')) > -1} `  
 変数`dow`で設定した曜日と実行日が部分一致だった場合`true`
 
 `${moment().format('YYYY-MM-DD') === sche_date}`  
