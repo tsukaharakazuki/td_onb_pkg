@@ -18,6 +18,7 @@ WITH t0 AS (
 SELECT
   IF(b.user_id is not NULL, CAST(b.user_id AS VARCHAR), a.${media[params].key_id_web}) AS td_ms_id ,
   IF(b.user_id is not NULL, 'user_id', 'cookie') AS td_ms_id_type ,
+  b.user_id AS user_id_complement ,
   a.*
 FROM
   t0 a
