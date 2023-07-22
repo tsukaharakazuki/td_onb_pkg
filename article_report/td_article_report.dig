@@ -100,39 +100,39 @@ _error:
   
   +proc_basic:
     require>: td_article_report_basic
-    project_name: td_article_report
+    project_name: article_report
 
   +proc_action:
     require>: td_article_report_action
-    project_name: td_article_report
+    project_name: article_report
 
   +proc_cdp:
     require>: td_article_report_cdp
-    project_name: td_article_report
+    project_name: article_report
 
   +check_user_data:
     if>: ${check_user_data}
     _do:
       +proc_user_data:
         require>: td_article_report_user_data
-        project_name: td_article_report
+        project_name: article_report
 
   +proc_read_through_rate:
     require>: td_article_report_rtr
-    project_name: td_article_report
+    project_name: article_report
 
 +proc_click:
   require>: td_article_report_click
-  project_name: td_article_report
+  project_name: article_report
 
 +proc_result_datatank:
   if>: ${result_type == 'datatank'}
   _do:
     require>: td_article_report_result_datatank
-    project_name: td_article_report
+    project_name: article_report
 
 +proc_result_googlesheet:
   if>: ${result_type == 'googlesheet'}
   _do:
     require>: td_article_report_result_googlesheet
-    project_name: td_article_report
+    project_name: article_report
