@@ -28,6 +28,12 @@ set:
 ftr:
   feature:
     feature_time_range: TD_INTERVAL(time, '-60d', 'JST')
+    # 会員情報など1ユーザー1レコードしか持っていないデータ
+    feature_attribute:
+      - colmuns: gender
+        id: td_cookie
+        db: attribute_db
+        tbl: attribute_tbl
     # 閲覧コンテンツ、リファラなどIDが複数の値を持つカラムの割合計算
     feature_categorical:
       - colmuns: td_path
