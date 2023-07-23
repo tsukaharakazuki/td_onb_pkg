@@ -24,6 +24,17 @@ _export:
 
     +features:
       _parallel: true
+      +insert_attribute:
+        if>: ${(Object.prototype.toString.call(ftr[params].feature_attribute) === '[object Array]')}
+        _do:
+          for_each>:
+            ftr: ${ftr[params].feature_attribute}
+          _do:
+            +proc:
+              td>: sql/feature_attribute.sql
+              insert_into: features
+              engine: presto
+
       +insert_categorical:
         if>: ${(Object.prototype.toString.call(ftr[params].feature_categorical) === '[object Array]')}
         _do:
