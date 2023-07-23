@@ -58,7 +58,7 @@ ftr:
         db: weblog_db
         tbl: weblog_tbl
         negative_condition: td_path <> '/ordercomplete'
-      - colmuns: prefectures
+      - colmuns: ip_prefectures
         id: td_cookie
         db: weblog_db
         tbl: weblog_tbl
