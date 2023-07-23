@@ -98,6 +98,7 @@ SELECT
   utm_medium ,
   utm_source ,
   utm_term ,
+  source_medium AS td_source_medium ,
   SPLIT(source_medium, '/')[0] AS td_source ,
   SPLIT(source_medium, '/')[1] AS td_medium ,
   td_referrer ,
