@@ -29,7 +29,7 @@ _export:
             - "map_cookie_uid_${media[params].media_name}"
           database: ${media[params].output_db}
 
-        +check_weblog:
+        +check_weblog_comp:
           if>: ${media[params].check_web}
           _do:
             +map_cookie_userid_web:
@@ -40,9 +40,9 @@ _export:
               !include : config/set_colmuns_web.dig
               +weblog:
                 td>: comp/reg/p11_behavior_weblog.sql
-                insert_into: ${media[params].output_db}.ms_behavior_${media[params].media_name}
+                insert_into: ${media[params].output_db}.ms_behavior_comp_${media[params].media_name}
 
-        +check_applog:
+        +check_applog_comp:
           if>: ${media[params].check_app}
           _do:
             +map_cookie_userid_app:
@@ -52,8 +52,25 @@ _export:
             +behavior_applog:
               +applog:
                 td>: comp/reg/p12_behavior_applog.sql
+                insert_into: ${media[params].output_db}.ms_behavior_comp_${media[params].media_name}
+
+        +check_weblog:
+          if>: ${media[params].check_web}
+          _do:
+            +behavior_weblog:
+              !include : config/set_colmuns_web.dig
+              +weblog:
+                td>: query/p11_behavior_weblog.sql
                 insert_into: ${media[params].output_db}.ms_behavior_${media[params].media_name}
-                
+
+        +check_applog:
+          if>: ${media[params].check_app}
+          _do:
+            +behavior_applog:
+              +applog:
+                td>: query/p12_behavior_applog.sql
+                insert_into: ${media[params].output_db}.ms_behavior_${media[params].media_name}
+
       _else_do:
         +check_weblog:
           if>: ${media[params].check_web}
@@ -73,34 +90,67 @@ _export:
                 insert_into: ${media[params].output_db}.ms_behavior_${media[params].media_name}
 
     +proc_master_table:
-      +check_weblog:
-        if>: ${media[params].check_web}
+      +comp_user_id:
+        if>: ${media[params].comp_user_id}
         _do:
-          +check_applog:
-            if>: ${media[params].check_app}
+          +check_weblog:
+            _export:
+              base_tbl: ms_behavior_comp_${media[params].media_name}
+            if>: ${media[params].check_web}
             _do:
-              +create_master_table_webapp:
-                td>: query/p21_master_table_webapp.sql
-                insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
-            
+              +check_applog:
+                if>: ${media[params].check_app}
+                _do:
+                  +create_master_table_webapp:
+                    td>: query/p21_master_table_webapp.sql
+                    insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+                
+                _else_do:
+                  +create_master_table_web:
+                    td>: query/p22_master_table_web.sql
+                    insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+
             _else_do:
-              +create_master_table_web:
-                td>: query/p22_master_table_web.sql
-                insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+              +check_applog:
+                if>: ${media[params].check_app}
+                _do:
+                  +create_master_table_app:
+                    td>: query/p23_master_table_app.sql
+                    insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
 
-        _else_do:
-          +check_applog:
-            if>: ${media[params].check_app}
+          +comp_recovery_msttbl_user_id:
+            td>: comp/recovery_user_id.sql
+            insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+
+          +comp_mst_tbl_cookie:
+            td>: comp/mst_tbl_cookie.sql
+            create_table: ${media[params].output_db}.ms_master_table_cookie_${media[params].media_name}
+
+        _else_do: 
+          +check_weblog:
+            _export:
+              base_tbl: ms_behavior_${media[params].media_name}
+            if>: ${media[params].check_web}
             _do:
-              +create_master_table_app:
-                td>: query/p23_master_table_app.sql
-                insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+              +check_applog:
+                if>: ${media[params].check_app}
+                _do:
+                  +create_master_table_webapp:
+                    td>: query/p21_master_table_webapp.sql
+                    insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+                
+                _else_do:
+                  +create_master_table_web:
+                    td>: query/p22_master_table_web.sql
+                    insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
 
-    +comp_recovery_msttbl_user_id:
-      if>: ${media[params].comp_user_id}
-      _do:
-        td>: comp/recovery_user_id.sql
-        insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+            _else_do:
+              +check_applog:
+                if>: ${media[params].check_app}
+                _do:
+                  +create_master_table_app:
+                    td>: query/p23_master_table_app.sql
+                    insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
 
     +create_engagement_score:
       !include : config/engagement_score_date.dig
