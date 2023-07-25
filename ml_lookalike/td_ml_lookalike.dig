@@ -139,8 +139,11 @@ _export:
         - "ms_behavior_tdml"
 
     +create_ms_pred_list:
-      td_for_each>: sql/inquiry_pred_data.sql
+      for_each>:
+        params: ${Object.keys(cdp)}
       _do:
-        +proc:
-          td>: sql/create_ml_list.sql
-          insert_into: ms_behavior_tdml
+        td_for_each>: sql/inquiry_pred_data.sql
+        _do:
+          +proc:
+            td>: sql/create_ml_list.sql
+            insert_into: ms_behavior_tdml
