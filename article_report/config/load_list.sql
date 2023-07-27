@@ -1,5 +1,9 @@
 SELECT
   article_id ,
+  REGEXP_REPLACE(
+    article_id,
+    '\.|\/|\@|\#|\$|\%|\^|\&|\*|\(|\)|\-|\+|\=|\[|\]|\{|\}|,|:|;',
+  '_') AS tbl_name ,
   article_key ,
   target_host ,
   start_date ,
