@@ -87,7 +87,7 @@ _error:
         _do:
           +insert_dist_tbl:
             td>: queries/dist_push_googlesheet.sql
-            insert_into: dist_${td.each.article_id}_${td.each.article_num}
+            insert_into: dist_${td.each.tbl_name}_${td.each.article_num}
 
       +each_process_articles:
         for_each>:
@@ -96,7 +96,7 @@ _error:
           !include : config/set_colmuns_result_googlesheet.dig
           +to_google_sheets:
             td>: 
-            query: SELECT ${td.last_results.set_columns} FROM dist_${td.each.article_id}_${td.each.article_num} 
+            query: SELECT ${td.last_results.set_columns} FROM dist_${td.each.tbl_name}_${td.each.article_num} 
             result_connection: ${result_google[params].connecter}
             result_settings:
               spreadsheet_folder: ${result_google[params].folder}
