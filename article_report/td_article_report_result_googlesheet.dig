@@ -57,7 +57,7 @@ _error:
       +create_dist_table:
         td_ddl>:
         empty_tables:
-            - "dist_${td.each.article_id}_${td.each.article_num}"
+            - "dist_${td.each.tbl_name}_${td.each.article_num}"
 
       +for_each_tbl:
         for_each>:
