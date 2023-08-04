@@ -14,12 +14,12 @@ _export:
   _parallel: true
   +proc_common:
     require>: td_table_definition_common
-    project_name: td_table_definition
+    project_name: table_definition
 
   +proc_specific:
     require>: td_table_definition_specific
-    project_name: td_table_definition
+    project_name: table_definition
 
 +proc_dist:
   require>: td_table_definition_dist
-  project_name: td_table_definition
+  project_name: table_definition
