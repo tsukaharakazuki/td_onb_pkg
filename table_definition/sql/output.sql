@@ -1,7 +1,7 @@
 SELECT
   database_name AS "データベース名" ,
   table_name AS "テーブル名"  ,
-  ordinal_position AS "カラム順"  
+  ordinal_position AS "カラム順" ,
   column_name AS "カラム名"  ,
   data_type AS "データ型"  ,
   sample AS "サンプルデータ"  
