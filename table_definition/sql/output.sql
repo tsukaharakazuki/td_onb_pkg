@@ -7,7 +7,7 @@ SELECT
   sample AS "サンプルデータ"  
   --, '' AS  "説明"  
 FROM
-  table_difinition
+  td_table_definition
 WHERE
   database_name = '${td.each.database_name}'
   AND table_name = '${td.each.table_name}'
