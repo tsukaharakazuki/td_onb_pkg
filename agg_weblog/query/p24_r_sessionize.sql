@@ -8,11 +8,7 @@ WITH t1 AS (
     td_client_id ,
     td_global_id ,
     td_ssc_id ,
-    IF(
-    	user_id is NULL ,
-    	MAX(user_id) OVER (PARTITION BY session_id) ,
-    	user_id 
-  	) AS user_id ,
+    user_id ,
     utm_campaign ,
     utm_medium ,
     utm_source ,
@@ -88,7 +84,11 @@ SELECT
   td_client_id ,
   td_global_id ,
   td_ssc_id ,
-  user_id ,
+  IF(
+    	user_id is NULL ,
+    	MAX(user_id) OVER (PARTITION BY session_id) ,
+    	user_id 
+  ) AS user_id ,
   utm_campaign ,
   utm_medium ,
   utm_source ,
