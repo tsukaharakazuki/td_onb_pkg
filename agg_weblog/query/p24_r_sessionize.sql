@@ -82,7 +82,7 @@ SELECT
   MAX(time) OVER (PARTITION BY session_id) AS session_end_time ,
   session_id ,
   row_number() over (partition by session_id order by time ASC) AS session_num ,
-  LEAD(time) OVER (PARTITION BY session_id,td_path order by time ASC) - MIN(time) OVER (PARTITION BY session_id,td_path order by time ASC) AS browsing_sec ,
+  LEAD(time) OVER (PARTITION BY session_id order by time ASC) - MIN(time) OVER (PARTITION BY session_id,td_path order by time ASC) AS browsing_sec ,
   cookie AS td_cookie ,
   cookie_type AS td_cookie_type ,
   td_client_id ,
