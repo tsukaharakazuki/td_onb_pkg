@@ -94,11 +94,11 @@ SELECT
   td_client_id ,
   td_global_id ,
   td_ssc_id ,
-  IF(
-    	user_id is NULL ,
+  user_id ,
+  IF( user_id is NULL ,
     	MAX(user_id) OVER (PARTITION BY session_id) ,
     	user_id 
-  ) AS user_id ,
+  ) AS user_id_comp ,
   utm_campaign ,
   utm_medium ,
   utm_source ,
