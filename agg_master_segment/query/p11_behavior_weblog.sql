@@ -1,6 +1,6 @@
 SELECT
   'web' AS behavior_type ,
-  ${media[params].key_id_web} AS td_ms_id ,
+  IF(user_id_comp is not NULL, user_id_comp, ${media[params].key_id_web}) AS td_ms_id ,
   ${media[params].set_td_url_web} AS td_url ,
   td_url AS td_url_raw ,
   utm_campaign AS ms_utm_campaign ,
