@@ -2,6 +2,7 @@ SELECT
   *
 FROM (
   SELECT
+    last_infrow_unix AS time ,
     td_ms_id ,
     inflow_source_medium ,
     inflow_source ,
