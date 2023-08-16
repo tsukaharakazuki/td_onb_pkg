@@ -20,7 +20,7 @@ https://docs.treasuredata.com/display/public/PD/Sites+and+Endpoints
 ↓
 "type": "timestamp"
 ```
-
+![bf](https://github.com/tsukaharakazuki/td_onb_pkg/blob/main/audience-studio-time-filter/img/json_bf.png)
 ## 修正した構成ファイルのアップロード
 ```
 export audienceId=xxxxxxx
@@ -30,3 +30,6 @@ curl -X PUT -H "Content-Type: application/json" -H "Authorization: TD1 "$TD_API_
 ```
 * ハードコーディングしてコマンドを打つことも可能
 `curl -X PUT -H "Content-Type: application/json" -H "Authorization: TD1 "_TD_API_KEY_ --data @audience.json "https://_TD_ENDPOINT_/audiences/_audienceId_"`
+
+## 設定完了後のAudience Studio
+![filter](https://github.com/tsukaharakazuki/td_onb_pkg/blob/main/audience-studio-time-filter/img/filter.png)
