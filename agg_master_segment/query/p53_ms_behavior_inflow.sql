@@ -1,6 +1,6 @@
 SELECT
   * ,
-  '流入元ランク | '||inflow_source_medium||' ランク:'||CAST(rnk AS varchar)||' 回数:'||CAST(inflow AS varchar)
+  '流入元ランク | '||inflow_source_medium||' ランク:'||CAST(rnk AS varchar)||' 回数:'||CAST(inflow AS varchar) AS td_url
 FROM (
   SELECT
     last_infrow_unix AS time ,
