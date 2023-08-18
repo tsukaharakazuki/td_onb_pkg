@@ -12,6 +12,7 @@ WITH t0 AS (
 
 SELECT
   * ,
-  '最終アクセス | '||media_name||' '||last_access AS td_url
+  '最終アクセス | '||media_name||' '||last_access AS td_url ,
+  last_access_unix AS time
 FROM
   t0
