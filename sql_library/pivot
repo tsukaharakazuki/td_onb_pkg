@@ -1,0 +1,9 @@
+SELECT 
+  unique_col,
+  MAX(CASE WHEN key = 'c1' THEN value END) AS c1,
+  MAX(CASE WHEN key = 'c2' THEN value END) AS c2,
+  MAX(CASE WHEN key = 'c3' THEN value END) AS c3
+FROM 
+  database.table
+GROUP BY 
+  unique_col
