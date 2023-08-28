@@ -4,7 +4,7 @@ _export:
   td:
     database: td_jp_cs
 
-+media_process:
++process_bulkregular:
   _export:
     !include : 'config/params_br.yml'
   for_each>:
