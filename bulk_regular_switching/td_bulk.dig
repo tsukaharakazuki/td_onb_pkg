@@ -1,0 +1,25 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  td:
+    database: td_jp_cs
+
++bulk_regular_process:
+  _export:
+    !include : 'config/params_br.yml'
+  for_each>:
+    params: ${Object.keys(vals)}
+  _do:
+    +empty_tables:
+      td_ddl>:
+      empty_tables: 
+        - "${vals[params].output_tbl}"
+      database: ${vals[params].output_db}
+
+    +proc:
+      _export:
+        where: 
+      td>: query/bulk_regular_switching.sql
+      insert_into: ${vals[params].output_db}.${vals[params].output_tbl}
+      engine: hive # Only Hive works
+      engine_version: stable
