@@ -1,2 +1,0 @@
-# このWorkflowについて
-Audience Studioで、初回アクセス日や最終購入日など、cookie/user_id単位でGROUP BYした値を集計して設定したい場合などに、初回の全件処理と日々の差分更新で処理を分ける際に使用します。
