@@ -5,7 +5,7 @@ TreasureDataの初期構築において活用できるWorkflowパッケージで
   
 WorkflowファイルをTreasureData環境にインストールするためには、Treasure Data Toolbelt（CLI）の利用が必要です。以下からダウンロードしてインストールしてください。  
  - ドキュメント
- https://support.treasuredata.com/hc/en-us/articles/360000720048-Treasure-Data-Toolbelt-Command-line-Interface
+ [https://support.treasuredata.com/hc/en-us/articles/360000720048-Treasure-Data-Toolbelt-Command-line-Interface](https://docs.treasuredata.com/display/public/PD/TD+Toolbelt)
  
  - Toolbeltダウンロードリンク
  https://toolbelt.treasuredata.com/
