@@ -14,6 +14,6 @@
         td>:
         query: delete from ${media[params].output_db}.${val.dist} where TD_TIME_RANGE(time,NULL,'${moment(session_time).add(-365, 'days').format("YYYY-MM-DD")}','JST')
 
-  +insert:
-    td>: query/delete_and_insert.sql
-    insert_into: ${media[params].output_db}.${val.dist}
+      +insert:
+        td>: query/delete_and_insert.sql
+        insert_into: ${media[params].output_db}.${val.dist}
