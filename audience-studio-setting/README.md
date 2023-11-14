@@ -37,7 +37,7 @@ https://github.com/tsukaharakazuki/td_onb_pkg/tree/main/audience-studio-time-fil
 
 
 ## Attribute Data設定
-### Date Diffとった値カラムの作成
+### Date Diff値カラムの作成
 経過日数を取り扱いた日付などは、先にDiffを計算してLong型のカラムを作成しておくと、セグメントの設定が楽になります。
 *SAMPLE SQL
 ```
