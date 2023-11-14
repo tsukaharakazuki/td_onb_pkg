@@ -45,7 +45,7 @@ https://github.com/tsukaharakazuki/td_onb_pkg/tree/main/audience-studio-time-fil
 SELECT
   DATE_DIFF('DAY', CAST(DATE_FORMAT(DATE_PARSE(regist_date), '%Y-%m-%d'),'%Y-%m-%d') as DATE), CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd') as DATE)) AS regist_duration
 ```
-- SAMPLE OUTPUT
+- SAMPLE OUTPUT  
   
 | regist_date | regist_duration |
 ----|---- 
@@ -68,7 +68,7 @@ https://prestodb.io/docs/current/functions/datetime.html#mysql-date-functions
 SELECT
   DATE_DIFF('YEAR', CAST(DATE_FORMAT(DATE_PARSE(birth_day)), '%Y-%m-%d %H:%i:%s.%f'),'%Y-%m-%d') as DATE), CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd') as DATE)) AS age
 ```
-- SAMPLE OUTPUT
+- SAMPLE OUTPUT  
   
 | birth_day | age |
 ----|---- 
@@ -93,7 +93,7 @@ SELECT
   END onetime_flag ,
   DATE_DIFF('DAY', CAST(DATE_FORMAT(DATE_PARSE(last_order_date, '%Y-%m-%d'),'%Y-%m-%d') as DATE), CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd') as DATE)) AS duration_days
 ```
-- SAMPLE OUTPUT
+- SAMPLE OUTPUT  
   
 | regist_date | last_order_date | onetime_flag | duration_days |
 ----|----|----|----
@@ -113,7 +113,7 @@ SELECT
   TD_TIME_FORMAT(TD_TIME_PARSE(birth_day,'JST'),'MM') AS birth_month ,
   TD_TIME_FORMAT(TD_TIME_PARSE(birth_day,'JST'),'dd') AS birth_date 
 ```
-- SAMPLE OUTPUT
+- SAMPLE OUTPUT  
   
 | birth_day | birth_year | birth_month | birth_date |
 ----|----|----|----
@@ -135,7 +135,7 @@ SELECT
     ELSE NULL
   END birth_day_flag 
 ```
-- SAMPLE OUTPUT
+- SAMPLE OUTPUT  
   
 | birth_day | birth_day_flag |
 ----|----
@@ -158,7 +158,7 @@ SELECT
   LOWER(TO_HEX(SHA256(TO_UTF8(email)))) AS email_hash ,
   'JP' AS country_code
 ```
-- SAMPLE OUTPUT
+- SAMPLE OUTPUT  
   
 | phone | phone_remove0 | phone_remove0plus81 | phone_hash | phone_hash_remove0 | phone_hash_remove0plus81 | email | email_hash | country_code |
 ----|----|----|----|----|----|----|----|----
@@ -182,7 +182,7 @@ SELECT
   price ,
   '購買ログ 商品:'||IF(sku is NULL,'',sku)||' 金額:'||IF(price is NULL,'',price)  AS td_url
 ```
-- SAMPLE OUTPUT
+- SAMPLE OUTPUT  
   
 | sku | price | td_url |
 ----|----|----
