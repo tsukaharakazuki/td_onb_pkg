@@ -142,7 +142,7 @@ SELECT
 | 1986-11-11 | Today |
 
 
-### 電話番号やEMAIのアグリゲート
+### 電話番号やEMAILのアグリゲート
 LINEにセグメント連携する場合は`+818011112222`の形式でデータ連携する必要があるなど、プラットフォームにより特に電話番号は出力形式が異なります。事前に連携するプラットフォームの型に合わせて整形しておくことが必要です。
 
 - SAMPLE SQL
@@ -162,10 +162,10 @@ SELECT
   
 | phone | phone_remove0 | phone_remove0plus81 | phone_hash | phone_hash_remove0 | phone_hash_remove0plus81 | email | email_hash | country_code |
 ----|----|----|----|----|----|----|----|----
-| 08011112222 | 8011112222 | +818011112222 | AAAAAAAAAA | BBBBBBBBBB | CCCCCCCCCC | aaa@aaa.com | DDDDDDDDDD | country_code |
+| 08011112222 | 8011112222 | +818011112222 | AAAAAAAAAA | BBBBBBBBBB | CCCCCCCCCC | aaa@aaa.com | DDDDDDDDDD | JP |
 
 
-## Behavior
+## Behavior Data設定
 
 ### timeカラムにはアクセス日や注文日のUnixtimeを入れる
 td-js-sdkで取得しているWebアクセスログなどのtimeカラムにはデータが取得された値が入っていますが、購買データなど外部DBから取り込まれたデータについては取り込み日が入力されている場合が多く見られます。  
