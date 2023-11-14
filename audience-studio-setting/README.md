@@ -6,12 +6,12 @@
 `2023-01-01`のような形でデータが入っているカラムをUnixtimeに変換してください。  
 Audience Studioの選択時に、Time Filter形式で選択可能な設定が可能です。  
 
-*SAMPLE SQL
+- SAMPLE SQL
 ```
 SELECT
   TD_TIME_PURSE(order_date,'JST') AS unix_order_date
 ```
-*SAMPLE OUTPUT
+- SAMPLE OUTPUT
 | order_date | unix_order_date |
 ----|---- 
 | 1986-11-11 | 532018800 |
@@ -39,12 +39,12 @@ https://github.com/tsukaharakazuki/td_onb_pkg/tree/main/audience-studio-time-fil
 ## Attribute Data設定
 ### Date Diff値カラムの作成
 経過日数を取り扱いた日付などは、先にDiffを計算してLong型のカラムを作成しておくと、セグメントの設定が楽になります。
-*SAMPLE SQL
+- SAMPLE SQL
 ```
 SELECT
   DATE_DIFF('DAY', CAST(DATE_FORMAT(DATE_PARSE(regist_date), '%Y-%m-%d'),'%Y-%m-%d') as DATE), CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd') as DATE)) AS regist_duration
 ```
-*SAMPLE OUTPUT
+- SAMPLE OUTPUT
 | regist_date | regist_duration |
 ----|---- 
 | 1986-11-11 | 3 |
@@ -61,12 +61,12 @@ SELECT
 カラム内のDate型のフォーマットについてはこちらを参考に変更ください  
 https://prestodb.io/docs/current/functions/datetime.html#mysql-date-functions  
 
-*SAMPLE SQL
+- SAMPLE SQL
 ```
 SELECT
   DATE_DIFF('YEAR', CAST(DATE_FORMAT(DATE_PARSE(birth_day)), '%Y-%m-%d %H:%i:%s.%f'),'%Y-%m-%d') as DATE), CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd') as DATE)) AS age
 ```
-*SAMPLE OUTPUT
+- SAMPLE OUTPUT
 | birth_day | age |
 ----|---- 
 | 1986-11-11 00:00:00.000 | 37 |
@@ -75,7 +75,7 @@ SELECT
 ECでのデータ活用において、よく会員登録日と最終購入日カラムをユーザーごとに生成するところまでは処理できていますが、そこから一歩踏み込み、フラグ化し、経過日数とともにデータを持つことで、施策の幅が広がります。  
 F2転換施策をやりたいという要望は多くありますが、初回購入からの経過日数に応じて実施すべき施策は別であるべきだと考えます。  
 
-*SAMPLE SQL
+- SAMPLE SQL
 ```
 SELECT
   regist_date ,
@@ -90,7 +90,7 @@ SELECT
   END onetime_flag ,
   DATE_DIFF('DAY', CAST(DATE_FORMAT(DATE_PARSE(last_order_date, '%Y-%m-%d'),'%Y-%m-%d') as DATE), CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd') as DATE)) AS duration_days
 ```
-*SAMPLE OUTPUT
+- SAMPLE OUTPUT
 | regist_date | last_order_date | onetime_flag | duration_days |
 ----|----|----|----
 | 1986-11-11 | 1986-11-11 | 1 | 4 |
@@ -101,7 +101,7 @@ Date形式で入っているカラムを分解することで、特定日付の�
 Ex)11月誕生日のユーザーだけを抽出したい場合  
 `birth_month = 11`
 
-*SAMPLE SQL
+- SAMPLE SQL
 ```
 SELECT
   birth_day ,
@@ -109,7 +109,7 @@ SELECT
   TD_TIME_FORMAT(TD_TIME_PARSE(birth_day,'JST'),'MM') AS birth_month ,
   TD_TIME_FORMAT(TD_TIME_PARSE(birth_day,'JST'),'dd') AS birth_date 
 ```
-*SAMPLE OUTPUT
+- SAMPLE OUTPUT
 | birth_day | birth_year | birth_month | birth_date |
 ----|----|----|----
 | 1986-11-11 | 1986 | 11 | 11 |
@@ -118,7 +118,7 @@ SELECT
 ### 誕生日フラグ作成
 翌日誕生日のユーザーにメールを送りたい、来週誕生日のユーザーに誕生日まで有効な特別クーポンの案内を広告で配信したいなど施策を実行する場合、先にカラムを生成していく必要があります。
 
-*SAMPLE SQL
+- SAMPLE SQL
 ```
 SELECT
   birth_day ,
@@ -130,7 +130,7 @@ SELECT
     ELSE NULL
   END birth_day_flag 
 ```
-*SAMPLE OUTPUT
+- SAMPLE OUTPUT
 | birth_day | birth_day_flag |
 ----|----
 | 1986-11-11 | Today |
@@ -139,7 +139,7 @@ SELECT
 ### 電話番号やEMAIのアグリゲート
 LINEにセグメント連携する場合は`+818011112222`の形式でデータ連携する必要があるなど、プラットフォームにより特に電話番号は出力形式が異なります。事前に連携するプラットフォームの型に合わせて整形しておくことが必要です。
 
-*SAMPLE SQL
+- SAMPLE SQL
 ```
 SELECT
   phone ,
@@ -152,7 +152,7 @@ SELECT
   LOWER(TO_HEX(SHA256(TO_UTF8(email)))) AS email_hash ,
   'JP' AS country_code
 ```
-*SAMPLE OUTPUT
+- SAMPLE OUTPUT
 | phone | phone_remove0 | phone_remove0plus81 | phone_hash | phone_hash_remove0 | phone_hash_remove0plus81 | email | email_hash | country_code |
 ----|----|----|----|----|----|----|----|----
 | 08011112222 | 8011112222 | +818011112222 | AAAAAAAAAA | BBBBBBBBBB | CCCCCCCCCC | aaa@aaa.com | DDDDDDDDDD | country_code |
@@ -168,14 +168,14 @@ td-js-sdkで取得しているWebアクセスログなどのtimeカラムには�
 セグメント作成後のProfileサンプルのビヘイビアデータは,`td_url`カラム内に入力されている値が表示されます。  
 購買データなどをBihabiorテーブルに設定する場合、ベースになるデータに`td_url`カラムを追加して、表示したい値を入力してあげることで、Audience Studioの視認性が大幅にアップします。  
 
-*SAMPLE SQL
+- SAMPLE SQL
 ```
 SELECT
   sku ,
   price ,
   '購買ログ 商品:'||IF(sku is NULL,'',sku)||' 金額:'||IF(price is NULL,'',price)  AS td_url
 ```
-*SAMPLE OUTPUT
+- SAMPLE OUTPUT
 | sku | price | td_url |
 ----|----|----
 | Tシャツ | 3000 | 購買ログ 商品:Tシャツ  金額:3000 |
