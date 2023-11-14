@@ -46,6 +46,7 @@ SELECT
   DATE_DIFF('DAY', CAST(DATE_FORMAT(DATE_PARSE(regist_date), '%Y-%m-%d'),'%Y-%m-%d') as DATE), CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd') as DATE)) AS regist_duration
 ```
 - SAMPLE OUTPUT
+  
 | regist_date | regist_duration |
 ----|---- 
 | 1986-11-11 | 3 |
@@ -68,6 +69,7 @@ SELECT
   DATE_DIFF('YEAR', CAST(DATE_FORMAT(DATE_PARSE(birth_day)), '%Y-%m-%d %H:%i:%s.%f'),'%Y-%m-%d') as DATE), CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd') as DATE)) AS age
 ```
 - SAMPLE OUTPUT
+  
 | birth_day | age |
 ----|---- 
 | 1986-11-11 00:00:00.000 | 37 |
@@ -92,6 +94,7 @@ SELECT
   DATE_DIFF('DAY', CAST(DATE_FORMAT(DATE_PARSE(last_order_date, '%Y-%m-%d'),'%Y-%m-%d') as DATE), CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd') as DATE)) AS duration_days
 ```
 - SAMPLE OUTPUT
+  
 | regist_date | last_order_date | onetime_flag | duration_days |
 ----|----|----|----
 | 1986-11-11 | 1986-11-11 | 1 | 4 |
@@ -111,6 +114,7 @@ SELECT
   TD_TIME_FORMAT(TD_TIME_PARSE(birth_day,'JST'),'dd') AS birth_date 
 ```
 - SAMPLE OUTPUT
+  
 | birth_day | birth_year | birth_month | birth_date |
 ----|----|----|----
 | 1986-11-11 | 1986 | 11 | 11 |
@@ -132,6 +136,7 @@ SELECT
   END birth_day_flag 
 ```
 - SAMPLE OUTPUT
+  
 | birth_day | birth_day_flag |
 ----|----
 | 1986-11-11 | Today |
@@ -154,6 +159,7 @@ SELECT
   'JP' AS country_code
 ```
 - SAMPLE OUTPUT
+  
 | phone | phone_remove0 | phone_remove0plus81 | phone_hash | phone_hash_remove0 | phone_hash_remove0plus81 | email | email_hash | country_code |
 ----|----|----|----|----|----|----|----|----
 | 08011112222 | 8011112222 | +818011112222 | AAAAAAAAAA | BBBBBBBBBB | CCCCCCCCCC | aaa@aaa.com | DDDDDDDDDD | country_code |
@@ -177,6 +183,7 @@ SELECT
   '購買ログ 商品:'||IF(sku is NULL,'',sku)||' 金額:'||IF(price is NULL,'',price)  AS td_url
 ```
 - SAMPLE OUTPUT
+  
 | sku | price | td_url |
 ----|----|----
 | Tシャツ | 3000 | 購買ログ 商品:Tシャツ  金額:3000 |
