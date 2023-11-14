@@ -6,12 +6,12 @@
 `2023-01-01`のような形でデータが入っているカラムをUnixtimeに変換してください。  
 Audience Studioの選択時に、Time Filter形式で選択可能な設定が可能です。  
 
-- SAMPLE SQL
+- SAMPLE SQL  
 ```
 SELECT
   TD_TIME_PURSE(order_date,'JST') AS unix_order_date
 ```
-- SAMPLE OUTPUT
+- SAMPLE OUTPUT  
 | order_date | unix_order_date |
 ----|---- 
 | 1986-11-11 | 532018800 |
