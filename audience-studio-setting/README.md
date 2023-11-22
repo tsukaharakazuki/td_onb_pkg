@@ -9,7 +9,7 @@ Audience Studioの選択時に、Time Filter形式で選択可能な設定が可
 - SAMPLE SQL  
 ```
 SELECT
-  TD_TIME_PURSE(order_date,'JST') AS unix_order_date
+  TD_TIME_PARSE(order_date,'JST') AS unix_order_date
 ```
 - SAMPLE OUTPUT
   
@@ -43,7 +43,7 @@ https://github.com/tsukaharakazuki/td_onb_pkg/tree/main/audience-studio-time-fil
 - SAMPLE SQL
 ```
 SELECT
-  DATE_DIFF('DAY', CAST(DATE_FORMAT(DATE_PARSE(regist_date), '%Y-%m-%d'),'%Y-%m-%d') as DATE), CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd') as DATE)) AS regist_duration
+  DATE_DIFF('DAY', CAST(DATE_FORMAT(DATE_PARSE(regist_date, '%Y-%m-%d %H:%i:%s.%f'),'%Y-%m-%d') as DATE), CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd') as DATE)) AS regist_duration
 ```
 - SAMPLE OUTPUT  
   
