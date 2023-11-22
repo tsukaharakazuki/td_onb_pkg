@@ -91,11 +91,15 @@ SELECT
     ELSE 
       0
   END onetime_flag ,
-  DATE_DIFF('DAY', CAST(DATE_FORMAT(DATE_PARSE(last_order_date, '%Y-%m-%d'),'%Y-%m-%d') as DATE), CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd') as DATE)) AS duration_days
+  CASE
+    WHEN TD_TIME_FORMAT(TD_TIME_PARSE(regist_date,'JST'),'yyyy-MM-dd') = TD_TIME_FORMAT(TD_TIME_PARSE(last_order_date,'JST'),'yyyy-MM-dd')
+      THEN DATE_DIFF('DAY', CAST(DATE_FORMAT(DATE_PARSE(last_order_date, '%Y-%m-%d'),'%Y-%m-%d') as DATE), CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd') as DATE)) 
+    ELSE NULL
+  END onetime_duration
 ```
 - SAMPLE OUTPUT  
   
-| regist_date | last_order_date | onetime_flag | duration_days |
+| regist_date | last_order_date | onetime_flag | onetime_duration |
 ----|----|----|----
 | 1986-11-11 | 1986-11-11 | 1 | 4 |
 
