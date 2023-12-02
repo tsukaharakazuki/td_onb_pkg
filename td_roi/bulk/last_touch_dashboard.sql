@@ -5,8 +5,9 @@ SELECT
   td_source ,
   td_medium ,
   td_campaign ,
-  td_smc ,
-  SUM(amount) AS amount_total ,
+  td_smc
+  ${(Object.prototype.toString.call(resurl_add_col) === '[object Array]')?','+resurl_add_col.join():''}
+  , SUM(amount) AS amount_total ,
   COUNT(DISTINCT user_id) AS uu_date
 FROM
   roi_last_touch
@@ -16,3 +17,4 @@ GROUP BY
   td_medium ,
   td_campaign ,
   td_smc   
+  ${(Object.prototype.toString.call(resurl_add_col) === '[object Array]')?','+resurl_add_col.join():''}
