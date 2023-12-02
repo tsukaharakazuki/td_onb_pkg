@@ -17,3 +17,4 @@ GROUP BY
   td_medium ,
   td_campaign ,
   td_smc   
+  ${(Object.prototype.toString.call(resurl_add_col) === '[object Array]')?','+resurl_add_col.join():''}
