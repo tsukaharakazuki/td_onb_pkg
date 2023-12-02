@@ -33,6 +33,8 @@ pos:
    # - product_name not RLIKE '無料'
 
 # 結果出力設定
+resurl_add_col:
+  - brand
 result_type: googlesheet
 result_google:
   result_1:
