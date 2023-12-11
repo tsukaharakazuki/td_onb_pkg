@@ -62,7 +62,7 @@ columns:
   - ms_utm_source
 
 data_types:
-  - array(varchar)
+  - array
   - bigint
   - double
   - varchar
