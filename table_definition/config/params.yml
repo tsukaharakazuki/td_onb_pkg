@@ -1,0 +1,76 @@
+# データが出力されるTable
+td:
+  database: td_audience_studio
+
+# 定義書を作成したいDatabase
+db_list:
+  - td_audience_studio
+
+# 全てのTableで同一の定義で値が存在するカラム指定
+columns:
+  - time
+  - td_charset
+  - td_description
+  - td_browser_version
+  - td_os
+  - td_ip
+  - td_browser
+  - td_referrer
+  - td_version
+  - td_title
+  - td_language
+  - td_color
+  - td_os_version
+  - td_user_agent
+  - td_platform
+  - td_host
+  - td_path
+  - td_screen
+  - td_client_id
+  - td_global_id
+  - td_ssc_id
+  - td_viewport
+  - td_cookie
+  - td_cookie_type
+  - td_ref_host
+  - td_ref_name
+  - td_ref_name_sub
+  - td_source
+  - td_medium
+  - td_data_type
+  - td_url_raw
+  - access_date
+  - access_date_time
+  - access_hour
+  - ampm
+  - behavior_type
+  - dow
+  - click_url
+  - href
+  - ip_country
+  - ip_city
+  - ip_prefectures
+  - ms_utm_campaign
+  - ms_utm_medium
+  - ua_category
+  - ua_browser
+  - ua_os
+  - ua_os_version
+  - utm_campaign
+  - utm_source
+  - utm_term
+  - ms_utm_source
+
+data_types:
+  - array(varchar)
+  - bigint
+  - double
+  - varchar
+
+flags:
+  - common
+  - specific
+
+googlesheet:
+  result_connection: CONNECTOR_NAME
+  spreadsheet_folder: FOLDER_ID

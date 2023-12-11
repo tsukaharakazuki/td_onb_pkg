@@ -1,0 +1,77 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  daily>: 03:00:00
+
+_export:
+  !include : 'config/params.yml'
+
++search_information_schema:
+  td>: sql/search_information_schema.sql
+  create_table: tmp_information_schema
+
++main:
+  _parallel: true
+  for_each>: 
+    data_type: ${data_types}
+  _do:
+    _parallel: true
+    for_each>:
+      flag: ${flags}
+    _do:
+      +empty_tables:
+        td_ddl>:
+        empty_tables: 
+          - "test_tmp_table_definition_sample_${flag}"
+
+      +flag_check:
+        if>: ${flag == 'common'}
+        _do:
+          +get_columns:
+            td>: sql/get_columns_common.sql
+            create_table: tmp_columns_${flag}_${data_type}
+        _else_do:
+          +get_columns:
+            td>: sql/get_columns_specific.sql
+            create_table: tmp_columns_${flag}_${data_type}
+
+      +get_tables:
+        td_for_each>: sql/get_tables.sql
+        _do: 
+          +get_columns_common_str:
+            td>: sql/get_columns_str.sql
+            store_last_results: true
+
+          +column_check:
+            if>: ${td.last_results.sample_columns != ''}
+            _do:
+              +get_sample:
+                td>: sql/get_sample.sql
+                insert_into: test_tmp_table_definition_sample_${flag}  
+
++dist:
+  td>: sql/dist.sql
+  create_table: td_table_definition
+
+S+drop_tables:
+S  td_ddl>:
+S  drop_tables: 
+S    - "tmp_information_schema"
+S    - "tmp_table_definition_sample_common"
+S    - "tmp_table_definition_sample_specific"
+
++if_output:
+  if>: true #true or false
+  _do:
+    #Googleスプレッドシートへの出力サンプル
+    +to_google_sheets:
+      td_for_each>: config/output.sql
+      _do:
+        +dist_table_info:
+          td>: sql/output.sql
+          result_connection: ${googlesheet.result_connection}
+          result_settings:
+            spreadsheet_folder: ${googlesheet.spreadsheet_folder}
+            spreadsheet_title: "TreasureData_テーブル定義書_${td.each.database_name}"
+            sheet_title: "${td.each.table_name}"
+            mode: truncate
