@@ -1,0 +1,11 @@
+td:
+  database: l1_app
+  
+media:
+  sample_1:
+    media_name: sample_1
+    log_db: APPSFLYER_DB #set database
+    log_tbl: APPSFLYER_TBL #set table
+    json_columns:
+      - IF(get_json_object(event_value, '$.af_userid') = '',NULL,get_json_object(event_value, '$.af_userid')) AS user_id
+      - get_json_object(event_value, '$.af_mail') AS af_mail 

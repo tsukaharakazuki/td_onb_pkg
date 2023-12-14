@@ -1,0 +1,26 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params_bulk.yml'
+  session_span: 1800 #秒数→セッショナイズする間隔設定
+  proc_firsttime: true #初回のみtrue/それ以降はfalse
+
++empty_tables:
+  if>: ${proc_firsttime}
+  _do:
+    +empty_base:
+      td_ddl>:
+      empty_tables: 
+        - "l1_appsflyer"
+
++media_process:
+  for_each>:
+    params: ${Object.keys(media)}
+  _do:
+    +proc:
+      _export:
+        time_filter: TD_TIME_RANGE(time ,NULL ,TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd 00:00:00', 'JST') ,'JST')
+      td>: query/appsflyer.sql
+      insert_into: l1_appsflyer
+      engine: hive # Only Hive works
+      engine_version: stable

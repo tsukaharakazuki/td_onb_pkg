@@ -1,0 +1,20 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  cron>: 1 0 * * *
+
+_export:
+  !include : 'config/params.yml'
+  session_span: 1800 #秒数→セッショナイズする間隔設定
+
++media_process:
+  for_each>:
+    params: ${Object.keys(media)}
+  _do:
+    +proc:
+      _export:
+        time_filter: TD_INTERVAL(time,'-1d','JST')
+      td>: query/appsflyer.sql
+      insert_into: l1_appsflyer
+      engine: hive # Only Hive works
+      engine_version: stable
