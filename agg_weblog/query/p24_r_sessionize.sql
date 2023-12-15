@@ -20,6 +20,8 @@ WITH t1 AS (
         THEN utm_source||'/(none)'
       WHEN utm_source is NULL AND utm_medium is not NULL
         THEN '(none)/'||utm_medium
+      WHEN REGEXP_LIKE(td_url, 'gclid')
+        THEN 'google/cpc'   
       WHEN td_ref_host = '' OR td_ref_host = td_host OR td_ref_host is NULL
         THEN '(direct)/(none)'
       WHEN REGEXP_LIKE(td_ref_host, '(mail)\.(google|yahoo|nifty|excite|ocn|odn|jimdo)\.')
