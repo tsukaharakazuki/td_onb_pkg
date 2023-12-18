@@ -1,0 +1,31 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params.yml'
+  proc_firsttime: true #初回のみtrue/それ以降はfalse
+
++empty_tables:
+  if>: ${proc_firsttime}
+  _do:
+    +empty_base:
+      td_ddl>:
+      empty_tables: 
+        - "l1_new_visitor"
+
++media_process:
+  for_each>:
+    params: ${Object.keys(media)}
+  _do:
+    +proc:
+      _export:
+        time_filter: TD_TIME_RANGE(time ,NULL ,TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd 00:00:00', 'JST') ,'JST')
+      td>: query/l1_new_visitor_row.sql
+      insert_into: l1_new_visitor
+      engine: hive # Only Hive works
+      engine_version: stable
+
+    +dashbord:
+      td>: query/l2_new_visitor_dashbord.sql
+      create_table: l2_new_visitor_dashbord
+      engine: hive # Only Hive works
+      engine_version: stable

@@ -1,0 +1,41 @@
+timezone: "Asia/Tokyo"
+
+schedule:
+  cron>: 1 1 * * *
+
+_export:
+  !include : 'config/params.yml'
+  
++media_process:
+  for_each>:
+    params: ${Object.keys(media)}
+  _do:
+    +proc:
+      _export:
+        time_filter: TD_INTERVAL(time,'-1d','JST')
+      td>: query/l1_new_visitor_row.sql
+      insert_into: l1_new_visitor
+      engine: hive # Only Hive works
+      engine_version: stable
+
+    +rename_tables:
+      td_ddl>:
+      rename_tables: 
+        - {from: "l1_new_visitor", to: "l1_new_visitor_tmp"}
+
+    +re_create:
+      td>: query/l1_new_visitor.sql
+      create_table: l1_new_visitor
+      engine: hive # Only Hive works
+      engine_version: stable
+
+    +drop_tables:
+      td_ddl>:
+      drop_tables: 
+        - "l1_new_visitor_row_tmp"
+
+    +dashbord:
+      td>: query/l2_new_visitor_dashbord.sql
+      create_table: l2_new_visitor_dashbord
+      engine: hive # Only Hive works
+      engine_version: stable

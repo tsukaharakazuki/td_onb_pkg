@@ -1,0 +1,10 @@
+td:
+  database: l1_roi
+  
+media:
+  sample_1:
+    log_db: l1_web #set database
+    log_tbl: agg_weblog #set table
+    key_id: td_cookie
+    add_columns:
+      - media_name
