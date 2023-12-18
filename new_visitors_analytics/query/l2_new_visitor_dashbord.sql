@@ -10,7 +10,9 @@ SELECT
 FROM
   l1_new_visitor
 GROUP BY
-  time 
+  TD_TIME_FORMAT(time,'yyyy','JST') ,
+  TD_TIME_FORMAT(time,'yyyy-MM','JST') ,
+  TD_TIME_FORMAT(time,'yyyy-MM-dd','JST') 
   ${(Object.prototype.toString.call(media[params].add_columns) === '[object Array]')?','+media[params].add_columns.join():''}
   , td_source ,
   td_medium ,
