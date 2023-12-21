@@ -1,7 +1,7 @@
 SELECT
   TD_TIME_FORMAT(time,'yyyy','JST') AS year ,
   TD_TIME_FORMAT(time,'yyyy-MM-01','JST') AS month ,
-  TD_TIME_FORMAT(time,'yyyy-MM-dd','JST') AS date 
+  TD_TIME_FORMAT(time,'yyyy-MM-dd','JST') AS `date` 
   ${(Object.prototype.toString.call(media[params].add_columns) === '[object Array]')?','+media[params].add_columns.join():''}
   , td_source ,
   td_medium ,
