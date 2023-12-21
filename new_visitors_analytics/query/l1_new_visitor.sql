@@ -4,7 +4,7 @@ SELECT
   , MIN(time) AS time ,
   MIN_BY(td_source,time) AS td_source ,
   MIN_BY(td_medium,time) AS td_medium ,
-  MIN_BY(utm_campaign,time) AS td_campaign
+  MIN_BY(td_campaign,time) AS td_campaign
 FROM
   l1_new_visitor_tmp
 GROUP BY
