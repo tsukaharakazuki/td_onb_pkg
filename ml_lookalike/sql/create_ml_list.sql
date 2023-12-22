@@ -11,6 +11,7 @@ WITH t0 AS (
 SELECT
   * ,
   ntile(10) OVER (ORDER BY score DESC) AS decile ,
+  ROW_NUMBER() OVER (ORDER BY score DESC) AS score_rnk ,
   '${td.each.segment_name}' AS segment_name ,
   '機械学習 | ${td.each.segment_name} スコア:'||CAST(score AS varchar) AS td_url
 FROM
