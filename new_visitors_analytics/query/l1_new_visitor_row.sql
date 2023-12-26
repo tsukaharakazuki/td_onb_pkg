@@ -1,15 +1,19 @@
 SELECT
   ${media[params].key_id} 
   ${(Object.prototype.toString.call(media[params].add_columns) === '[object Array]')?','+media[params].add_columns.join():''}
-  , MIN(time) AS time ,
-  MIN_BY(td_source,time) AS td_source ,
-  MIN_BY(td_medium,time) AS td_medium ,
-  MIN_BY(utm_campaign,time) AS td_campaign
-FROM
-  ${media[params].log_db}.${media[params].log_tbl}
+  , time ,
+  td_source ,
+  td_medium ,
+  utm_campaign AS td_campaign
+FROM (
+  SELECT
+    * ,
+    ROW_NUMBER() OVER (PARTITION BY ${media[params].key_id} ORDER BY time ASC) AS dum
+  FROM
+    ${media[params].log_db}.${media[params].log_tbl}
+  WHERE
+    session_num = 1
+    AND ${time_filter}
+) t
 WHERE
-  session_num = 1
-  AND ${time_filter}
-GROUP BY
-  ${media[params].key_id} 
-  ${(Object.prototype.toString.call(media[params].add_columns) === '[object Array]')?','+media[params].add_columns.join():''}
+  dum = 1
