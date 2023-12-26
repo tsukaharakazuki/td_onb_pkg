@@ -1,7 +1,7 @@
 SELECT
   ${media[params].key_id} 
   ${(Object.prototype.toString.call(media[params].add_columns) === '[object Array]')?','+media[params].add_columns.join():''}
-  , MIN(time) AS time ,
+  , time ,
   td_source ,
   td_medium ,
   td_campaign
