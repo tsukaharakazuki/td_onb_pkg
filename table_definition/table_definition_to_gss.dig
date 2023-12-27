@@ -53,12 +53,12 @@ _export:
   td>: sql/dist.sql
   create_table: td_table_definition
 
-S+drop_tables:
-S  td_ddl>:
-S  drop_tables: 
-S    - "tmp_information_schema"
-S    - "tmp_table_definition_sample_common"
-S    - "tmp_table_definition_sample_specific"
++drop_tables:
+  td_ddl>:
+  drop_tables: 
+    - "tmp_information_schema"
+    - "tmp_table_definition_sample_common"
+    - "tmp_table_definition_sample_specific"
 
 +if_output:
   if>: true #true or false
