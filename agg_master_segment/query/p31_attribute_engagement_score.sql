@@ -27,7 +27,7 @@ WITH base AS (
 SELECT
   * ,
   td_recency_web * -1 AS td_recency_web_pn ,
-  ntile(10) OVER (ORDER BY engagement_score DESC) AS decile
+  ntile(10) OVER (ORDER BY engagement_score ASC) AS decile
 FROM (
   SELECT
     * ,
