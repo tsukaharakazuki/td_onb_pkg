@@ -1,0 +1,55 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params.yml'
+
++online:
+  +empty_tbl:
+    td_ddl>:
+    empty_tables: 
+      - "roi_behabior_online"
+
+  +web:
+    td>: bulk/web.sql
+    insert_into: roi_behabior_online
+    engine: hive # Only Hive works
+    engine_version: stable
+
++purchace:
+  +empty_tbl:
+    td_ddl>:
+    empty_tables: 
+      - "roi_behabior_purchace"
+
+  +pos:
+    td>: bulk/pos.sql
+    insert_into: roi_behabior_purchace
+    engine: hive # Only Hive works
+    engine_version: stable
+
++dist:
+  +empty_tbl:
+    td_ddl>:
+    empty_tables: 
+      - "dist_roi"
+
+  +dist_roi:
+    td>: bulk/dist_roi.sql
+    insert_into: dist_roi
+
++dashboard:
+  +empty_tbl:
+    td_ddl>:
+    empty_tables: 
+      - "dashboard_roi"
+
+  +dashboard_roi:
+    td>: bulk/dashboard_roi.sql
+    insert_into: dashboard_roi
+    engine: hive # Only Hive works
+    engine_version: stable
+
++proc_result_googlesheet:
+  if>: ${result_type == 'googlesheet'}
+  _do:
+    call>: td_roi_dist.dig

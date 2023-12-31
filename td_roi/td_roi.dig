@@ -1,0 +1,52 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  cron>: 1 0 * * *
+
+_export:
+  !include : 'config/params.yml'
+
++online:
+  +web:
+    td>: query/web.sql
+    insert_into: roi_behabior_online
+    #engine: hive # Only Hive works
+    #engine_version: stable
+
++purchace:
+  +pos:
+    td>: query/pos.sql
+    create_table: roi_behabior_purchace_yesterday
+    #engine: hive # Only Hive works
+    #engine_version: stable
+
+  +insert:
+    _export:
+      insert_tbl: roi_behabior_purchace_yesterday
+    td>: 
+    query: SELECT * FROM ${insert_tbl}
+    insert_into: roi_behabior_purchace
+
++dist:
+  +dist_roi:
+    td>: query/dist_roi.sql
+    create_table: dist_roi_yesterday
+
+  +insert_dist_roi:
+    _export:
+      insert_tbl: dist_roi_yesterday
+    td>: 
+    query: SELECT * FROM ${insert_tbl}
+    insert_into: dist_roi
+
++dashboard:
+  +dashboard_roi:
+    td>: query/dashboard_roi.sql
+    insert_into: dashboard_roi
+    engine: hive # Only Hive works
+    engine_version: stable
+
++proc_result_googlesheet:
+  if>: ${result_type == 'googlesheet'}
+  _do:
+    call>: td_roi_dist.dig
