@@ -1,9 +1,8 @@
 timezone: "Asia/Tokyo"
 
 _export:
+  !include : 'config/params_common.yml'
   !include : 'config/params.yml'
-  td:
-    database: td_audience_studio
 
 +media_process:
   for_each>:
@@ -226,4 +225,25 @@ _export:
       +ms_behavior_last_access:
         td>: bulk/p60_ms_behavior_last_access.sql
         insert_into: ${media[params].output_db}.ms_behavior_last_access_${media[params].media_name}
-        
+
+    +narrow:
+      +delete_if_exists:
+        for_each>:
+          val: 
+            - tbl: ms_behavior_${media[params].media_name}
+              dist: ms_behavior_${media[params].media_name}_${narrow_date}d
+        _do:
+          +create_tables:
+            td_ddl>:
+            create_tables: 
+              - ${val.dist}
+            database: ${media[params].output_db}
+          +delete:
+            td>:
+            query: delete from ${media[params].output_db}.${val.dist} where TD_TIME_RANGE(time,NULL,'${moment(session_time).add(-${narrow_date}, 'days').format("YYYY-MM-DD")}','JST')
+
+          +insert:
+            _export:
+              time_filter: TD_TIME_RANGE(time ,'${moment(session_time).add(-${narrow_date}, 'days').format("YYYY-MM-DD")}' ,TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd 00:00:00', 'JST') ,'JST')
+            td>: query/narrow_date.sql
+            insert_into: ${media[params].output_db}.${val.dist}
