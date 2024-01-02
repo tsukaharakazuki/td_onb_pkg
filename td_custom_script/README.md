@@ -1,5 +1,5 @@
 # Custom Script Docment
-[リンク集]: (https://docs.treasuredata.com/display/public/PD/Custom+Scripts)
+[リンク集](https://docs.treasuredata.com/display/public/PD/Custom+Scripts)
 [イントロダクション]: https://docs.treasuredata.com/display/public/PD/Introduction+to+Custom+Scripts
 [Workflowへの追加]: https://docs.treasuredata.com/display/public/PD/Adding+a+Custom+Python+Script+to+Your+Workflow
 [構文]: https://docs.treasuredata.com/display/public/PD/Workflow+py+Operator+Syntax+Reference#WorkflowpyOperatorSyntaxReference-Syntax
