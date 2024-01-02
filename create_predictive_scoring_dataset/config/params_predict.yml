@@ -82,3 +82,20 @@ set:
         tbl: weblog_tbl
         where_condition: 
           - td_path <> '/ordercomplete'
+
+    feature_array:
+      - colmuns: gender
+        output: gender
+        id: td_cookie
+        db: weblog_db
+        tbl: weblog_tbl
+        where_condition: 
+          #- td_path <> '/ordercomplete'
+        name1: 1 
+        conditions1: "< 2"
+        name2: 2
+        conditions2: "BETWEEN 2 and 30"
+        name3: 3
+        conditions3: "BETWEEN 31 and 50"
+        name4: 4
+        conditions4: "> 50"
