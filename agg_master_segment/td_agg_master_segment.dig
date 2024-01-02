@@ -258,7 +258,7 @@ _export:
 
           +insert:
             _export:
-              time_filter: TD_TIME_RANGE(time ,'${moment(session_time).add(-${narrow_date}, 'days').format("YYYY-MM-DD")}' ,TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd 00:00:00', 'JST') ,'JST')
+              time_filter: TD_INTERVAL(time,'-1d','JST')
             td>: query/narrow_date.sql
             insert_into: ${media[params].output_db}.${val.dist}
 
