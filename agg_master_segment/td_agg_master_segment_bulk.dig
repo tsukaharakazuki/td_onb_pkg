@@ -235,7 +235,7 @@ _export:
         _do:
           +create_tables:
             td_ddl>:
-            create_tables: 
+            empty_tables: 
               - ${val.dist}
             database: ${media[params].output_db}
           +delete:
