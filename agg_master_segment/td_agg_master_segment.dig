@@ -245,22 +245,21 @@ _export:
         for_each>:
           val: 
             - tbl: ms_behavior_${media[params].media_name}
-              dist: ms_behavior_${media[params].media_name}_${narrow_date}d
         _do:
           +create_tables:
             td_ddl>:
             create_tables: 
-              - ${val.dist}
+              - ${val.tbl}_${narrow_date}d
             database: ${media[params].output_db}
           +delete:
             td>:
-            query: delete from ${media[params].output_db}.${val.dist} where TD_TIME_RANGE(time,NULL,'${moment(session_time).add(-${narrow_date}, 'days').format("YYYY-MM-DD")}','JST')
+            query: delete from ${media[params].output_db}.${val.tbl}_${narrow_date}d where TD_TIME_RANGE(time,NULL,'${moment(session_time).add(-${narrow_date}, 'days').format("YYYY-MM-DD")}','JST')
 
           +insert:
             _export:
               time_filter: TD_INTERVAL(time,'-1d','JST')
             td>: query/narrow_date.sql
-            insert_into: ${media[params].output_db}.${val.dist}
+            insert_into: ${media[params].output_db}.${val.tbl}_${narrow_date}d
 
     +check_kick_audience_workflow:
       if>: ${(Object.prototype.toString.call(media[params].master_segment_id) === '[object Number]')}
