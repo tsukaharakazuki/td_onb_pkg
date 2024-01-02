@@ -78,14 +78,14 @@ _export:
               insert_into: tmp_dataset_predict_${set[params].dataset_name}
               engine: presto
 
-      +feature_proportion:
-        if>: ${(Object.prototype.toString.call(set[params].feature_proportion) === '[object Array]')}
+      +feature_array:
+        if>: ${(Object.prototype.toString.call(set[params].feature_array) === '[object Array]')}
         _do:
           for_each>:
-            set: ${set[params].feature_proportion}
+            set: ${set[params].feature_array}
           _do:
             +proc:
-              td>: sql/feature_proportion.sql
+              td>: sql/feature_array.sql
               insert_into: tmp_dataset_predict_${set[params].dataset_name}
               engine: presto
 
