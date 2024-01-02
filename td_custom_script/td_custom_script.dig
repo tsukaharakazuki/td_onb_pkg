@@ -1,0 +1,24 @@
+timezone: Asia/Tokyo
+
+#schedule:
+#  daily>: 02:50:00
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: DATABSE_NAME
+    endpoint: api.treasuredata.com
+  
++python_script:
+  +proc:
+    docker:
+      image: "digdag/digdag-python:3.9"
+    _env:
+      TD_API_KEY: ${secret:td.apikey}
+      ENDPOINT: ${td.endpoint}
+      SESSION_UNIXTIME: ${session_unixtime}
+    py>: pyscript.main_script.main
+    database: ${td.database}
+    table: TABLE_NAME
+    dist_table: DIST_TABLE_NAME
+    timezone: ${timezone}
