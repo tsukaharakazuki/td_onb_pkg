@@ -2,6 +2,9 @@
 このWorkflowは、目的変数として設定した条件（Ex.商品購入、来店）に合わせて、WebログやAppログ、その他行動ログから機械学習でスコアリングをするWorkflowです。  
 機械学習のロジックは`RandomForestClassifier`になります。  
 手軽に機械学習を実装することを目的に作成されており、基本的に変更する部分は、`config/params.yml`のみで結果が出力されます。
+
+# ドキュメント
+https://docs.google.com/presentation/d/1hCl3UBvcZ56MxQ2bERAh-kndFtIU4vfhFLJga8fk0TA/
   
 # 変数設定  
 `config/params.yml`の各変数を変更します。
