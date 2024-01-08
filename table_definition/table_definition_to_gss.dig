@@ -29,11 +29,11 @@ _export:
         _do:
           +get_columns:
             td>: sql/get_columns_common.sql
-            create_table: tmp_columns_${flag}_${data_type}
+            create_table: tmp_columns_${flag}_${data_type.col}
         _else_do:
           +get_columns:
             td>: sql/get_columns_specific.sql
-            create_table: tmp_columns_${flag}_${data_type}
+            create_table: tmp_columns_${flag}_${data_type.col}
 
       +get_tables:
         td_for_each>: sql/get_tables.sql
@@ -49,6 +49,11 @@ _export:
                 td>: sql/get_sample.sql
                 insert_into: test_tmp_table_definition_sample_${flag}  
 
+      +drop_tables:
+        td_ddl>:
+        drop_tables: 
+          - "tmp_columns_${flag}_${data_type.col}"
+
 +dist:
   td>: sql/dist.sql
   create_table: td_table_definition
@@ -59,6 +64,8 @@ _export:
     - "tmp_information_schema"
     - "tmp_table_definition_sample_common"
     - "tmp_table_definition_sample_specific"
+    - "test_tmp_table_definition_sample_common"
+    - "test_tmp_table_definition_sample_specific"
 
 +if_output:
   if>: true #true or false
