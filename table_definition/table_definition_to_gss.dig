@@ -49,10 +49,18 @@ _export:
                 td>: sql/get_sample.sql
                 insert_into: test_tmp_table_definition_sample_${flag}  
 
-      +drop_tables:
-        td_ddl>:
-        drop_tables: 
-          - "tmp_columns_${flag}_${data_type.col}"
++main_drop_tables:
+  _parallel: true
+  for_each>: 
+    data_type: ${data_types}
+  _do:
+    _parallel: true
+    for_each>:
+      flag: ${flags}
+    _do:
+      td_ddl>:
+      drop_tables: 
+        - "tmp_columns_${flag}_${data_type.col}"
 
 +dist:
   td>: sql/dist.sql
