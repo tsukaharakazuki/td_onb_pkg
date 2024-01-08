@@ -22,7 +22,7 @@ _export:
       +empty_tables:
         td_ddl>:
         empty_tables: 
-          - "test_tmp_table_definition_sample_${flag}"
+          - "tmp_table_definition_sample_${flag}"
 
       +flag_check:
         if>: ${flag == 'common'}
@@ -47,7 +47,7 @@ _export:
             _do:
               +get_sample:
                 td>: sql/get_sample.sql
-                insert_into: test_tmp_table_definition_sample_${flag}  
+                insert_into: tmp_table_definition_sample_${flag}  
 
 +main_drop_tables:
   _parallel: true
@@ -72,8 +72,6 @@ _export:
     - "tmp_information_schema"
     - "tmp_table_definition_sample_common"
     - "tmp_table_definition_sample_specific"
-    - "test_tmp_table_definition_sample_common"
-    - "test_tmp_table_definition_sample_specific"
 
 +if_output:
   if>: true #true or false
