@@ -62,10 +62,14 @@ columns:
   - ms_utm_source
 
 data_types:
-  - array
-  - bigint
-  - double
-  - varchar
+  - col: array
+    dt: array(varchar)
+  - col: bigint
+    dt: bigint
+  - col: double
+    dt: double
+  - col: varchar
+    dt: varchar
 
 flags:
   - common
