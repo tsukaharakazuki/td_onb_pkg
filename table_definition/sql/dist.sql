@@ -22,6 +22,6 @@ FROM
 LEFT JOIN
   tmp_table_definition_sample_specific b
 ON
-  a.database_name = b.db_name
-  AND a.table_name = b.tbl_name
+  a.database_name = b.database_name
+  AND a.table_name = b.table_name
   AND a.column_name = b.col_name
