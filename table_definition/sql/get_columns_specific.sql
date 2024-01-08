@@ -5,7 +5,7 @@ SELECT
 FROM
   tmp_information_schema
 WHERE
-  data_type = '${data_type}'
+  data_type = '${data_type.dt}'
   AND NOT regexp_like(
     column_name,
     '^(${(Object.prototype.toString.call(columns) === '[object Array]')?columns.join('|'):''})$'
