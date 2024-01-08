@@ -22,9 +22,9 @@ SELECT
   c.database_name
   ,c.table_name
   ,s.col_name
-  ,${data_type == 'array' ? "ARRAY_JOIN(s.sample, ',') AS sample":"CAST(s.sample AS VARCHAR) AS sample"}
+  ,${data_type.dt == 'array(varchar)' ? "ARRAY_JOIN(s.sample, ',') AS sample":"CAST(s.sample AS VARCHAR) AS sample"}
 FROM
-  tmp_columns_${flag}_${data_type} c
+  tmp_columns_${flag}_${data_type.col} c
 INNER JOIN
   sample_data s
 ON
