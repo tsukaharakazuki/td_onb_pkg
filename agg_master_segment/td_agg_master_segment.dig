@@ -253,7 +253,7 @@ _export:
             database: ${media[params].output_db}
           +delete:
             td>:
-            query: delete from ${media[params].output_db}.${val.tbl}_${narrow_date}d where TD_TIME_RANGE(time,NULL,'${moment(session_time).add(-${narrow_date}, 'days').format("YYYY-MM-DD")}','JST')
+            query: delete from ${media[params].output_db}.${val.tbl}_${narrow_date}d where TD_TIME_RANGE(time,NULL,'${moment(session_time).add(-narrow_date, 'days').format("YYYY-MM-DD")}','JST')
 
           +insert:
             _export:
