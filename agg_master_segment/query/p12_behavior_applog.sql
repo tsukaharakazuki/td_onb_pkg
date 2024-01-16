@@ -1,6 +1,6 @@
 SELECT
   'app' AS behavior_type ,
-  IF(user_id_comp is not NULL, user_id_comp, ${media[params].key_id_web}) AS td_ms_id ,
+  IF(user_id_comp is not NULL, user_id_comp, ${media[params].key_id_app}) AS td_ms_id ,
   IF(user_id_comp is not NULL, 'user_id', 'device_id') AS td_ms_id_type ,
   ${media[params].set_td_url_app} AS td_url ,
   ${media[params].engagement_vols_app} AS engagement_vols ,
