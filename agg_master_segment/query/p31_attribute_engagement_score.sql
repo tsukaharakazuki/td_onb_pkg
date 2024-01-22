@@ -54,7 +54,8 @@ WITH tmp AS (
     MAX_BY(td_recency_web,dum) AS td_recency_web ,
     SUM(td_frequency_web) AS td_frequency_web ,
     SUM(td_volume_web) AS td_volume_web ,
-    MIN(time) AS time 
+    MIN(time) AS time ,
+    MIN(time) AS td_firsttime_web_unix
     ${(Object.prototype.toString.call(media[params].add_engagement_calc.sql) === '[object Array]')?','+media[params].add_engagement_calc.sql.join():''}
   FROM
     tmp
