@@ -159,7 +159,7 @@ _export:
     +create_engagement_score:
       !include : config/engagement_score_date.dig
       +engagement_score:
-        td>: query/p31_attribute_engagement_score.sql
+        td>: bulk/p31_attribute_engagement_score.sql
         insert_into: ${media[params].output_db}.ms_attribute_engagement_score_${media[params].media_name}
         engine: hive # Only Hive works
         engine_version: stable
