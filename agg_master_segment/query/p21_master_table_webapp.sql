@@ -8,7 +8,8 @@ SELECT
   MAX_BY(td_cookie, if(td_cookie is null,null,time)) AS td_cookie ,
   ARRAY_AGG(DISTINCT td_cookie) FILTER(WHERE td_cookie IS NOT NULL) AS td_cookies ,
   MAX_BY(td_client_id, if(td_client_id is null,null,time)) AS td_client_id ,
-  MAX_BY(user_id, time) AS user_id 
+  MAX_BY(user_id, time) AS user_id ,
+  MAX(time) AS time
 FROM 
   ${media[params].output_db}.ms_behavior_${media[params].media_name}
 GROUP BY 
