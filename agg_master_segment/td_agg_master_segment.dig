@@ -158,6 +158,13 @@ _export:
           insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
 
     +engagement_score:
+      +insert_engagement_score:
+        +engagement_score:
+          td>: query/p32_insert_engagement_score.sql
+          create_table: ${media[params].output_db}.ms_attribute_engagement_score_${media[params].media_name}
+          engine: hive # Only Hive works
+          engine_version: stable
+          
       +create_engagement_score:
         !include : config/engagement_score_date.dig
         +engagement_score:
@@ -170,11 +177,13 @@ _export:
         td_ddl>:
         drop_tables: 
           - "ms_attribute_engagement_score_${media[params].media_name}"
+        database: ${media[params].output_db}
 
       +rename_tables:
         td_ddl>:
         rename_tables: 
           - {from: "tmp_ms_attribute_engagement_score_${media[params].media_name}", to: "ms_attribute_engagement_score_${media[params].media_name}"}
+        database: ${media[params].output_db}
 
     +check_predict_dataset:
       if>: ${media[params].check_predict_dataset}
