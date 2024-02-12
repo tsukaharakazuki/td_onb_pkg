@@ -10,7 +10,8 @@ WITH base AS (
     COUNT(DISTINCT TD_TIME_FORMAT(time,'yyyy-MM-dd','JST')) AS td_frequency_web ,
     COUNT(DISTINCT engagement_vols) AS td_volume_web ,
     MIN(time) AS time ,
-    MIN(time) AS td_firsttime_web_unix
+    MIN(time) AS td_firsttime_web_unix ,
+    1 AS dum
     ${(Object.prototype.toString.call(media[params].add_engagement_calc.sql) === '[object Array]')?','+media[params].add_engagement_calc.sql.join():''}
   FROM (
     SELECT
