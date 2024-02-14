@@ -1,0 +1,23 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  cron>: 1 14 * * *
+
+_export:
+  td:
+    database: td_criteo
+  segnment_target_tbl: push_segment
+
++td_for_each:
+  td_for_each>: queries/check_update.sql
+  _do:
+    +td-result-into-criteo:
+      td>: queries/criteo.sql
+      result_connection: ${td.each.result_connection}
+      result_settings:
+        advertiser_id: ${td.each.advertiser_id}
+        request_threshold: 50000
+        request_retries: 7
+        request_connect_timeout: 300
+        request_read_timeout: 900
+        request_write_timeout: 900

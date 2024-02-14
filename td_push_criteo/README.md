@@ -1,0 +1,2 @@
+# このWorkflowについて
+このWorkflowは、Audience Studioで作成したセグメントデータをcriteoコネクタを使って送信するWorkflowです。
