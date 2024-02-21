@@ -282,8 +282,8 @@ _export:
 
     +access_hour:
       +proc:
-        td>: query/p61_ms_behavior_access_hour.sql
-        create_table: ${media[params].output_db}.ms_behavior_access_hour_${media[params].media_name}
+        td>: query/p61_ms_attribute_access_hour.sql
+        create_table: ${media[params].output_db}.ms_attribute_access_hour_${media[params].media_name}
 
     +check_kick_audience_workflow:
       if>: ${(Object.prototype.toString.call(media[params].master_segment_id) === '[object Number]')}
