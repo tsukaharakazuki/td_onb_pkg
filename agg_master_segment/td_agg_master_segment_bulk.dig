@@ -246,3 +246,8 @@ _export:
               time_filter: TD_TIME_RANGE(time ,'${moment(session_time).add(-narrow_date, 'days').format("YYYY-MM-DD")}' ,TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd 00:00:00', 'JST') ,'JST')
             td>: query/narrow_date.sql
             insert_into: ${media[params].output_db}.${val.tbl}_${narrow_date}d
+
+    +access_hour:
+      +proc:
+        td>: query/p61_ms_attribute_access_hour.sql
+        create_table: ${media[params].output_db}.ms_attribute_access_hour_${media[params].media_name}
