@@ -280,6 +280,11 @@ _export:
             td>: query/narrow_date.sql
             insert_into: ${media[params].output_db}.${val.tbl}_${narrow_date}d
 
+    +access_hour:
+      +proc:
+        td>: query/p61_ms_behavior_access_hour.sql
+        create_table: ${media[params].output_db}.ms_behavior_access_hour_${media[params].media_name}
+
     +check_kick_audience_workflow:
       if>: ${(Object.prototype.toString.call(media[params].master_segment_id) === '[object Number]')}
       _do:
