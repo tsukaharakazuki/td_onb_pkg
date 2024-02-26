@@ -5,7 +5,7 @@ WITH t0 AS (
     COUNT(*) AS cnt ,
     ROW_NUMBER() OVER (PARTITION BY td_ms_id ORDER BY COUNT(*) DESC) AS rnk
   FROM
-    l1_audience_studio.ms_behavior_tsi
+    ${media[params].output_db}.ms_behavior_${media[params].media_name}
   WHERE
     TD_INTERVAL(time,'-90d','JST')
   GROUP BY
