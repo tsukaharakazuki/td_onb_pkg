@@ -6,8 +6,8 @@ media:
     log_tbl: YOUR_WEB_LOG_TB #set web_log table
     primary_cookie: td_ssc_id #td_ssc_id or td_client_id
     sub_cookie: td_client_id
-    td_ssc_id: td_ssc_id #td_ssc_id未取得の場合 "''"
-    user_id: user_id #set user_id column未取得の場合 "''"
+    td_ssc_id: td_ssc_id #td_ssc_id未取得の場合 CAST(IF(1=1,NULL,NULL) AS STRING or VARCHAR)
+    user_id: user_id #set user_id column未取得の場合 CAST(IF(1=1,NULL,NULL) AS STRING or VARCHAR)
     pv_columns:
       columns:
         #- text #追加カラムがない場合未記載(計算クエリ可)
@@ -23,8 +23,8 @@ media:
     click_col: click_url
     primary_cookie_click: td_ssc_id #td_ssc_id or td_client_id
     sub_cookie_click: td_client_id
-    td_ssc_id_click: td_ssc_id #td_ssc_id未取得の場合 "''"
-    user_id_click: "''" #set user_id column未取得の場合 "''"
+    td_ssc_id_click: td_ssc_id #td_ssc_id未取得の場合 CAST(IF(1=1,NULL,NULL) AS STRING or VARCHAR)
+    user_id_click: CAST(IF(1=1,NULL,NULL) AS VARCHAR) #set user_id column未取得の場合 CAST(IF(1=1,NULL,NULL) AS STRING or VARCHAR)
     click_columns:
       columns:
         #- text #追加カラムがない場合未記載(計算クエリ可)
@@ -38,8 +38,8 @@ media:
     read_col: scroll_depth_threshold
     primary_cookie_read: td_ssc_id #td_ssc_id or td_client_id
     sub_cookie_read: td_client_id
-    td_ssc_id_read: td_ssc_id #td_ssc_id未取得の場合 "''"
-    user_id_read: "''" #set user_id column未取得の場合 "''"
+    td_ssc_id_read: td_ssc_id #td_ssc_id未取得の場合 CAST(IF(1=1,NULL,NULL) AS STRING or VARCHAR)
+    user_id_read: CAST(IF(1=1,NULL,NULL) AS VARCHAR) #set user_id column未取得の場合 CAST(IF(1=1,NULL,NULL) AS STRING or VARCHAR)
     read_columns:
       columns:
         #- text #追加カラムがない場合未記載(計算クエリ可)
