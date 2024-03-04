@@ -1,0 +1,291 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  cron>: 1 2 * * *
+
+_export:
+  !include : 'config/params_common.yml'
+  !include : 'config/params.yml'
+  log_span: 1d #固定
+
++media_process:
+  for_each>:
+    params: ${Object.keys(media)}
+  _do:
+    +empty_dist_tables:
+      td_ddl>:
+      empty_tables: 
+        - "ms_master_table_${media[params].media_name}"
+      database: ${media[params].output_db}
+
+    +comp_user_id:
+      if>: ${media[params].comp_user_id}
+      _do:
+        +empty_tables:
+          td_ddl>:
+          empty_tables: 
+            - "map_cookie_uid_${media[params].media_name}"
+          database: ${media[params].output_db}
+
+        +check_weblog_comp:
+          if>: ${media[params].check_web}
+          _do:
+            +map_cookie_userid_web:
+              td>: comp/map_cookie_userid_web.sql
+              insert_into: ${media[params].output_db}.map_cookie_uid_${media[params].media_name}
+
+            +behavior_weblog:
+              !include : config/set_colmuns_web.dig
+              +weblog:
+                td>: comp/reg/p11_behavior_weblog.sql
+                insert_into: ${media[params].output_db}.ms_behavior_comp_${media[params].media_name}
+
+        +check_applog_comp:
+          if>: ${media[params].check_app}
+          _do:
+            +map_cookie_userid_app:
+              td>: comp/map_cookie_userid_app.sql
+              insert_into: ${media[params].output_db}.map_cookie_uid_${media[params].media_name}
+
+            +behavior_applog:
+              +applog:
+                td>: comp/reg/p12_behavior_applog.sql
+                insert_into: ${media[params].output_db}.ms_behavior_comp_${media[params].media_name}
+
+        +check_weblog:
+          if>: ${media[params].check_web}
+          _do:
+            +behavior_weblog:
+              !include : config/set_colmuns_web.dig
+              +weblog:
+                td>: query/p11_behavior_weblog.sql
+                insert_into: ${media[params].output_db}.ms_behavior_${media[params].media_name}
+
+        +check_applog:
+          if>: ${media[params].check_app}
+          _do:
+            +behavior_applog:
+              +applog:
+                td>: query/p12_behavior_applog.sql
+                insert_into: ${media[params].output_db}.ms_behavior_${media[params].media_name}
+
+      _else_do:
+        +check_weblog:
+          if>: ${media[params].check_web}
+          _do:
+            +behavior_weblog:
+              !include : config/set_colmuns_web.dig
+              +weblog:
+                td>: query/p11_behavior_weblog.sql
+                insert_into: ${media[params].output_db}.ms_behavior_${media[params].media_name}
+
+        +check_applog:
+          if>: ${media[params].check_app}
+          _do:
+            +behavior_applog:
+              +applog:
+                td>: query/p12_behavior_applog.sql
+                insert_into: ${media[params].output_db}.ms_behavior_${media[params].media_name}
+
+    +proc_master_table:
+      +comp_user_id:
+        if>: ${media[params].comp_user_id}
+        _do:
+          +check_weblog:
+            _export:
+              base_tbl: ms_behavior_comp_${media[params].media_name}
+            if>: ${media[params].check_web}
+            _do:
+              +check_applog:
+                if>: ${media[params].check_app}
+                _do:
+                  +create_master_table_webapp:
+                    td>: query/p21_master_table_webapp.sql
+                    insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+                
+                _else_do:
+                  +create_master_table_web:
+                    td>: query/p22_master_table_web.sql
+                    insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+
+            _else_do:
+              +check_applog:
+                if>: ${media[params].check_app}
+                _do:
+                  +create_master_table_app:
+                    td>: query/p23_master_table_app.sql
+                    insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+
+          +comp_recovery_msttbl_user_id:
+            td>: comp/recovery_user_id.sql
+            insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+
+          +comp_mst_tbl_cookie:
+            td>: comp/mst_tbl_cookie.sql
+            create_table: ${media[params].output_db}.ms_master_table_cookie_${media[params].media_name}
+
+        _else_do: 
+          +check_weblog:
+            _export:
+              base_tbl: ms_behavior_${media[params].media_name}
+            if>: ${media[params].check_web}
+            _do:
+              +check_applog:
+                if>: ${media[params].check_app}
+                _do:
+                  +create_master_table_webapp:
+                    td>: query/p21_master_table_webapp.sql
+                    insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+                
+                _else_do:
+                  +create_master_table_web:
+                    td>: query/p22_master_table_web.sql
+                    insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+
+            _else_do:
+              +check_applog:
+                if>: ${media[params].check_app}
+                _do:
+                  +create_master_table_app:
+                    td>: query/p23_master_table_app.sql
+                    insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+
+    +check_master_table_recovery:
+      if>: ${media[params].master_table_recovery}
+      _do:
+        +recovery:
+          td>: query/recovery.sql
+          insert_into: ${media[params].output_db}.ms_master_table_${media[params].media_name}
+
+    +engagement_score:
+      +insert_engagement_score:
+        +engagement_score:
+          td>: query/p32_insert_engagement_score.sql
+          create_table: ${media[params].output_db}.ms_attribute_engagement_score_${media[params].media_name}
+          engine: hive # Only Hive works
+          engine_version: stable
+          
+      +create_engagement_score:
+        !include : config/engagement_score_date.dig
+        +engagement_score:
+          td>: query/p31_attribute_engagement_score.sql
+          create_table: ${media[params].output_db}.tmp_ms_attribute_engagement_score_${media[params].media_name}
+          engine: hive # Only Hive works
+          engine_version: stable
+
+      +drop_tables:
+        td_ddl>:
+        drop_tables: 
+          - "ms_attribute_engagement_score_${media[params].media_name}"
+        database: ${media[params].output_db}
+
+      +rename_tables:
+        td_ddl>:
+        rename_tables: 
+          - {from: "tmp_ms_attribute_engagement_score_${media[params].media_name}", to: "ms_attribute_engagement_score_${media[params].media_name}"}
+        database: ${media[params].output_db}
+
+    +inflow:
+      +rename_tables:
+        td_ddl>:
+        rename_tables: 
+          - {from: "ms_behavior_inflow_${media[params].media_name}", to: "tmp_calc_inflow_${media[params].media_name}"}
+
+      +calc_inflow_tmp:
+        td>: query/p51_calc_inflow_tmp.sql
+        insert_into: ${media[params].output_db}.tmp_calc_inflow_${media[params].media_name}
+
+      +calc_inflow:
+        td>: query/p52_calc_inflow.sql
+        create_table: ${media[params].output_db}.calc_inflow_${media[params].media_name}
+
+      +create_ms_behavior_inflow:
+        td>: query/p53_ms_behavior_inflow.sql
+        create_table: ${media[params].output_db}.ms_behavior_inflow_${media[params].media_name}
+
+      +drop_tbl:
+        td_ddl>:
+        drop_tables: 
+          - "tmp_calc_inflow_${media[params].media_name}"
+        database: ${media[params].output_db}
+
+    +first_last_access:
+      +rename_tables:
+        td_ddl>:
+        rename_tables: 
+          - {from: "ms_behavior_last_access_${media[params].media_name}", to: "tmp_ms_behavior_last_access_${media[params].media_name}"}
+          - {from: "ms_behavior_first_access_${media[params].media_name}", to: "tmp_ms_behavior_first_access_${media[params].media_name}"}
+        database: ${media[params].output_db}
+
+      +last_access:
+        +ms_behavior_last_access:
+          _export:
+            time_filter: TD_INTERVAL(time,'-1d','JST')
+          td>: query/p60_ms_behavior_last_access.sql
+          insert_into: ${media[params].output_db}.tmp_ms_behavior_last_access_${media[params].media_name}
+          engine: hive # Only Hive works
+          engine_version: stable
+
+        +dist:
+          td>: query/p61_dist_behavior_last_access.sql
+          create_table: ${media[params].output_db}.ms_behavior_last_access_${media[params].media_name}
+          engine: hive # Only Hive works
+          engine_version: stable
+
+      +first_access:  
+        +ms_behavior_first_access:
+          _export:
+            time_filter: TD_INTERVAL(time,'-1d','JST')
+          td>: query/p62_ms_behavior_first_access.sql
+          insert_into: ${media[params].output_db}.tmp_ms_behavior_first_access_${media[params].media_name}
+          engine: hive # Only Hive works
+          engine_version: stable
+
+        +dist:
+          td>: query/p63_dist_behavior_first_access.sql
+          create_table: ${media[params].output_db}.ms_behavior_first_access_${media[params].media_name}
+          engine: hive # Only Hive works
+          engine_version: stable
+
+      +drop_tbl:
+        td_ddl>:
+        drop_tables: 
+          - "tmp_ms_behavior_last_access_${media[params].media_name}"
+          - "tmp_ms_behavior_first_access_${media[params].media_name}"
+        database: ${media[params].output_db}
+
+    +narrow:
+      +delete_if_exists:
+        for_each>:
+          val: 
+            - tbl: ms_behavior_${media[params].media_name}
+        _do:
+          +create_tables:
+            td_ddl>:
+            create_tables: 
+              - ${val.tbl}_${narrow_date}d
+            database: ${media[params].output_db}
+          +delete:
+            td>:
+            query: delete from ${media[params].output_db}.${val.tbl}_${narrow_date}d where TD_TIME_RANGE(time,NULL,'${moment(session_time).add(-narrow_date, 'days').format("YYYY-MM-DD")}','JST')
+
+          +insert:
+            _export:
+              time_filter: TD_INTERVAL(time,'-1d','JST')
+            td>: query/narrow_date.sql
+            insert_into: ${media[params].output_db}.${val.tbl}_${narrow_date}d
+
+    +access_hour:
+      +proc:
+        td>: query/p71_ms_attribute_access_hour.sql
+        create_table: ${media[params].output_db}.ms_attribute_access_hour_${media[params].media_name}
+
+    +check_kick_audience_workflow:
+      if>: ${(Object.prototype.toString.call(media[params].master_segment_id) === '[object Number]')}
+      _do:
+        +kick_audience_workflow:
+          http>: "https://api-cdp.treasuredata.com/audiences/${media[params].master_segment_id}/run"
+          method: POST
+          headers:
+            - authorization: "TD1 ${secret:td.apikey}"
+          retry: true
