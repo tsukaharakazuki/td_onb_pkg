@@ -15,7 +15,7 @@ WITH t0 AS (
 
 SELECT
   td_ms_id ,
-  MAX_BY(access_hour,cnt) AS td_top_hour ,
+  CAST(MAX_BY(access_hour,cnt) AS INT) AS td_top_hour ,
   '{"access_hour":{'||ARRAY_JOIN(ARRAY_AGG('"'||CAST(rnk AS VARCHAR)||'":"'||access_hour||'"'),',')||'}}' AS td_access_hour_json
 FROM
   t0
