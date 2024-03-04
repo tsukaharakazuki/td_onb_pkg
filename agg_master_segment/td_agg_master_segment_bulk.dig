@@ -215,16 +215,21 @@ _export:
         td>: query/p53_ms_behavior_inflow.sql
         create_table: ${media[params].output_db}.ms_behavior_inflow_${media[params].media_name}
 
-    +last_access:
+    +firstlast_access:
       +empty_tables:
         td_ddl>:
         empty_tables: 
           - "ms_behavior_last_access_${media[params].media_name}"
+          - "ms_behavior_first_access_${media[params].media_name}"
         database: ${media[params].output_db}
 
       +ms_behavior_last_access:
         td>: bulk/p60_ms_behavior_last_access.sql
         insert_into: ${media[params].output_db}.ms_behavior_last_access_${media[params].media_name}
+
+      +ms_behavior_first_access:
+        td>: bulk/p61_ms_behavior_first_access.sql
+        insert_into: ${media[params].output_db}.ms_behavior_first_access_${media[params].media_name}
 
     +narrow:
       +delete_if_exists:
