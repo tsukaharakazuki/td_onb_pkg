@@ -32,10 +32,4 @@ media:
     # エンゲージメントスコア設定
     add_engagement_calc:
       sql: 
-        #- SUM(purchase_price) AS purchase_price_total 
-    # PredictiveScoringの契約がある場合、専用のAttrデータ作成
-    check_predict_dataset: false
-    predict_dataset:
-      #- colmuns: td_path
-      #- colmuns: td_source
-      
+        #- SUM(purchase_price) AS purchase_price_total      
