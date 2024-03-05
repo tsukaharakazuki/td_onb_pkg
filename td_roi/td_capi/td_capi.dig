@@ -1,0 +1,149 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  cron>: 1 0 * * *
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: td_capi
+  regular_span: 3d
+
++main_process:
+  for_each>:
+    params: ${Object.keys(brand)}
+  _do:
+    +preparation:
+      _parallel: true
+      +user:
+        +empty_tables:
+          td_ddl>:
+          empty_tables: 
+            - "capi_user"
+        +main:
+          td>: query/user.sql
+          insert_into: capi_user
+
+      +offline:
+        if>: ${brand[params].offline.check}
+        _do:
+          +empty_tables:
+            td_ddl>:
+            empty_tables: 
+              - "capi_offline_${brand[params].name}"
+          +main:
+            td>: query/offline.sql
+            insert_into: capi_offline_${brand[params].name}
+
+      +online:
+        if>: ${brand[params].online.check}
+        _do:
+          +empty_tables:
+            td_ddl>:
+            empty_tables: 
+              - "capi_online_${brand[params].name}"
+          +main:
+            td>: query/online.sql
+            insert_into: capi_online_${brand[params].name}
+
+    +result:
+      # https://docs.treasuredata.com/articles/#!int/facebook-conversions-api-export-integration/q/facebook%2520conversions/qp/1/qid/536/qid/537
+      +META-online:
+        if>: ${brand[params].meta.online}
+        _do:
+          +main:
+            _export:
+              result_params:
+                - em
+                - ge
+                - value 
+                - event_source_url 
+                - client_user_agent 
+                - client_ip_address 
+            td>: result/meta.sql
+            result_connection: ${brand[params].meta.connector}
+            result_settings:
+              skip_invalid: true
+
+    # https://docs.treasuredata.com/articles/#!int/google-enhanced-conversion-via-google-ads-export-integration/q/google/qp/1
+    +GOOGLE:
+      +GOOGLE-upload_enhanced_for_web:
+        if>: ${brand[params].google_upload_enhanced_for_web.check}
+        _do:
+          _export:
+            result_params:
+              - email
+          td>: result/google_upload_enhanced_for_web.sql
+          result_connection: ${google.connector}
+          result_settings:
+            customer_id: ${google.customer_id} 
+            conversion_type: upload_enhanced_for_web
+            skip_invalid_records: true
+            
+      +GOOGLE-upload_enhanced_for_lead:
+        if>: ${brand[params].upload_enhanced_for_lead.check}
+        _do:
+          _export:
+            result_params:
+              - order_id
+          td>: result/google_upload_enhanced_for_lead.sql
+          result_connection: ${google.connector}
+          result_settings:
+            customer_id: ${google.customer_id} 
+            conversion_type: upload_enhanced_for_lead
+            skip_invalid_records: true
+            
+      +GOOGLE-upload_offline_click_conversion:
+        if>: ${brand[params].upload_offline_click_conversion.check}
+        _do:
+          _export:
+            result_params:
+              - order_id
+          td>: result/google_upload_offline_click_conversion.sql
+          result_connection: ${google.connector}
+          result_settings:
+            customer_id: ${google.customer_id} 
+            conversion_type: upload_offline_click_conversion
+            skip_invalid_records: true
+
+      # https://docs.treasuredata.com/articles/#!int/yahoo-ads-conversion-export-integration
+      +YAHOO:
+        if>: ${brand[params].yahoo.check}
+        _do:
+          +main:
+            _export:
+              result_params:
+                - hashed_email # OR/BOTH hashed_phone_number
+                - yclid
+                - yjr_yjad
+                - yahoo_ydn_conv_value
+            td>: result/yahoo.sql
+            result_connection: ${brand[params].yahoo.connector}
+            result_settings:
+              app_id: ${brand[params].yahoo.yahoo_app_id}
+              ignore_invalid_records: true
+            type:
+
+      # https://docs.treasuredata.com/articles/#!int/line-conversion-export-integration
+      # https://conversion-api-docs.linebiz.com/ja/#section/%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89%E3%83%A9%E3%82%A4%E3%83%B3/%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88%E3%81%AE%E9%87%8D%E8%A4%87%E6%8E%92%E9%99%A4%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6
+      +LINE:
+        if>: ${brand[params].line.check}
+        _do:
+          +main:
+            _export:
+              result_params:
+                - email # OR/BOTH phone
+                - referrer
+                - ip_address
+                - user_agent
+                - url
+                - browser_id #__lt__cid
+                - click_id #ldtag_cl
+                #- ifa
+                #- line_uid
+            td>: result/line.sql
+            result_connection: ${brand[params].line.connector}
+            result_settings:
+              line_tag_id: ${brand[params].line.line_tag_id}
+              access_token: ${brand[params].line.access_token}
+              ignore_invalid_records: true
