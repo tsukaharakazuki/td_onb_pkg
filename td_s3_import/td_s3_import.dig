@@ -1,0 +1,22 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  cron>: 1 2 * * *
+
+_export:
+  !include : 'config/params.yml'
+  log_span: 1d #固定
+
++main:
+  for_each>:
+    param: ${Object.keys(s3)}
+  _do:
+    +create_tables:
+      td_ddl>:
+      create_tables: 
+        - "${s3[param].td_output_tbl}"
+      database: ${s3[param].td_output_db}
+
+    +import:
+      td_load>: yaml/s3_import.yml
+      table: ${s3[param].td_output_tbl}

@@ -1,0 +1,19 @@
+td:
+  database: YOUR_DATABASE_NAME
+
+s3:
+  sample1:
+    td_authentication_id: S3_CONNECTOR_AUTHENTICATION_ID
+    td_output_db: TD_IMPORT_DATABASE_NAME
+    td_output_tbl: TD_IMPORT_TABLE_NAME
+    bucket: S3_BUCKET_NAME
+    path_prefix: prefix/path_ #頭の/は記述しない
+    charset: UTF-8
+    newline: CRLF
+    type: csv
+    skip_header_lines: 1
+    columns:
+      - {name: td_col_name_1, type: string}
+      - {name: td_col_name_2, type: string}
+    mode: replace #append / replace_on_new_data
+

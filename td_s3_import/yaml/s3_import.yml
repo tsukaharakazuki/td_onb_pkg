@@ -1,0 +1,24 @@
+---
+in:
+  type: s3
+  td_authentication_id: ${s3[param].td_authentication_id}
+  bucket: ${s3[param].bucket}
+  path_prefix: ${s3[param].path_prefix}
+  parser:
+    charset: ${s3[param].charset}
+    newline: ${s3[param].newline}
+    type: ${s3[param].type}
+    skip_header_lines: ${s3[param].skip_header_lines}
+    allow_extra_columns: false
+    allow_optional_columns: false
+    columns: ${s3[param].columns}
+out:
+  mode: ${s3[param].mode}
+exec: {}
+filters:
+- type: add_time
+  to_column:
+    name: time
+    type: timestamp
+  from_value:
+    mode: upload_time
