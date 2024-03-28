@@ -53,7 +53,8 @@ TDのtimeカラムには、取り込み日時のUNIXTIMEが入る設定になっ
     mode: upload_time
 ```
   
-カラムが多い・少ない場合の挙動については、初期設定ではSKIP（データを取り込まない）設定になっています。変更する場合は以下を変更ください。詳細については（https://docs.treasuredata.com/articles/#!pd/CSV-Parser-Function）を参照ください。
+カラムが多い・少ない場合の挙動については、初期設定ではSKIP（データを取り込まない）設定になっています。変更する場合は以下を変更ください。詳細については以下を参照ください。  
+https://docs.treasuredata.com/articles/#!pd/CSV-Parser-Function
 ```
 allow_extra_columns: false
 allow_optional_columns: false
