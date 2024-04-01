@@ -1,0 +1,39 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params.yml'
+  proc_date: ${session_date}
+
++get_progress:
+  !include : config/engagement_date.dig
+  +engagement_score:
+    for_each>:
+      val: ${config_each}
+    _do:
+      +proc:
+        !include : config/set_colmuns_store.dig
+
+        +empty_tables:
+          td_ddl>:
+          empty_tables: 
+            - "tmp_engagement_score_${val.label}"
+            - "td_engagement_score_${val.label}"
+            - "store_engagement_score_${val.label}"
+  
+        +tmp:
+          td>: queries/tmp.sql
+          insert_into: tmp_engagement_score_${val.label}
+          engine: hive
+          engine_version: stable
+  
+        +main:
+          td>: queries/main.sql
+          insert_into: td_engagement_score_${val.label}
+          engine: hive
+          engine_version: stable
+
+        +store:
+          td>: queries/store.sql
+          insert_into: store_engagement_score_${val.label}
+          engine: hive
+          engine_version: stable

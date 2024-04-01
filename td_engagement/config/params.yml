@@ -1,0 +1,14 @@
+td:
+  database: td_engagement
+
+weblog_db: td_audience_studio
+weblog_tbl: agg_weblog
+key_id: user_id
+
+config_each:
+  - label: ltv
+    time_filter: TD_TIME_RANGE(time ,NULL ,TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd 00:00:00', 'JST') ,'JST')
+    target_date: ${td.last_results.progress}
+  - label: 365d
+    time_filter: TD_INTERVAL(time,'-365d','JST')
+    target_date: 365
