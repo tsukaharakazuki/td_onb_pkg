@@ -11,3 +11,8 @@ WHERE
   )
 ORDER BY
   1
+
+/*
+'- '||'IF('||column_name||' = '''' OR '||column_name||' = ''undefined'',NULL,'||column_name||') AS '||column_name
+'- '||'IF('||column_name||' = '''' ,NULL,'||column_name||') AS '||column_name
+*/
