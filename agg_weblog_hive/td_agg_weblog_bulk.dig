@@ -1,0 +1,71 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params_bulk.yml'
+  td:
+    database: l1_agg_weblog
+  session_span: 1800 #秒数→セッショナイズする間隔設定
+  proc_firsttime: true #初回のみtrue/それ以降はfalse
+
++empty_tables:
+  if>: ${proc_firsttime}
+  _do:
+    +empty_base:
+      td_ddl>:
+      empty_tables: 
+        - "agg_weblog"
+
++media_process:
+  for_each>:
+    params: ${Object.keys(media)}
+  _do:
+    +empty_tmp_tbl:
+      td_ddl>:
+      empty_tables: 
+        - "tmp_agg_weblog_first"
+    
+    +weblog_processing:
+      +pv:
+        _export:
+          time_filter: TD_TIME_RANGE(time ,NULL ,TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd 00:00:00', 'JST') ,'JST')
+        td>: query/p1_pv.sql
+        insert_into: tmp_agg_weblog_first
+        engine: hive # Only Hive works
+        engine_version: stable
+
+    +click_processing:
+      if>: ${media[params].check_click}
+      _do:
+        +click:
+          _export:
+            time_filter: TD_TIME_RANGE(time ,NULL ,TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd 00:00:00', 'JST') ,'JST')
+          td>: query/p2_click.sql
+          insert_into: tmp_agg_weblog_first
+          engine: hive # Only Hive works
+          engine_version: stable
+
+    +read_processing:
+      if>: ${media[params].check_read}
+      _do:
+        +read:
+          _export:
+            time_filter: TD_TIME_RANGE(time ,NULL ,TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd 00:00:00', 'JST') ,'JST')
+          td>: query/p3_read.sql
+          insert_into: tmp_agg_weblog_first
+          engine: hive # Only Hive works
+          engine_version: stable
+
+    +sessionize_processing:
+      +sessionize:
+        _export:
+          target_tbl: tmp_agg_weblog_first
+        td>: query/p4_sessionize.sql
+        insert_into: agg_weblog
+        engine: hive # Only Hive works
+        engine_version: stable
+        
+    +drop_tmp_tbl:
+      td_ddl>:
+      drop_tables: 
+        - "tmp_agg_weblog_first"
+

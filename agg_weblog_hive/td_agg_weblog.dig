@@ -1,0 +1,65 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  cron>: 1 0 * * *
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: l1_agg_weblog
+  session_span: 1800 #秒数→セッショナイズする間隔設定
+  regular_span: 1d
+
++media_process:
+  for_each>:
+    params: ${Object.keys(media)}
+  _do:
+    +empty_tmp_tbl:
+      td_ddl>:
+      empty_tables: 
+        - "tmp_agg_weblog_regular"
+    
+    +weblog_processing:
+      +pv:
+        _export:
+          time_filter: TD_INTERVAL(time, '-${regular_span}', 'JST')
+        td>: query/p1_pv.sql
+        insert_into: tmp_agg_weblog_regular
+        engine: hive # Only Hive works
+        engine_version: stable
+
+    +click_processing:
+      if>: ${media[params].check_click}
+      _do:
+        +click:
+          _export:
+            time_filter: TD_INTERVAL(time, '-${regular_span}', 'JST')
+          td>: query/p2_click.sql
+          insert_into: tmp_agg_weblog_regular
+          engine: hive # Only Hive works
+          engine_version: stable
+
+    +read_processing:
+      if>: ${media[params].check_read}
+      _do:
+        +read:
+          _export:
+            time_filter: TD_INTERVAL(time, '-${regular_span}', 'JST')
+          td>: query/p3_read.sql
+          insert_into: tmp_agg_weblog_regular
+          engine: hive # Only Hive works
+          engine_version: stable
+
+    +sessionize_processing:
+      +sessionize:
+        _export:
+          target_tbl: tmp_agg_weblog_regular
+        td>: query/p4_sessionize.sql
+        insert_into: agg_weblog
+        engine: hive # Only Hive works
+        engine_version: stable
+        
+    +drop_tmp_tbl:
+      td_ddl>:
+      drop_tables: 
+        - "tmp_agg_weblog_regular"
