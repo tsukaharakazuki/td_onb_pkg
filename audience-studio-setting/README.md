@@ -8,8 +8,7 @@ Audience Studioの選択時に、Time Filter形式で選択可能な設定が可
 
 - SAMPLE SQL  
 ```
-SELECT
-  TD_TIME_PARSE(order_date,'JST') AS unix_order_date
+TD_TIME_PARSE(order_date,'JST') AS unix_order_date
 ```
 - SAMPLE OUTPUT
   
@@ -42,8 +41,7 @@ https://github.com/tsukaharakazuki/td_onb_pkg/tree/main/audience-studio-time-fil
 経過日数を取り扱いた日付などは、先にDiffを計算してLong型のカラムを作成しておくと、セグメントの設定が楽になります。
 - SAMPLE SQL
 ```
-SELECT
-  DATE_DIFF('DAY', CAST(DATE_FORMAT(DATE_PARSE(regist_date, '%Y-%m-%d %H:%i:%s.%f'),'%Y-%m-%d') as DATE), CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd') as DATE)) AS regist_duration
+DATE_DIFF('DAY', CAST(DATE_FORMAT(DATE_PARSE(regist_date, '%Y-%m-%d %H:%i:%s.%f'),'%Y-%m-%d') as DATE), CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd') as DATE)) AS regist_duration
 ```
 - SAMPLE OUTPUT  
   
@@ -65,8 +63,7 @@ https://prestodb.io/docs/current/functions/datetime.html#mysql-date-functions
 
 - SAMPLE SQL
 ```
-SELECT
-  DATE_DIFF('YEAR', CAST(DATE_FORMAT(DATE_PARSE(birth_day)), '%Y-%m-%d %H:%i:%s.%f'),'%Y-%m-%d') as DATE), CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd') as DATE)) AS age
+DATE_DIFF('YEAR', CAST(DATE_FORMAT(DATE_PARSE(birth_date, '%Y-%m-%d'),'%Y-%m-%d') as DATE), CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd') as DATE)) as age 
 ```
 - SAMPLE OUTPUT  
   
