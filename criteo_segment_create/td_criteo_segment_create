@@ -1,0 +1,41 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  td:
+    database: td_criteo
+  send_email: dummy@dummy.jp
+
++td_for_each:
+  for_each>:
+    seg: 
+      #- name: "TD初回送信テスト"
+      #  advertiser_id: 11111
+      #- name: "TD初回送信テスト"
+      #  advertiser_id: 11111
+      #- name: "TD初回送信テスト"
+      #  advertiser_id: 11111
+      #- name: "TD初回送信テスト"
+      #  advertiser_id: 11111
+      #- name: "TD初回送信テスト"
+      #  advertiser_id: 11111
+      #- name: "TD初回送信テスト"
+      #  advertiser_id: 11111
+  _do:
+    +td-result-into-criteo:
+      td>: 
+      query: |
+        SELECT
+          '${send_email}' AS userid ,
+          '${seg.name}' AS name ,
+          'add' AS operation ,
+          'email' AS schema ,
+          359 AS gumid ,
+          CAST(NULL AS varchar) AS id
+      result_connection: CRITEO_CONNECTOR_NAME
+      result_settings:
+        advertiser_id: ${seg.advertiser_id}
+        request_threshold: 50000
+        request_retries: 7
+        request_connect_timeout: 300
+        request_read_timeout: 900
+        request_write_timeout: 900
