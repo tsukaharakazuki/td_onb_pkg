@@ -180,6 +180,7 @@ SELECT
   LOWER(TO_HEX(SHA256(TO_UTF8(phone)))) AS phone_hash ,
   LOWER(TO_HEX(SHA256(TO_UTF8(SUBSTR(phone,2))))) AS phone_hash_remove0 ,
   LOWER(TO_HEX(SHA256(TO_UTF8('+81'||SUBSTR(phone,2))))) AS phone_hash_remove0plus81 ,
+  LOWER(TO_HEX(SHA256(TO_UTF8('81'||SUBSTR(phone,2))))) AS phone_hash_remove0_81 ,
   email ,
   LOWER(TO_HEX(SHA256(TO_UTF8(email)))) AS email_hash ,
   'JP' AS country_code
