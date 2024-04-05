@@ -8,7 +8,7 @@ WITH t1 AS (
     td_client_id ,
     td_global_id ,
     td_ssc_id ,
-	  user_id ,
+    user_id ,
     utm_campaign ,
     utm_medium ,
     utm_source ,
@@ -62,75 +62,87 @@ WITH t1 AS (
     ip_city 
     ${(Object.prototype.toString.call(media[params].all_columns.columns) === '[object Array]')?','+media[params].all_columns.columns.join():''}
   FROM (
-		SELECT
-			* 
-		FROM
-			${target_tbl}
-		DISTRIBUTE BY 
-			cookie
-		SORT BY 
-			cookie,time
-	) t
+    SELECT
+      * 
+    FROM
+      ${target_tbl}
+    DISTRIBUTE BY 
+      cookie
+    SORT BY 
+      cookie,time
+  ) t
+)
+
+, t2 AS (
+  SELECT
+    time ,
+    '${media[params].media_name}' AS media_name ,
+    td_data_type ,
+    TD_TIME_FORMAT(time,'yyyy-MM-dd HH:mm:ss','JST') AS access_date_time ,
+    TD_TIME_FORMAT(time,'yyyy-MM-dd','JST') AS access_date ,
+    TD_TIME_FORMAT(time,'HH','JST') AS access_hour ,
+    TD_TIME_FORMAT(time,'ww','JST') AS week ,
+    TD_TIME_FORMAT(time,'EEE','JST') AS dow ,
+    TD_TIME_FORMAT(time,'a','JST') AS ampm ,
+    MIN(time) OVER (PARTITION BY session_id) AS session_start_time ,
+    MAX(time) OVER (PARTITION BY session_id) AS session_end_time ,
+    session_id ,
+    row_number() over (partition by session_id order by time ASC) AS session_num ,
+    LEAD(time) OVER (PARTITION BY session_id order by time ASC) - time AS browsing_sec ,
+    cookie AS td_cookie ,
+    cookie_type AS td_cookie_type ,
+    td_client_id ,
+    td_global_id ,
+    td_ssc_id ,
+    user_id ,
+    IF( user_id is NULL ,
+        MAX(user_id) OVER (PARTITION BY session_id) ,
+        user_id 
+    ) AS user_id_comp ,
+    utm_campaign ,
+    utm_medium ,
+    utm_source ,
+    utm_term ,
+    source_medium AS td_source_medium ,
+    SPLIT(source_medium, '/')[0] AS td_source ,
+    SPLIT(source_medium, '/')[1] AS td_medium ,
+    utm_campaign AS td_campaign ,
+    td_referrer ,
+    td_ref_host ,
+    td_url ,
+    CONCAT(td_host, td_path) AS article_key ,
+    td_host ,
+    td_path ,
+    td_title ,
+    td_description ,
+    td_ip ,
+    td_os ,
+    td_user_agent ,
+    td_browser ,
+    td_screen ,
+    td_viewport ,
+    ua_os ,
+    ua_vendor ,
+    ua_os_version ,
+    ua_browser ,
+    ua_category ,
+    ip_country ,
+    REGEXP_REPLACE(REGEXP_REPLACE(ip_prefectures, '^Ō', 'O'), 'ō', 'o') AS ip_prefectures ,
+    REGEXP_REPLACE(REGEXP_REPLACE(ip_city, '^Ō', 'O'), 'ō', 'o') AS ip_city ,
+    UNIX_TIMESTAMP() AS td_proc_date 
+    ${(Object.prototype.toString.call(media[params].all_columns.columns) === '[object Array]')?','+media[params].all_columns.columns.join():''}
+  FROM
+    t1
 )
 
 -- DIGDAG_INSERT_LINE
-
 SELECT
-  time ,
-  '${media[params].media_name}' AS media_name ,
-  td_data_type ,
-  TD_TIME_FORMAT(time,'yyyy-MM-dd HH:mm:ss','JST') AS access_date_time ,
-  TD_TIME_FORMAT(time,'yyyy-MM-dd','JST') AS access_date ,
-  TD_TIME_FORMAT(time,'HH','JST') AS access_hour ,
-  TD_TIME_FORMAT(time,'ww','JST') AS week ,
-  TD_TIME_FORMAT(time,'EEE','JST') AS dow ,
-  TD_TIME_FORMAT(time,'a','JST') AS ampm ,
-  MIN(time) OVER (PARTITION BY session_id) AS session_start_time ,
-  MAX(time) OVER (PARTITION BY session_id) AS session_end_time ,
-  session_id ,
-  row_number() over (partition by session_id order by time ASC) AS session_num ,
-  LEAD(time) OVER (PARTITION BY session_id order by time ASC) - time AS browsing_sec ,
-  cookie AS td_cookie ,
-  cookie_type AS td_cookie_type ,
-  td_client_id ,
-  td_global_id ,
-  td_ssc_id ,
-  user_id ,
-  IF( user_id is NULL ,
-    	MAX(user_id) OVER (PARTITION BY session_id) ,
-    	user_id 
-  ) AS user_id_comp ,
-  utm_campaign ,
-  utm_medium ,
-  utm_source ,
-  utm_term ,
-  source_medium AS td_source_medium ,
-  SPLIT(source_medium, '/')[0] AS td_source ,
-  SPLIT(source_medium, '/')[1] AS td_medium ,
-  utm_campaign AS td_campaign ,
-  td_referrer ,
-  td_ref_host ,
-  td_url ,
-  CONCAT(td_host, td_path) AS article_key ,
-  td_host ,
-  td_path ,
-  td_title ,
-  td_description ,
-  td_ip ,
-  td_os ,
-  td_user_agent ,
-  td_browser ,
-  td_screen ,
-  td_viewport ,
-  ua_os ,
-  ua_vendor ,
-  ua_os_version ,
-  ua_browser ,
-  ua_category ,
-  ip_country ,
-  REGEXP_REPLACE(REGEXP_REPLACE(ip_prefectures, '^Ō', 'O'), 'ō', 'o') AS ip_prefectures ,
-  REGEXP_REPLACE(REGEXP_REPLACE(ip_city, '^Ō', 'O'), 'ō', 'o') AS ip_city ,
-  UNIX_TIMESTAMP() AS td_proc_date 
-  ${(Object.prototype.toString.call(media[params].all_columns.columns) === '[object Array]')?','+media[params].all_columns.columns.join():''}
+  * ,
+  IF(user_id_comp is not NULL, user_id_comp, td_cookie) AS td_ms_id ,
+  IF(user_id_comp is not NULL, 'user_id', 'cookie') AS td_ms_id_type ,
+  parse_url(td_url,'QUERY','ldtag_cl') AS ldtag_cl ,
+  parse_url(td_url,'QUERY','gclid') AS gclid ,
+  parse_url(td_url,'QUERY','yclid') AS yclid ,
+  parse_url(td_url,'QUERY','fbclid') AS fbclid 
 FROM
-  t1
+  t2
