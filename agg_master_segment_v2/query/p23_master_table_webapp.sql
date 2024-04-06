@@ -8,7 +8,7 @@ SELECT
   MAX_BY(td_cookie, if(td_cookie is null,null,time)) AS td_cookie ,
   MAX_BY(td_cookies, if(td_cookies is null,null,time)) AS td_cookies ,
   MAX_BY(td_client_id, if(td_client_id is null,null,time)) AS td_client_id ,
-  MAX_BY(user_id, time) AS user_id ,
+  MAX(user_id) AS user_id ,
   MAX(time) AS time
 FROM 
   ${media[params].output_db}.ms_master_table_${media[params].media_name}
