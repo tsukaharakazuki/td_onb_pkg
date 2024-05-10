@@ -75,7 +75,7 @@ WITH tmp AS (
         --追加がある場合以下に記入
         --入力例：, ('カラム名', '説明') 
         --, ('', '', '') 
-    ) as cols(col_name, col_info);
+    ) as cols(col_name, col_info)
   ) b
   ON
     a.column_name = b.col_name
