@@ -2,9 +2,9 @@ SELECT
   time ,
   td_ms_id ,
   media_name ,
-  ms_utm_source AS td_source ,
-  ms_utm_medium AS td_medium ,
-  ms_utm_campaign AS td_campaign ,
+  td_source ,
+  td_medium ,
+  td_campaign ,
   time AS first_access_unix ,
   TD_TIME_FORMAT(time,'yyyy-MM-dd HH:mm:ss','JST') AS first_access ,
   CONCAT('初回アクセス | ',media_name,' ',TD_TIME_FORMAT(time,'yyyy-MM-dd HH:mm:ss','JST')) AS td_url 
