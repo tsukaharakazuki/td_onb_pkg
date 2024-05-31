@@ -1,0 +1,39 @@
+WITH t0 AS (
+  SELECT  
+    uid ,
+    time
+  FROM
+    tbl
+  GROUP BY
+    1,2
+)
+
+, t1 AS (
+  SELECT 
+    uid,
+    MAX(CASE WHEN num = '1' THEN time END) AS f1_unix ,
+    MAX(CASE WHEN num = '2' THEN time END) AS f2_unix ,
+    MAX(CASE WHEN num = '3' THEN time END) AS f3_unix ,
+    MAX(CASE WHEN num = '4' THEN time END) AS f4_unix
+  FROM (
+    SELECT
+      * ,
+      CAST(ROW_NUMBER() OVER (PARTITION BY uid ORDER BY time ASC) AS VARCHAR) AS num
+    FROM
+      t0
+  )
+  GROUP BY 
+    uid
+)
+
+SELECT
+  * ,
+  TD_TIME_FORMAT(f1_unix ,'yyyy-MM-dd HH:mm:ss','JST') AS f1_date ,
+  TD_TIME_FORMAT(f2_unix ,'yyyy-MM-dd HH:mm:ss','JST') AS f2_date ,
+  TD_TIME_FORMAT(f3_unix ,'yyyy-MM-dd HH:mm:ss','JST') AS f3_date ,
+  TD_TIME_FORMAT(f4_unix ,'yyyy-MM-dd HH:mm:ss','JST') AS f4_date ,
+  (f2_unix - f1_unix) / 86400 AS f2_diff ,
+  (f3_unix - f2_unix) / 86400 AS f3_diff ,
+  (f4_unix - f3_unix) / 86400 AS f4_diff 
+FROM
+  t1
