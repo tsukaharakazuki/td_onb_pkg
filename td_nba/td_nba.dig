@@ -6,7 +6,6 @@ timezone: "Asia/Tokyo"
 _export:
   !include : 'config/params_common.yml'
   !include : 'config/params.yml'
-  log_span: 1d #固定
 
 +media_process:
   for_each>:
