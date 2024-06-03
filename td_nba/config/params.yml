@@ -1,0 +1,18 @@
+---
+inflow:
+  db: inflow_db
+  tbl: calc_inflow_sample
+  max_rank: 10
+
+exclusion_source_medium:
+  - \(direct\)/\(none\)
+
+list:
+  sample1:
+    list_name: sample1
+    output_db: td_nba
+    target_db: weblog_db
+    target_tbl: weblog_tbl
+    target_brand: media_name
+    where_condition: 
+      - td_path = '/ordercomplete' 
