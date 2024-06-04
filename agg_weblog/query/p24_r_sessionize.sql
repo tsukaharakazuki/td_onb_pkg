@@ -22,6 +22,16 @@ WITH t1 AS (
         THEN '(none)/'||utm_medium
       WHEN REGEXP_LIKE(td_url, 'gclid')
         THEN 'google/cpc'   
+      WHEN REGEXP_LIKE(td_url, 'fbclid')
+        THEN 'facebook/ad'   
+      WHEN REGEXP_LIKE(td_url, 'yclid')
+        THEN 'yahoo/ad'   
+      WHEN REGEXP_LIKE(td_url, 'ldtag_cl')
+        THEN 'line/ad'   
+      WHEN REGEXP_LIKE(td_url, 'twclid')
+        THEN 'x/ad'   
+      WHEN REGEXP_LIKE(td_url, 'ttclid')
+        THEN 'tiktok/ad'   
       WHEN td_ref_host = '' OR td_ref_host = td_host OR td_ref_host is NULL
         THEN '(direct)/(none)'
       WHEN REGEXP_LIKE(td_ref_host, '(mail)\.(google|yahoo|nifty|excite|ocn|odn|jimdo)\.')
