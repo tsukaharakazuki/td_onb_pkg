@@ -21,7 +21,17 @@ WITH t1 AS (
       WHEN utm_source is NULL AND utm_medium is not NULL
         THEN CONCAT('(none)/',utm_medium)
       WHEN td_url RLIKE 'gclid'
-        THEN 'google/cpc'   
+        THEN 'google/cpc'  
+      WHEN td_url RLIKE 'fbclid'
+        THEN 'facebook/ad'  
+      WHEN td_url RLIKE 'yclid'
+        THEN 'yahoo/ad'  
+      WHEN td_url RLIKE 'ldtag_cl'
+        THEN 'line/ad'  
+      WHEN td_url RLIKE 'twclid'
+        THEN 'x/ad'  
+      WHEN td_url RLIKE 'ttclid'
+        THEN 'tiktok/ad'  
       WHEN td_ref_host = '' OR td_ref_host = td_host OR td_ref_host is NULL
         THEN '(direct)/(none)'
       WHEN td_ref_host RLIKE '(mail)\.(google|yahoo|nifty|excite|ocn|odn|jimdo)\.'
