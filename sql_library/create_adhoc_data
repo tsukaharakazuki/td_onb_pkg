@@ -1,0 +1,7 @@
+SELECT 
+  * 
+FROM (
+  VALUES 
+    ('') 
+    --, ('') 
+) as cols(col_name);
