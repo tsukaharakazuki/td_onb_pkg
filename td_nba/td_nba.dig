@@ -7,6 +7,17 @@ _export:
   !include : 'config/params_common.yml'
   !include : 'config/params.yml'
 
++user_proc:
+  +empty_dist_tables:
+    td_ddl>:
+    empty_tables: 
+      - "nba_user"
+    database: ${td.database}
+
+  +user:
+    td>: query/user.sql
+    insert_into: ${td.database}.nba_user
+
 +media_process:
   for_each>:
     param: ${Object.keys(list)}
@@ -16,7 +27,7 @@ _export:
       empty_tables: 
         - "nba_${list[param].list_name}"
         - "nba_cv_${list[param].list_name}"
-        - "nba_user_${list[param].list_name}"
+        #- "nba_user_${list[param].list_name}"
         - "nba_tmp_${list[param].list_name}"
       database: ${list[param].output_db}
 
@@ -25,9 +36,9 @@ _export:
         td>: query/cnv.sql
         insert_into: ${list[param].output_db}.nba_cv_${list[param].list_name}
 
-      +user:
-        td>: query/user.sql
-        insert_into: ${list[param].output_db}.nba_user_${list[param].list_name}
+      #+user:
+      #  td>: query/user.sql
+      #  insert_into: ${list[param].output_db}.nba_user_${list[param].list_name}
 
       +tmp:
         td>: query/tmp.sql
