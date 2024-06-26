@@ -12,6 +12,7 @@ _export:
     td_ddl>:
     empty_tables: 
       - "nba_user"
+      - "ms_behavior_nba"
     database: ${td.database}
 
   +user:
@@ -48,3 +49,4 @@ _export:
       +proc:
         td>: query/main.sql
         insert_into: ${list[param].output_db}.nba_${list[param].list_name}
+        #insert_into: ${td.database}.ms_behavior_nba
