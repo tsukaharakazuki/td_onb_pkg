@@ -13,7 +13,8 @@ SELECT
   td_ms_id ,
   next_most_action ,
   IF(best_source_medium is not NULL ,best_source_medium,best_action) AS next_best_action ,
-  best_action AS next_better_action
+  best_action AS next_better_action ,
+  '${list[param].target_name}' AS segment_name
 FROM
   t0 a
 LEFT JOIN (
