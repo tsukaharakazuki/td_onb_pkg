@@ -4,7 +4,8 @@ FROM (
   SELECT
     * 
   FROM
-    ${list[param].output_db}.nba_user_${list[param].list_name}
+    ${td.database}.nba_user
+    --${list[param].output_db}.nba_user_${list[param].list_name}
   WHERE
     inflow_rank < ${inflow.max_rank}
 ) a
