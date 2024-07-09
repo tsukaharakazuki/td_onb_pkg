@@ -1,0 +1,27 @@
+# 全てのデータをロードするテーブル
+all_tbl:
+  - src_dataset: BQ_DATASET #取り込みデータのDATASET
+    src_table: BQ_TABLE #取り込みデータのTABLE
+    td_output_db: TD_OUTPUT_DB #TD出力DATABASE
+    td_output_tbl: TD_OUTPUT_TBL #TD出力TABLE
+    time_column: created_at  # timeに割り当てる対象のカラム
+
+# Where区でtable_suffixを指定してロードするテーブル
+date_prefix_file:
+  - src_dataset: BQ_DATASET
+    src_table: BQ_TABLE
+    td_output_db: TD_OUTPUT_DB
+    td_output_tbl: TD_OUTPUT_TBL
+    query:
+      - "* except(event_date)"
+      - CAST(event_date AS string) AS event_date
+    time_column: event_date  # timeに割り当てる対象のカラム
+
+# Where区で特定カラムを日時指定してロードするテーブル
+incremental:
+  - src_dataset: BQ_DATASET
+    src_table: BQ_TABLE
+    td_output_db: TD_OUTPUT_DB
+    td_output_tbl: TD_OUTPUT_TBL
+    date_column: updated_at  # 取り込み前々日データのみをインポートする
+    time_column: updated_at  # timeに割り当てる対象のカラム

@@ -1,0 +1,10 @@
+td:
+  database: IMPORT_DB
+
+# BigQuery側の設定
+gcp:
+  secret_key: ${secret:bq.json_key}
+  project_id: PROJECT_ID
+  temp_dataset: TMP_DATASET  # 一時テーブルを保存する場所
+  gcs_bucket: GCS_BUCKET  # データを保存する場所
+  location: US # BigQueryおよびGCSのロケーション(同一である必要あり)

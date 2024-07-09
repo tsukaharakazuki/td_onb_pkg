@@ -1,0 +1,57 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/common_params.yml'
+  !include : 'config/params.yml'
+
++all_table:
+  for_each>:
+    dp: ${all_tbl}
+  _parallel: true
+  _do:
+    +create_import_table:
+      td_ddl>:
+      create_tables: 
+        - "${dp.td_output_tbl}"
+      database: ${dp.td_output_db}
+            
+    +load:
+      td_load>: yaml/all.yml
+      database: ${dp.td_output_db}
+      table: ${dp.td_output_tbl}
+
++date_prefix_file:
+  for_each>:
+    dp: ${date_prefix_file}
+  _parallel: true
+  _do:
+    +create_import_table:
+      td_ddl>:
+      create_tables: 
+        - "${dp.td_output_tbl}"
+      database: ${dp.td_output_db}
+            
+    +load:
+      _export:
+        time_filter:
+      td_load>: yaml/date_prefix.yml
+      database: ${dp.td_output_db}
+      table: ${dp.td_output_tbl}
+
++incremental:
+  for_each>:
+    dp: ${incremental}
+  _parallel: true
+  _do:
+    +create_import_table:
+      td_ddl>:
+      create_tables: 
+        - "${dp.td_output_tbl}"
+      database: ${dp.td_output_db}
+
+    +load:
+      _export:
+        time_filter: 
+      td_load>: config/incremental.yml
+      database: ${dp.td_output_db}
+      table: ${dp.td_output_tbl}
