@@ -173,3 +173,7 @@ _export:
       +proc:
         td>: query/p71_ms_attribute_access_hour.sql
         create_table: ${media[params].output_db}.ms_attribute_access_hour_${media[params].media_name}
+
+    +criteo_gum_id:
+      td>: query/p72_criteo_gum_id.sql
+      create_table: ${media[params].output_db}.ms_attribute_criteo_gum_id_${media[params].media_name}
