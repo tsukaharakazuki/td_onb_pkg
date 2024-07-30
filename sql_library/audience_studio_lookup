@@ -1,0 +1,26 @@
+WITH t0 AS (
+--AudienceStudio SQL START
+--ここに集計したいセグメントのSQLを貼り付けてください
+--AudienceStudio SQL END
+)
+
+SELECT
+  *
+FROM
+  DATABASE_NAME.TABLE_NAME a
+INNER JOIN (
+  SELECT
+    KEY_ID AS jid 
+  FROM
+    t0
+) b
+ON
+  a.KEY_ID = b.jid
+WHERE
+  TD_TIME_RANGE(
+    time,
+    '2024-02-01 00:00:00' , --集計開始日
+    '2024-06-01 00:00:00' , --集計終了日
+    'JST'
+  )
+
