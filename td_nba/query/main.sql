@@ -9,6 +9,7 @@ WITH t0 AS (
     1
 )
 
+, t1 AS (
 SELECT
   td_ms_id ,
   next_most_action ,
@@ -25,3 +26,10 @@ LEFT JOIN (
 ) b
 ON
   1 = 1
+)
+
+SELECT
+  * ,
+  'NBA|next_most_action:'||next_most_action||' next_best_action:'||next_best_action AS td_url 
+FROM
+  t1
