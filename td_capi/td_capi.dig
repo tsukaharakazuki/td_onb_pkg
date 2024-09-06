@@ -49,7 +49,7 @@ _export:
     +result:
       # https://docs.treasuredata.com/articles/#!int/facebook-conversions-api-export-integration/q/facebook%2520conversions/qp/1/qid/536/qid/537
       +META-online:
-        if>: ${brand[params].meta.online}
+        if>: ${brand[params].meta.check}
         _do:
           +main:
             _export:
@@ -60,51 +60,54 @@ _export:
                 - event_source_url 
                 - client_user_agent 
                 - client_ip_address 
+                - custom_data
             td>: result/meta.sql
             result_connection: ${brand[params].meta.connector}
             result_settings:
               skip_invalid: true
 
-      # https://docs.treasuredata.com/articles/#!int/google-enhanced-conversion-via-google-ads-export-integration/q/google/qp/1
-      +GOOGLE:
-        +GOOGLE-upload_enhanced_for_web:
-          if>: ${brand[params].google_upload_enhanced_for_web.check}
-          _do:
-            _export:
-              result_params:
-                - email
-            td>: result/google_upload_enhanced_for_web.sql
-            result_connection: ${google.connector}
-            result_settings:
-              customer_id: ${google.customer_id} 
-              conversion_type: upload_enhanced_for_web
-              skip_invalid_records: true
-              
-        +GOOGLE-upload_enhanced_for_lead:
-          if>: ${brand[params].upload_enhanced_for_lead.check}
-          _do:
-            _export:
-              result_params:
-                - order_id
-            td>: result/google_upload_enhanced_for_lead.sql
-            result_connection: ${google.connector}
-            result_settings:
-              customer_id: ${google.customer_id} 
-              conversion_type: upload_enhanced_for_lead
-              skip_invalid_records: true
-              
-        +GOOGLE-upload_offline_click_conversion:
-          if>: ${brand[params].upload_offline_click_conversion.check}
-          _do:
-            _export:
-              result_params:
-                - order_id
-            td>: result/google_upload_offline_click_conversion.sql
-            result_connection: ${google.connector}
-            result_settings:
-              customer_id: ${google.customer_id} 
-              conversion_type: upload_offline_click_conversion
-              skip_invalid_records: true
+    # https://docs.treasuredata.com/articles/#!int/google-enhanced-conversion-via-google-ads-export-integration/q/google/qp/1
+    +GOOGLE:
+      +GOOGLE-upload_enhanced_for_web:
+        if>: ${brand[params].google.enhanced_for_web.check}
+        _do:
+          _export:
+            result_params:
+              - email
+              - order_id
+          td>: result/google_upload_enhanced_for_web.sql
+          result_connection: ${brand[params].google.connector}
+          result_settings:
+            customer_id: ${brand[params].google.customer_id} 
+            conversion_type: upload_enhanced_for_web
+            skip_invalid_records: true
+            
+      +GOOGLE-upload_enhanced_for_lead:
+        if>: ${brand[params].google.enhanced_for_lead.check}
+        _do:
+          _export:
+            result_params:
+              - order_id
+          td>: result/google_upload_enhanced_for_lead.sql
+          result_connection: ${brand[params].google.connector}
+          result_settings:
+            customer_id: ${brand[params].google.customer_id} 
+            conversion_type: upload_enhanced_for_lead
+            skip_invalid_records: true
+            
+      +GOOGLE-upload_offline_click_conversion:
+        if>: ${brand[params].google.offline_click_conversion.check}
+        _do:
+          _export:
+            result_params:
+              - order_id
+          td>: result/google_upload_offline_click_conversion.sql
+          result_connection: ${brand[params].google.connector}
+          result_settings:
+            customer_id: ${brand[params].google.customer_id} 
+            conversion_type: upload_offline_click_conversion
+            skip_invalid_records: true
+
 
       # https://docs.treasuredata.com/articles/#!int/yahoo-ads-conversion-export-integration
       +YAHOO:
