@@ -27,7 +27,9 @@ SELECT
   IF('${brand[params].user.city}' <> 'na',${brand[params].user.city},CAST(NULL AS VARCHAR)) AS city ,
   IF('${brand[params].user.zip_code}' <> 'na',${brand[params].user.zip_code},CAST(NULL AS VARCHAR)) AS zip_code ,
   IF('${brand[params].user.country}' <> 'na','${brand[params].user.country}',CAST(NULL AS VARCHAR)) AS country ,
-  IF('${brand[params].user.currency}' <> 'na','${brand[params].user.currency}',CAST(NULL AS VARCHAR)) AS currency 
+  IF('${brand[params].user.currency}' <> 'na','${brand[params].user.currency}',CAST(NULL AS VARCHAR)) AS currency ,
+  IF('${brand[params].user.ifa}' <> 'na','${brand[params].user.ifa}',CAST(NULL AS VARCHAR)) AS ifa ,
+  IF('${brand[params].user.line_uid}' <> 'na','${brand[params].user.line_uid}',CAST(NULL AS VARCHAR)) AS line_uid 
 FROM (
   SELECT
     * ,
