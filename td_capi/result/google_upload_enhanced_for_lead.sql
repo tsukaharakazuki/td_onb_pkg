@@ -32,9 +32,9 @@ WITH t0 AS (
 
 SELECT
   TD_TIME_FORMAT(time,'yyyy-MM-dd HH:mm:ss+09:00') AS conversion_date_time ,
-  '${google.conversion_action_id}' as conversion_action_id ,
+  '${brand[params].google.conversion_action_id}' as conversion_action_id ,
   conversion_value ,
-  currency_code ,
+  currency_code 
   ${(Object.prototype.toString.call(result_params) === '[object Array]')?','+result_params.join():''}
 FROM
   t0
