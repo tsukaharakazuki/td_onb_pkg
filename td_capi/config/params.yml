@@ -63,39 +63,31 @@ brand:
       cnv_url:
         - thanks
     meta:
-      offline: false 
-      online: false
+      check: false
       connector: CONNECTOR_NAME
       custom_data: json_format(CAST(MAP(ARRAY['currency', 'value'], ARRAY[currency, cast(amount as VARCHAR)]) as JSON))
-    google_upload_enhanced_for_web:
-      check: false
-      type: upload_enhanced_for_web 
+    google:
       connector: CONNECTOR_NAME
-      customer_id: 111111
-      conversion_action_id: 111111
-    google_upload_enhanced_for_lead:
-      check: false
-      type: upload_enhanced_for_lead 
-      connector: CONNECTOR_NAME
-      customer_id: 111111
-      conversion_action_id: 111111
-    google_upload_offline_click_conversion:
-      check: false
-      type: upload_offline_click_conversion 
-      connector: CONNECTOR_NAME
-      customer_id: 111111
-      conversion_action_id: 111111
-    google_upload_call_conversion:
-      check: false
-      type: upload_call_conversion 
-      connector: CONNECTOR_NAME
-      customer_id: 111111
-      conversion_action_id: 111111
+      customer_id: 111111111 #xxx-yyy-zzzz -> xxxyyyzzzz
+      conversion_action_id: 111111111
+      enhanced_for_web:
+        check: true
+        type: upload_enhanced_for_web 
+      enhanced_for_lead:
+        check: false
+        type: upload_enhanced_for_lead 
+      offline_click_conversion:
+        check: false
+        type: upload_offline_click_conversion 
+      #未対応
+      #call_conversion:
+      #  check: false
+      #  type: upload_call_conversion 
     yahoo:
       check: true
       connector: CONNECTOR_NAME
       yahoo_app_id: 111111
-      yahoo_ydn_conv_io: 1EALEzSJBNabcdEFGBE1
+      yahoo_ydn_conv_io: axaxaxaxaxaxaxaxaxa
       yahoo_ydn_conv_label: AB0ABCDEFGHIJKLMNOP123456
     line:
       check: true
