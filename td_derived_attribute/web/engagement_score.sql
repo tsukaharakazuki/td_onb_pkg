@@ -1,7 +1,7 @@
 WITH t0 AS (
   SELECT
     ${web[param].key_id} as key_id ,
-    CAST((TD_DATE_TRUNC('day',MAX(time)) - TD_DATE_TRUNC('day',current_timestamp())) / 86400 AS INT) AS td_recency ,
+    CAST((TD_DATE_TRUNC('day',MAX(time)) - TD_DATE_TRUNC('day',CAST(current_timestamp() AS INT))) / 86400 AS INT) AS td_recency ,
     COUNT(DISTINCT TD_TIME_FORMAT(time,'yyyy-MM-dd','JST')) AS td_frequency ,
     COUNT(DISTINCT td_path) AS td_volume ,
     MIN(time) AS time 
@@ -17,7 +17,7 @@ WITH t0 AS (
 , t1 AS (
   SELECT
     * ,
-    log10(td_frequency * SQRT(td_volume)* (365 + td_recency + 1)) AS td_engagement_score
+    log10(td_frequency * SQRT(td_volume)* (${web[param].date_range} + td_recency + 1)) AS td_engagement_score
   FROM
     t0
 )
