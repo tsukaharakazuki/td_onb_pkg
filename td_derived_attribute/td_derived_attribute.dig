@@ -1,0 +1,206 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  cron>: 1 0 * * *
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: td_test
+
++web_process:
+  for_each>:
+    param: ${Object.keys(web)}
+  _do:
+    +empty_tmp_tbl:
+      td_ddl>:
+      empty_tables: 
+        - "tmp_derived_attribute"
+
+    +pv:
+      +all:
+        _export:
+          func: COUNT
+          val: 1
+          output: pv
+        td>: web/count_sum_max.sql
+        insert_into: tmp_derived_attribute
+        engine: hive # Only Hive works
+        engine_version: stable
+
+      +season:
+        _export:
+          spring: 3 AND 5
+          summer: 6 AND 8
+          autumn: 9 AND 11
+        td>: web/season.sql
+        insert_into: tmp_derived_attribute
+        engine: hive # Only Hive works
+        engine_version: stable
+
+      +hour:
+        td>: web/hour.sql
+        insert_into: tmp_derived_attribute
+        engine: hive # Only Hive works
+        engine_version: stable
+
+      +hour_range:
+        _export:
+          midnight: 0 AND 5
+          morning: 6 AND 10
+          noon: 11 AND 14
+          afternoon: 15 AND 19
+          night: 20 AND 23
+        td>: web/hour_range.sql
+        insert_into: tmp_derived_attribute
+        engine: hive # Only Hive works
+        engine_version: stable
+
+      +dow:
+        td>: web/dow.sql
+        insert_into: tmp_derived_attribute
+        engine: hive # Only Hive works
+        engine_version: stable
+
+      +holiday:
+        td>: web/holiday.sql
+        insert_into: tmp_derived_attribute
+        engine: hive # Only Hive works
+        engine_version: stable
+
+      +area:
+        _export:
+          capital: Tokyo
+        td>: web/area.sql
+        insert_into: tmp_derived_attribute
+        engine: hive # Only Hive works
+        engine_version: stable
+
+      +device:
+        td>: web/device.sql
+        insert_into: tmp_derived_attribute
+        engine: hive # Only Hive works
+        engine_version: stable
+
+    +referrer:
+      td>: web/referrer.sql
+      insert_into: tmp_derived_attribute
+      engine: hive # Only Hive works
+      engine_version: stable
+
+    +channel:
+      td>: web/channel.sql
+      insert_into: tmp_derived_attribute
+      engine: hive # Only Hive works
+      engine_version: stable
+
+    +engagement_score:
+      td>: web/engagement_score.sql
+      insert_into: tmp_derived_attribute
+      engine: hive # Only Hive works
+      engine_version: stable
+
+    +apparel:
+      if>: true #true or false
+      _do:
+        +aw_ss:
+          _export:
+            ss: 3 AND 9
+          td>: apparel/aw_ss.sql
+          insert_into: tmp_derived_attribute
+          engine: hive # Only Hive works
+          engine_version: stable
+
+        +sale:
+          _export:
+            func: SUM
+            val: IF(TD_TIME_FORMAT(time,'MM','JST') RLIKE '^(01|06|07|12)$',1,0)
+            output: pv_sale
+          td>: web/count_sum_max.sql
+          insert_into: tmp_derived_attribute
+          engine: hive # Only Hive works
+          engine_version: stable
+
+        +proper:
+          _export:
+            func: SUM
+            val: IF(TD_TIME_FORMAT(time,'MM','JST') NOT RLIKE '^(01|06|07|12)$',1,0)
+            output: pv_proper
+          td>: web/count_sum_max.sql
+          insert_into: tmp_derived_attribute
+          engine: hive # Only Hive works
+          engine_version: stable
+
++pivot:
+  if>: ${(Object.prototype.toString.call(pivot) === '[object Array]')}
+  _do:
+    for_each>:
+      set: ${pivot}
+    _do:
+      +empty_tbl:
+        td_ddl>:
+        empty_tables: 
+          - "tmp_feature_pivot_case"
+
+      +insert_case:
+        for_each>:
+          val: ${set.config}
+        _do:
+          td>: sql/insert_pivot.sql
+          insert_into: tmp_feature_pivot
+
+      +main:
+        !include : config/search_insert_case.dig
+        +proc:
+          td>: sql/pivot.sql
+          insert_into: tmp_derived_attribute
+          engine: hive # Only Hive works
+          engine_version: stable
+
+      +drop_tbl:
+        td_ddl>:
+        drop_tables: 
+          - "tmp_feature_pivot_case"
+
++true_false:
+  if>: ${(Object.prototype.toString.call(true_false) === '[object Array]')}
+  _do:
+    for_each>:
+      set: ${true_false}
+    _do:
+      +proc:
+        td>: sql/true_false.sql
+        insert_into: tmp_derived_attribute
+        engine: hive # Only Hive works
+        engine_version: stable
+
++array:
+  if>: ${(Object.prototype.toString.call(array) === '[object Array]')}
+  _do:
+    for_each>:
+      set: ${array}
+    _do:
+      +proc:
+        td>: sql/array.sql
+        insert_into: tmp_derived_attribute
+        engine: hive # Only Hive works
+        engine_version: stable
+
++dist:
+  +search_query:
+    _export:
+      search_tbl: tmp_derived_attribute
+    td>: sql/search_agg_sql.sql
+    store_last_results: true
+
+  +agg_dataset:
+    td>:
+      data: |
+        ${td.last_results.sql_contents}
+    create_table: td_derived_attribute
+    engine: hive
+
+  +drop_tmp_tbl:
+    td_ddl>:
+    drop_tables: 
+      - "tmp_derived_attribute"
