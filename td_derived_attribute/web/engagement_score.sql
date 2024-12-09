@@ -27,5 +27,5 @@ FROM (
     * ,
     log10(td_frequency * SQRT(td_volume)* (${web[param].date_range} + td_recency + 1)) AS td_engagement_score
   FROM
-    tmp_engagement_score_${val.label}
+    t0
 ) t
