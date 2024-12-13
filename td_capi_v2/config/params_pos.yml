@@ -1,0 +1,73 @@
+brand:
+  brand1:
+    name: brand1
+    # Config UserData ユーザーデータ設定
+    user:
+      db: YOUR_USERDATA_DB
+      tbl: YOUR_USERDATA_TBL
+      user_id: user_id
+      # If you don't have colmuns 'na'  カラムを持っていない場合 na を入力
+      email: 
+        row: na
+        hash: mail_hash
+      phone: 
+        # EX)Phone Number 080-2222-3333
+        # META - '818022223333' (記号、文字、すべての先行ゼロを削除,国番号)
+        # GOOGLE/LINE/YAHOO - '+818022223333' (E.164:先行ゼロ/ハイフンを削除,+国番号)
+        row: na
+        hash_meta: na
+        hash_e164: na
+      gender: gender_name
+      male: 男性
+      female: 女性
+      birth_date: na
+      first_name: na
+      last_name: na
+      prefecture: prefectures
+      city: na
+      zip_code: na
+      country: JP
+      currency: JPY
+      ifa: na
+      line_uid: na
+    # POS Data(bulk import purchase data)
+    pos:
+      check: true
+      db: YOUR_POS_DB #set web_log database
+      tbl: YOUR_POS_TBL #set web_log table
+      user_id: user_id #UserID
+      order_date_time: time
+      order_id: order_no
+      amount: total_unit_price
+      url: 購買完了ページのURL
+      title: 購買完了ページのタイトル
+      ip: 0.0.0.0
+    meta:
+      check: true
+      connector: capi_meta
+      custom_data: json_format(CAST(MAP(ARRAY['currency', 'value'], ARRAY[currency, cast(amount as VARCHAR)]) as JSON))
+    google:
+      # Check ULL ctId=111111111
+      connector: capi_google
+      customer_id: 1112223333 #xxx-yyy-zzzz -> xxxyyyzzzz
+      conversion_action_id: 111111111
+      enhanced_for_web:
+        check: false
+        type: upload_enhanced_for_web 
+      enhanced_for_lead:
+        check: false
+        type: upload_enhanced_for_lead 
+      offline_click_conversion:
+        check: false
+        type: upload_offline_click_conversion 
+    yahoo:
+      check: false
+      connector: capi_yahoo
+      yahoo_app_id: 11111
+      yahoo_ydn_conv_io: yahoo_ydn_conv_io
+      yahoo_ydn_conv_label: yahoo_ydn_conv_label
+    line:
+      check: true
+      connector: capi_line
+      line_tag_id: line_tag_id
+      access_token: access_token
