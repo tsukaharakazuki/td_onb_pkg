@@ -1,0 +1,150 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  cron>: 0 * * * *
+  
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: td_sandbox #ベースの参照・出力先Database
+    endpoint: api.treasuredata.co.jp
+      
+_error:
+  +error_mail:
+    call>: config/error.dig
+
++task_template:
+  td>: queries/presto.sql
+  create_table: test_ec
+
++sql:
+  td>: queries/sample_query.sql
+  create_table: test_ec #(存在するテーブルを削除して作り直す)
+  #insert_into: test_ec #(存在するテーブルに追記で書き込み)
+
++sql_variable:
+  td>: queries/sample_query_variable.sql
+  create_table: ${result_table} #(存在するテーブルを削除して作り直す)
+
++sql_hive:
+  td>: queries/sample_query_hive.sql
+  insert_into: ${hive.result_table}
+  engine: hive 
+  engine_version: stable #Tez
+  # WITH区のSQLの場合、INSERT区を挿入する場所に（-- DIGDAG_INSERT_LINE）を記載
+
++create_tables:
+  td_ddl>:
+  create_tables: 
+    - "my_table_${session_date_compact}"
+
++drop_tables:
+  td_ddl>:
+  drop_tables: 
+    - "my_table_${session_date_compact}"
+
++empty_tables:
+  td_ddl>:
+  empty_tables: 
+    - "my_table_${session_date_compact}"
+
++rename_tables:
+  td_ddl>:
+  rename_tables: 
+    - {from: "my_table_${session_date_compact}", to: "my_table"}
+
++if:
+  if>: true #true or false
+  _do:
+    +if_true:
+      td_ddl>:
+      empty_tables: 
+        - "if_table_true"
+  _else_do:
+    +if_false:
+      td_ddl>:
+      empty_tables: 
+        - "if_table_false"
+
++for_each:
+  for_each>:
+    val: 
+      - start: 2022-01-01
+        end: 2022-02-01
+        tbl: 2201_2202
+      - start: 2022-02-01
+        end: 2022-03-01
+        tbl: 2202_2203
+  _do:
+    +proc_for_each:
+      td>: queries/sample_query_for_each.sql
+      create_table: result_${val.tbl}
+
++for_each_param:
+  for_each>:
+    val: ${for_each_param}
+  _do:
+    +proc_for_each:
+      td>: queries/sample_query_for_each.sql
+      create_table: result_${val.tbl}
+
++loop:
+  loop>: 10
+  _do:
+    +proc_loop:
+      td>: 
+      query: SELECT '${i + 1}' AS col_${i + 1}
+      insert_into: loop_table
+
++call_other_dig:
+  call>: other.dig
+
++require_other_dig:
+  require>: other
+  project_name: PROJECT_NAME
+
++td_for_each:
+  td_for_each>: queries/search_td_for_each_params.sql
+  _do:
+    +proc:
+      td>: 
+      query: SELECT '${td.each.key}' AS key , ${td.each.val} AS val FROM ${td.each.tbl}
+      create_table: result_${td.each.name}
+  
+
++store_last_results:
+  td>: 
+  query: SELECT 'key' AS output_db , 'val' AS output_tbl
+store_last_results: true
+
++results_outpt:
+  td>: 
+  query: SELECT key , val FROM ${td.last_results.output_db}.${td.last_results.output_tbl}  
+  
+
++result_google_sheets:
+  td>: 
+  query: SELECT * FROM google_sheet_table
+  result_connection: YOUR_GOOGLE_SHEETS_CONNECTER_NAME
+  result_settings:
+    spreadsheet_folder: YOUR_GOOGLE_DRIVE_FOLDER_KEY
+    spreadsheet_title: "ファイル名"
+    sheet_title: "シート1"
+    mode: truncate
+
++python:
+  docker:
+    image: "digdag/digdag-python:3.9"
+  _env:
+    TD_API_KEY: ${secret:td.apikey}
+    ENDPOINT: ${td.endpoint}
+    SESSION_UNIXTIME: ${session_unixtime}
+  py>: pyscript.train_predict.main
+  database: ${td.database}
+  timezone: ${timezone}
+  tbl_name: ${py_tbl}
+  train: train_${py_name}
+  preprocessed: preprocessed_${py_name}
+  predicted: predicted_${py_name}
+  n_features: 1000
+  n_split: 10
