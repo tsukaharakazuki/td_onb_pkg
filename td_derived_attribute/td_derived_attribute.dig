@@ -97,8 +97,8 @@ _export:
     +engagement_score:
       td>: web/engagement_score.sql
       insert_into: tmp_derived_attribute
-      engine: hive # Only Hive works
-      engine_version: stable
+      #engine: hive # Only Hive works
+      #engine_version: stable
 
     +apparel:
       if>: true #true or false
