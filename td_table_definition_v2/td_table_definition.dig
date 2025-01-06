@@ -1,0 +1,59 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params.yml'
+
++empty_tables:
+  td_ddl>:
+  empty_tables: 
+    - "td_table_definition"
+    - "td_table_definition_sample"
+
++target_process:
+  for_each>:
+    param: ${Object.keys(target)}
+  _do:
+    +search_information_schema:
+      td>: sql/search_information_schema.sql
+      insert_into: td_table_definition
+
++create_sample_data:
+  td>: sql/sample.sql
+  insert_into: td_table_definition_sample
+
++if_output:
+  if>: true #true or false
+  _do:
+    +to_google_sheets:
+      td_for_each>: config/output.sql
+      _do:
+        +sample_data:
+          td>: sql/sample_data.sql
+          create_table: td_sample_data
+
+        +search_columns_info:
+          td>: sql/search_columns_info.sql
+          store_last_results: true
+
+        +sample_unpivot_data:
+          td>: sql/sample_unpivot_data.sql
+          create_table: td_sample_unpivot_data
+
+        +dist_table_info:
+          td>: sql/output.sql
+          result_connection: ${googlesheet.result_connection}
+          result_settings:
+            spreadsheet_folder: ${googlesheet.spreadsheet_folder}
+            spreadsheet_title: "${googlesheet.sheetname}_${td.each.database_name}"
+            sheet_title: "${td.each.table_name}"
+            mode: truncate
+
++drop_tables:
+  if>: true #データ内容をチェックする場合 : false
+  _do:
+    td_ddl>:
+    drop_tables: 
+      - "td_table_definition"
+      - "td_table_definition_sample"
+      - "td_sample_data"
+      - "td_sample_unpivot_data"

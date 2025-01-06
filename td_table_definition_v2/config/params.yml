@@ -1,0 +1,16 @@
+# データが出力されるTable
+td:
+  database: OUTPUT_DATABASE
+
+target:
+  target1:
+    db: TARGET_DATABASE
+    tbl:
+      - TARGET_TABLE1
+      - TARGET_TABLE2
+      - TARGET_TABLE3
+
+googlesheet:
+  result_connection: CONNECTOR_NAME
+  spreadsheet_folder: GDRIVE_FOLDER_ID
+  sheetname: TD_テーブル定義書
