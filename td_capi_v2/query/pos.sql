@@ -19,7 +19,7 @@ SELECT
   IF(
     REGEXP_LIKE(${brand[params].pos.order_date_time},'^\d$') ,
     ${brand[params].pos.order_date_time} ,
-    TD_TIME_PARSE(REGEXP_LIKE(${brand[params].pos.order_date_time},'JST'))
+    TD_TIME_PARSE(${brand[params].pos.order_date_time},'JST')
   ) AS time
 FROM
   t0
