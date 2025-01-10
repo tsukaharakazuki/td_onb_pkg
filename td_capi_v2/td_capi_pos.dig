@@ -45,7 +45,7 @@ _export:
       +main:
         _export:
           target_tbl: capi_pos_${brand[params].name} 
-        td>: query/output_data.sql
+        td>: query/output_pos.sql
         insert_into: output_capi_pos_${brand[params].name}
 
       +create_tables:
