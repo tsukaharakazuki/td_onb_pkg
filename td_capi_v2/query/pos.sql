@@ -17,8 +17,8 @@ SELECT
   IF(${brand[params].pos.order_id} is not NULL ,${brand[params].pos.order_id},CAST(NULL AS VARCHAR)) AS order_id ,
   ${brand[params].pos.amount} AS amount ,
   IF(
-    REGEXP_LIKE(CAST(${brand[params].pos.order_date_time} AS VARCHAR),'^\d$') ,
-    ${brand[params].pos.order_date_time} ,
+    CAST(REGEXP_LIKE(CAST(${brand[params].pos.order_date_time} AS VARCHAR),'^\d$') AS BIGINT) ,
+    CAST(${brand[params].pos.order_date_time} AS BIGINT) ,
     TD_TIME_PARSE(${brand[params].pos.order_date_time},'JST')
   ) AS time
 FROM
