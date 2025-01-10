@@ -1,7 +1,7 @@
 timezone: "Asia/Tokyo"
 
-schedule:
-  cron>: 1 13 * * *
+#schedule:
+#  cron>: 1 13 * * *
 
 _export:
   !include : 'config/params_online.yml'
