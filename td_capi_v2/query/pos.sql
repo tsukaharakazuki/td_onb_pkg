@@ -5,7 +5,7 @@ WITH t0 AS (
   FROM
     ${brand[params].pos.db}.${brand[params].pos.tbl}
   WHERE
-    TD_INTERVAL(time,'-${regular_span}d','JST')
+    TD_INTERVAL(time,'-${regular_span}','JST')
 )
 
 SELECT
@@ -17,7 +17,7 @@ SELECT
   IF(${brand[params].pos.order_id} is not NULL ,${brand[params].pos.order_id},CAST(NULL AS VARCHAR)) AS order_id ,
   ${brand[params].pos.amount} AS amount ,
   IF(
-    REGEXP_LIKE(${brand[params].pos.order_date_time},'^\d$') ,
+    REGEXP_LIKE(CAST(${brand[params].pos.order_date_time} AS VARCHAR),'^\d$') ,
     ${brand[params].pos.order_date_time} ,
     TD_TIME_PARSE(${brand[params].pos.order_date_time},'JST')
   ) AS time
