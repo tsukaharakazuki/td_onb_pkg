@@ -36,6 +36,7 @@ brand:
       db: YOUR_POS_DB #set web_log database
       tbl: YOUR_POS_TBL #set web_log table
       user_id: user_id #UserID
+      user_agent: NA
       order_date_time: time
       order_id: order_no
       amount: total_unit_price
