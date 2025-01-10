@@ -25,7 +25,7 @@ _export:
           insert_into: capi_user
 
       +pos:
-        if>: ${brand[params].online.check}
+        if>: ${brand[params].pos.check}
         _do:
           +create_tables:
             td_ddl>:
