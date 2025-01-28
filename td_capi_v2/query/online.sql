@@ -39,6 +39,7 @@ SELECT
   IF('${brand[params].online.fbc}' <> 'na',${brand[params].online.fbc},CAST(NULL AS VARCHAR)) AS fbc ,
   IF('${brand[params].online.yclid}' <> 'na',${brand[params].online.yclid},CAST(NULL AS VARCHAR)) AS yclid ,
   IF('${brand[params].online.yjr_yjad}' <> 'na',${brand[params].online.yjr_yjad},CAST(NULL AS VARCHAR)) AS yjr_yjad ,
+  IF('${brand[params].online.yjsu_yjad}' <> 'na',${brand[params].online.yjsu_yjad},CAST(NULL AS VARCHAR)) AS yjsu_yjad ,
   IF('${brand[params].online.lt_cid}' <> 'na',${brand[params].online.lt_cid},CAST(NULL AS VARCHAR)) AS lt_cid ,
   IF(${brand[params].online.order_id} is not NULL ,${brand[params].online.order_id},CAST(NULL AS VARCHAR)) AS order_id ,
   JSON_EXTRACT_SCALAR('{'||ec_datalayer||'}','$.item_name') AS item_name ,
