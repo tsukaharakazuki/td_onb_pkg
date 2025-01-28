@@ -144,9 +144,9 @@ _export:
             td>: result/yahoo.sql
             result_connection: ${brand[params].yahoo.connector}
             result_settings:
-              app_id: ${brand[params].yahoo.yahoo_app_id}
+              app_id: yahoo_app_id
               ignore_invalid_records: true
-            type:
+            type: yahoo_conversion
 
       # https://docs.treasuredata.com/articles/#!int/line-conversion-export-integration
       +LINE:
