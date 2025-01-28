@@ -138,7 +138,7 @@ _export:
               result_params:
                 - hashed_email # OR/BOTH hashed_phone_number
                 - yclid
-                - yjr_yjad
+                - yjsu_yjad
                 - yahoo_ydn_conv_value
               target_tbl: output_capi_online_${brand[params].name}
             td>: result/yahoo.sql
