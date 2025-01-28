@@ -45,7 +45,8 @@ brand:
       fbp: fbp
       fbc: fbc
       yclid: ycl_yjad
-      yjr_yjad: yjsu_yjad
+      yjr_yjad: na
+      yjsu_yjad: yjsu_yjad
       lt_cid: lt_cid
       amount: total_unit_price
       datalayer_ec_items: e_commerce_items
