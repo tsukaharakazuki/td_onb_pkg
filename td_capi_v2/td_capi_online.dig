@@ -140,6 +140,7 @@ _export:
                 - yclid
                 - yjsu_yjad
                 - yahoo_ydn_conv_value
+                #- order_id AS yahoo_ydn_conv_transaction_id
               target_tbl: output_capi_online_${brand[params].name}
             td>: result/yahoo.sql
             result_connection: ${brand[params].yahoo.connector}
