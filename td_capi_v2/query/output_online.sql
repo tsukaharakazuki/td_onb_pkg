@@ -11,6 +11,7 @@ SELECT
   b.fbc ,
   b.yclid ,
   b.yjr_yjad ,
+  b.yjsu_yjad ,
   b.lt_cid ,
   b.order_id ,
   b.item_name ,
