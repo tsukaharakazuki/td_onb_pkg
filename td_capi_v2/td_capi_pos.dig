@@ -140,11 +140,12 @@ _export:
                 - yclid
                 - yjr_yjad
                 - yahoo_ydn_conv_value
+                #- order_id AS yahoo_ydn_conv_transaction_id
               target_tbl: output_capi_pos_${brand[params].name}
             td>: result/yahoo.sql
             result_connection: ${brand[params].yahoo.connector}
             result_settings:
-              app_id: ${brand[params].yahoo.yahoo_app_id}
+              app_id: yahoo_app_id
               ignore_invalid_records: true
             type:
 
