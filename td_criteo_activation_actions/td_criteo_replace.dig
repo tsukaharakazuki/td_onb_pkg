@@ -1,0 +1,39 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params.yml'
+  proc_date: ${moment(session_time).format("YYYY-MM-DD")}
+
++create_tables:
+  td_ddl>:
+  create_tables: 
+    - "td_criteo_result"
+
++store_result:
+  td>: queries/store_result.sql
+  insert_into: td_criteo_result
+
++td-result-remove-criteo:
+  !include : config/search_last_proc_date.dig
+  +remove:
+    td>: result/remove.sql
+    result_connection: ${td.connector}
+    result_settings:
+      advertiser_id: ${td.advertiser_id}
+      request_threshold: 50000
+      request_retries: 7
+      request_connect_timeout: 300
+      request_read_timeout: 900
+      request_write_timeout: 900
+
++td-result-add-criteo:
+  td>: result/add.sql
+  result_connection: ${td.connector}
+  result_settings:
+    advertiser_id: ${td.advertiser_id}
+    request_threshold: 50000
+    request_retries: 7
+    request_connect_timeout: 300
+    request_read_timeout: 900
+    request_write_timeout: 900
+

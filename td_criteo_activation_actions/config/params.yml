@@ -1,0 +1,5 @@
+td:
+  database: td_sandbox #ベースの参照・出力先Database
+  endpoint: api.treasuredata.co.jp
+  connector: RESULT_CONNECTOR_NAME
+  advertiser_id: ADVERTISER_ID

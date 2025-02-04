@@ -1,0 +1,29 @@
++function_last_proc_date:
+  td>:
+  query: |
+    WITH t0 AS (
+      SELECT
+        * ,
+        ROW_NUMBER() OVER (ORDER BY proc_date DESC) AS num
+      FROM (
+        SELECT
+          segment_id ,
+          proc_date
+        FROM
+          td_criteo_result
+        WHERE
+          segment_id = '${segment_id}'
+        GROUP BY
+          segment_id ,
+          proc_date
+      )
+    )
+
+    SELECT
+      proc_date AS last_proc_date
+    FROM
+      t0
+    WHERE
+      num = 2
+  store_last_results: true
+
