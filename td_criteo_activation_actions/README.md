@@ -9,3 +9,7 @@ Activationの作成の際、`id`（本来はセグメントIDが入る部分）�
 # リプレイス
 `td_criteo_replace`を指定します。  
 こちらの処理は、すでにActivationされたIDを保管しておき、前回送信したセグメントを削除した上で、新規のセグメントを送ることでリプレイスの挙動を実現します。
+
+# Actuvation Setting
+## output Mapping
+![Image](https://github.com/tsukaharakazuki/td_onb_pkg/blob/main/img/criteo_activation_output.png)
