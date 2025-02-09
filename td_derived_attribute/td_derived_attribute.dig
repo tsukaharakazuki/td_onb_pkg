@@ -131,6 +131,18 @@ _export:
           engine: hive # Only Hive works
           engine_version: stable
 
++count_sum_max:
+  if>: ${(Object.prototype.toString.call(count_sum_max) === '[object Array]')}
+  _do:
+    for_each>:
+      set: ${count_sum_max}
+    _do:
+      +proc:
+        td>: sql/count_sum_max.sql
+        insert_into: tmp_derived_attribute
+        engine: hive # Only Hive works
+        engine_version: stable
+
 +pivot:
   if>: ${(Object.prototype.toString.call(pivot) === '[object Array]')}
   _do:
