@@ -9,6 +9,17 @@ web:
     key_id: KEY_ID #td_ssc_id or td_client_id
     date_range: 360
 
+count_sum_max:
+#  - output: ltv
+#    func: SUM # SUM / COUNT / MAX
+#    val: price
+#    null_check_col: price
+#    id: KEY_ID
+#    db: YOUR_DATABASE
+#    tbl: YOUR_TABLE
+#    where_condition: 
+#      #- TD_INTERVAL(time,'-360d','JST')
+
 pivot:
 #  - output: td_hour
 #    key: CAST(TD_TIME_FORMAT(time,'HH','JST') AS INT)
