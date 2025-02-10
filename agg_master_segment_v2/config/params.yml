@@ -5,6 +5,7 @@ media:
     master_segment_id:  # 初回データ作成時など、Master Segmentの更新をしない場合は空白
     output_db: td_master_segments
     master_table_recovery: false
+    as_period: 365
     recovery:
       db: USER_MST_DB
       tbl: USER_MST_TBL
