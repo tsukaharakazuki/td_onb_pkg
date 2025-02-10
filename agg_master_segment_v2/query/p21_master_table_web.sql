@@ -9,5 +9,7 @@ SELECT
   MAX(time) AS time
 FROM 
   ${media[params].output_db}.ms_behavior_${media[params].media_name}
+WHERE
+  TD_INTERVAL(time,'-${media[params].as_period}d','JST')
 GROUP BY 
   1,2,3
