@@ -13,8 +13,14 @@ WITH t0 AS (
       LOG10(a.pv * b.tfidf) AS weight
     FROM
       td_original_interest_words_access_log a
-    INNER JOIN
-      td_article_tags_tf_idf b
+    INNER JOIN (
+      SELECT
+        *
+      FROM
+        td_article_tags_tf_idf
+      WHERE
+        num <= ${interest_words.num_om_words}
+    ) b
     ON
       a.key = b.key_id
   ) t
