@@ -10,6 +10,6 @@ _export:
       https://console.treasuredata.com/app/workflows/${project_id}/sessions/${session_id}
   subject: 【テスト】エラーメールテスト
   to: 
-    - "tsukahara@treasure-data.com"
+    - "hoge@treasure-data.com"
   #cc:
   #  - "fuga@treasure-data.com"
