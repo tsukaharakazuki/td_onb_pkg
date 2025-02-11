@@ -6,7 +6,7 @@ WITH excluded_stopwords AS (
   FROM
     td_article_tags_tokenize_ja t
   WHERE
-    t.words NOT rlike '^.$|(.)\1+'
+    t.words NOT rlike '^.$|(.)\1+${(Object.prototype.toString.call(stopwords) === '[object Array]')?'|'+stopwords.join('|'):''}'
 ),
 
 tf AS (
