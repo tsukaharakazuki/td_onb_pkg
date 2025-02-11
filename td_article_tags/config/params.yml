@@ -1,12 +1,12 @@
 target:
-  db: prd_l1_sacula
-  tbl: prd_l1_hrcls_kijis
-  key: news_item_id
+  db: ARTICLE_DB
+  tbl: ARTICLE_TABLE
+  key: ARTICLE_KEY
   texts:
-    - midashi
-    - honbun
+    - title
+    - article
   where_condition:
-    # - TD_INTERVAL(TD_TIME_PARSE(cts_shimen_hizuke,'JST'),'-1d','JST')
+    # - TD_INTERVAL(time,'-1d','JST')
 
 tokenize_ja:
   col_text: normalize_unicode(text,'NFKC') # normalize_unicode(text,'NFKC')
@@ -16,9 +16,9 @@ tokenize_ja:
 
 interest_words:
   check: true
-  db: td_ad_audience_studio
-  tbl: as_behavior_ga4
+  db: WEBLOG_DB
+  tbl: WEBLOG_TBL
   span: 180
   user_id: td_ms_id
-  key: news_item_id
+  key: ARTICLE_KEY
   num_om_words: 30
