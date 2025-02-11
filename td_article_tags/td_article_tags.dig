@@ -1,0 +1,61 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  cron>: 0 * * * *
+  
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: td_sandbox #ベースの参照・出力先Database
+    endpoint: api.treasuredata.co.jp
+      
+_error:
+  +error_mail:
+    call>: config/error.dig
+
++prep:
+  +target:
+    td>: queries/target.sql
+    create_table: td_article_tags_base
+    engine: hive 
+    engine_version: stable #Tez
+    
++main:
+  +tokenize_ja:
+    td>: queries/tokenize_ja.sql
+    create_table: td_article_tags_tokenize_ja
+    engine: hive 
+    engine_version: stable #Tez
+
+  +tf_idf:
+    td>: queries/tf_idf.sql
+    create_table: td_article_tags_tf_idf
+    engine: hive 
+    engine_version: stable #Tez
+
+  +dist:
+    td>: queries/dist.sql
+    create_table: td_article_tags
+    engine: hive 
+    engine_version: stable #Tez
+
++original_interest_words:
+  if>: ${interest_words.check}
+  _do:
+    +access_log:
+      td>: queries/access_log.sql
+      create_table: td_original_interest_words_access_log
+      engine: hive 
+      engine_version: stable #Tez
+
+    +interest_words_base:
+      td>: queries/interest_words_base.sql
+      create_table: td_original_interest_words_base
+      engine: hive 
+      engine_version: stable #Tez
+
+    +dist:
+      td>: queries/interest_words.sql
+      create_table: td_original_interest_words
+      engine: hive 
+      engine_version: stable #Tez

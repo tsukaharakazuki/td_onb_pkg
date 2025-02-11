@@ -1,0 +1,24 @@
+target:
+  db: prd_l1_sacula
+  tbl: prd_l1_hrcls_kijis
+  key: news_item_id
+  texts:
+    - midashi
+    - honbun
+  where_condition:
+    # - TD_INTERVAL(TD_TIME_PARSE(cts_shimen_hizuke,'JST'),'-1d','JST')
+
+tokenize_ja:
+  col_text: normalize_unicode(text,'NFKC') # normalize_unicode(text,'NFKC')
+  stopwords: "NULL"
+  stoptags: stoptags_exclude(array("名詞-一般","名詞-固有名詞"))
+  num_om_words: 30
+
+interest_words:
+  check: true
+  db: td_ad_audience_studio
+  tbl: as_behavior_ga4
+  span: 180
+  user_id: td_ms_id
+  key: news_item_id
+  num_om_words: 30
