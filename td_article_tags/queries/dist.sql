@@ -4,6 +4,6 @@ SELECT
 FROM 
   td_article_tags_tf_idf
 WHERE
-  num <= ${target.num_om_words}
+  num <= ${tokenize_ja.num_om_words}
 GROUP BY
   1
