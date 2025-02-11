@@ -5,6 +5,7 @@ timezone: "Asia/Tokyo"
   
 _export:
   !include : 'config/params.yml'
+  !include : 'config/stopwords.yml'
   td:
     database: td_sandbox #ベースの参照・出力先Database
     endpoint: api.treasuredata.co.jp
