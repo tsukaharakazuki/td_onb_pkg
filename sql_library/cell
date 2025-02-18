@@ -1,0 +1,13 @@
+WITH t1 AS (
+  SELECT
+    * ,
+    ROW_NUMBER() OVER () AS num
+  FROM
+    db.tbl
+)
+
+SELECT
+  * ,
+  CEIL(num / 200000) AS group_num 
+FROM
+  t1
