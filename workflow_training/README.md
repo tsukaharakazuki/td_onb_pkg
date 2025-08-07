@@ -120,6 +120,17 @@ https://docs.digdag.io/operators/td_ddl.html
   rename_tables: 
     - {from: "my_table_${session_date_compact}", to: "my_table"}
 ```
+### `truncate_tables` スキーマ情報は残してデータを削除
+```
++truncate_table:
+  for_each>:
+    truncate: 
+      - tbl: table_a
+      - tbl: table_b
+  _do:
+    td>: 
+    query: DELETE FROM ${output_db}.${truncate.tbl} WHERE 1 = 1
+```
 
 ## `${session_date}`など予約変数
 https://docs.digdag.io/workflow_definition.html#using-variables  
