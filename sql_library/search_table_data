@@ -1,0 +1,35 @@
+WITH tmp AS (
+  SELECT
+    0 AS ordinal_position ,
+    'データベース名' AS table_schema ,
+    'テーブル名' AS table_name ,
+    'カラム名' AS column_name ,
+    '内容' AS content ,
+    'SQL' AS sql ,
+    '備考' AS appendix 
+
+  UNION ALL
+
+  SELECT
+    ordinal_position ,
+    table_schema , 
+    table_name , 
+    column_name ,
+    '' AS content ,
+    '' AS sql ,
+    '' AS appendix 
+  FROM
+    information_schema.columns
+  WHERE
+    table_schema = 'DATABASE_NAME'
+    AND table_name = 'TABLE_NAME'
+  GROUP BY
+    1,2,3,4
+)
+
+SELECT
+  *
+FROM
+  tmp
+ORDER BY
+  ordinal_position
