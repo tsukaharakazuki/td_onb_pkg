@@ -51,10 +51,14 @@ _export:
 
 +output:
   +result_google_sheets:
+    _export: 
+      flag:
+        - first
+        - recent
     td>: queries/output.sql
     result_connection: YOUR_GOOGLE_SHEETS_CONNECTER_NAME
     result_settings:
       spreadsheet_folder: YOUR_GOOGLE_DRIVE_FOLDER_KEY
       spreadsheet_title: "TD-EC-ダイレクトCV-ROI分析"
-      sheet_title: "シート1"
+      sheet_title: "${flag}"
       mode: truncate
