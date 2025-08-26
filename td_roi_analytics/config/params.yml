@@ -1,0 +1,16 @@
+# WebLog Conversion設定
+weblog_db: WEBLOG_DB
+weblog_tbl: WEBLOG_TBL
+td_url_col: td_url
+target_session_id: session_id
+user_id: user_id
+web_order_id: order_id
+conversion_urls:
+  - /order_confirm
+td_flag_params: TD
+
+# POSデータの設定
+pos_db: POS_DB
+pos_tbl: POS_TBL
+pos_order_id: order_id
+amount_col: amount

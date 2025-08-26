@@ -1,0 +1,60 @@
+timezone: "Asia/Tokyo"
+_export: 
+  !include : 'config/params.yml'
+  td:
+    database: td_sandbox
+  span: AND TD_INTERVAL(time,'-365d','JST')
+
++direct_conversion:
+  +table_truncate:
+    +create_tables:
+      td_ddl>:
+      create_tables: 
+        - "td_roi_prep_pv"
+        - "td_roi_dist_order_pv"
+        - "td_roi_order_analytics"
+
+    +truncate_table:
+      for_each>:
+        truncate: 
+          - tbl: td_roi_prep_pv
+          - tbl: td_roi_dist_order_pv
+          - tbl: td_roi_order_analytics
+      _do:
+        td>: 
+        query: DELETE FROM ${truncate.tbl} WHERE 1 = 1
+
+  +cv_session:
+    td>: queries/cv_session.sql
+    create_table: td_roi_cv_session
+
+  +tmp_pv:
+    td>: queries/tmp_pv.sql
+    create_table: td_roi_tmp_pv
+
+  +prep:
+    +order_pv:
+      td>: queries/order_pv.sql
+      insert_into: td_roi_prep_pv
+
+    +order_pv_non:
+      td>: queries/order_pv_non.sql
+      insert_into: td_roi_prep_pv
+
+    +dist_order_pv:
+      td>: queries/dist_order_pv.sql
+      insert_into: td_roi_dist_order_pv
+
+  +td_roi_order_analytics:
+    td>: queries/td_roi_order_analytics.sql
+    insert_into: td_roi_order_analytics
+
++output:
+  +result_google_sheets:
+    td>: queries/output.sql
+    result_connection: YOUR_GOOGLE_SHEETS_CONNECTER_NAME
+    result_settings:
+      spreadsheet_folder: YOUR_GOOGLE_DRIVE_FOLDER_KEY
+      spreadsheet_title: "TD-EC-ダイレクトCV-ROI分析"
+      sheet_title: "シート1"
+      mode: truncate
