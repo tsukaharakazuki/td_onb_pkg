@@ -127,6 +127,7 @@ https://docs.digdag.io/operators/td_ddl.html
     truncate: 
       - tbl: table_a
       - tbl: table_b
+  _parallel: true
   _do:
     td>: 
     query: DELETE FROM ${output_db}.${truncate.tbl} WHERE 1 = 1
