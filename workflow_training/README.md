@@ -130,7 +130,7 @@ https://docs.digdag.io/operators/td_ddl.html
   _parallel: true
   _do:
     td>: 
-    query: DELETE FROM ${output_db}.${truncate.tbl} WHERE 1 = 1
+    query: DELETE FROM ${truncate.tbl} WHERE 1 = 1
 ```
 
 ## `${session_date}`など予約変数
