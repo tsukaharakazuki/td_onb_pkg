@@ -1,0 +1,55 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  cron>: 0 * * * *
+  
+_export:
+  td:
+    database: td_sandbox #ベースの参照・出力先Database
+  engage_databse: ENGAGE_DATABASE
+  engage_event_table: events
+      
+_error:
+  +error_mail:
+    call>: config/error.dig
+
++at_firsttime:
+  if>: true #true or false
+  _do:
+    +empty_tables:
+      td_ddl>:
+      empty_tables: 
+        - "agg_engage_event_data"
+        - "organize_engage_event_data"
+        - "engage_studio_analytics_total"
+        - "engage_studio_analytics_daily"
+  _else_do:
+    +truncate_table:
+      for_each>:
+        truncate: 
+          - tbl: agg_engage_event_data
+          - tbl: organize_engage_event_data
+          - tbl: engage_studio_analytics_total
+          - tbl: engage_studio_analytics_daily
+      _parallel: true
+      _do:
+        td>: 
+        query: DELETE FROM ${truncate.tbl} WHERE 1 = 1
+
++prep:
+  +organize_engage_event_data:
+    td>: queries/organize_engage_event_data.sql
+    insert_into: organize_engage_event_data
+
+  +agg_engage_event_data:
+    td>: queries/agg_engage_event_data.sql
+    insert_into: agg_engage_event_data
+
++analytics:
+  +total:
+    td>: queries/analytics/total.sql
+    insert_into: engage_studio_analytics_total
+
+  +daily:
+    td>: queries/analytics/daily.sql
+    insert_into: engage_studio_analytics_daily
