@@ -1,7 +1,7 @@
 _export: 
   td:
     database: ${activation_actions_db}
-  key_colmun: email
+  key_column: email
 
 +distinct_email:
   td>: queries/distinct_email.sql
