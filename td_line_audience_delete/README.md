@@ -35,14 +35,14 @@ td secret:set td.apikey <YOUR_TD_API_KEY>
 
 ```yaml
 _export:
-  audience_ids: "4995892940383"
+  audience_ids: "1111111111111"
 ```
 
 ### 2. 複数のオーディエンスを削除
 
 ```yaml
 _export:
-  audience_ids: "4995892940383,1627960857765,2861903628561"
+  audience_ids: "1111111111111,1111111111112,1111111111113"
 ```
 
 ### 3. ワークフローの実行
