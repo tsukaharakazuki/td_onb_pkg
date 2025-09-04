@@ -1,0 +1,20 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  td:
+    database: td_sandbox #ベースの参照・出力先Database
+    endpoint: api.treasuredata.com
+  audience_ids: "TARGET_AUDIENCE_ID" #複数設定する場合はカンマ区切り
+
++delete_line_audiences:
+  py>: line_audience_deleter.main
+  requirements: ['requests', 'pytd', 'pandas']
+  docker:
+    image: "digdag/digdag-python:3.9"
+  _env:
+    LINE_CHANNEL_ACCESS_TOKEN: ${secret:line.channel_access_token}
+    TD_ENDPOINT: ${td.endpoint}
+    TD_API_KEY: ${secret:td.apikey}
+    AUDIENCE_IDS: ${audience_ids}
+    DELETION_TYPE: "audienceGroup"  # "audience" または "audienceGroup"
+
