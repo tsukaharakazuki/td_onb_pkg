@@ -1,0 +1,21 @@
+timezone: Asia/Tokyo
+
+#schedule:
+#  daily>: 02:50:00
+
+_export:
+  !include : 'config/params.yml'
+  
++python_script:
+  +proc:
+    docker:
+      image: "digdag/digdag-python:3.9"
+    _env:
+      TD_API_KEY: ${secret:td.apikey}
+      ENDPOINT: ${td.endpoint}
+      SESSION_UNIXTIME: ${session_unixtime}
+    py>: pyscript.sample.main
+    database: ${td.database}
+    table: ${td.table}
+    dist_table: ${td.dist_table}
+    timezone: ${timezone}

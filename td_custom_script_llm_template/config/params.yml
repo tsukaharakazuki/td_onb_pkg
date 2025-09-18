@@ -1,0 +1,8 @@
+# TreasureData CustomScript設定ファイル
+# このファイルを編集して、実際のデータベース名とテーブル名を指定してください
+
+td:
+  database: DATABASE_NAME  # 実際のデータベース名に変更してください
+  table: TABLE_NAME        # 実際のテーブル名に変更してください
+  dist_table: DIST_TABLE_NAME  # 実際の出力テーブル名に変更してください
+  endpoint: api.treasuredata.com
