@@ -125,12 +125,12 @@ https://docs.digdag.io/operators/td_ddl.html
 +truncate_table:
   for_each>:
     truncate: 
-      - tbl: table_a
-      - tbl: table_b
+      - table_a
+      - table_b
   _parallel: true
   _do:
     td>: 
-    query: DELETE FROM ${truncate.tbl} WHERE 1 = 1
+    query: DELETE FROM ${truncate} WHERE 1 = 1
 ```
 
 ## `${session_date}`など予約変数
