@@ -18,7 +18,7 @@ schedule:
   else...
 ``` 
 cronについて  
-https://docs.treasuredata.com/display/public/PD/Cron+Schedule+Values
+https://docs.treasuredata.com/products/customer-data-platform/integration-hub/batch/import/scheduling-data-collection#cron-schedule-values
 
 #  `_export:`での変数設定
 https://docs.digdag.io/workflow_definition.html#using-export-parameter
