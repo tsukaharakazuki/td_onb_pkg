@@ -1,0 +1,168 @@
+## ======================================================================
+## CAPI 汎用送信ワークフロー パラメータ設定
+## ======================================================================
+##
+## [対応プラットフォーム]
+##   facebook / yahoo / line / tiktok /
+##   google_store_sales / google_enhanced_web /
+##   pinterest / snapchat
+##
+## [カラム設定ルール]
+##   カラムが存在しない場合は "" (空文字) を設定。
+##   SQL側で "" の場合は NULL として出力される。
+##
+## [メアド設定]
+##   has_email: true  → JS-SDK/購買データでメアドが取得できる
+##   has_email: false → 会員IDをKeyに会員マスタからJOIN
+##
+## [JS-SDK有無]
+##   js_enabled: true  → hourly + daily（補完）
+##   js_enabled: false → dailyのみ（購買データのみ運用）
+## ======================================================================
+
+## ----- 共通設定 -----
+common:
+  database: capi_database               # 中間テーブル・ログの出力先DB
+  currency: JPY                          # 通貨コード
+  timezone: Asia/Tokyo
+
+## ----- ブランド設定 -----
+brand:
+
+  ## ----------------------------------------------------------
+  ## 設定例: Facebook CAPI（JS-SDKあり・メアドあり）
+  ## ----------------------------------------------------------
+  - brand_name: brand_a                  # ブランド識別子（テーブル名に使用）
+    platform: facebook                   # 送信先プラットフォーム
+    connector: brand_a_fb_capi           # TDコネクタ名
+
+    ## --- データソース ---
+    js_enabled: true
+    log_db: brand_a_db
+    log_tbl: pageviews
+    purchase_db: brand_a_db
+    purchase_tbl: purchases
+
+    ## --- メアド設定 ---
+    has_email: true
+    member_db: ""                        # has_email:false のとき設定
+    member_tbl: ""
+    member_id_col: ""
+    member_email_col: ""
+
+    ## --- JS-SDK カラム名（"" → NULL） ---
+    col_order_id: transactionid
+    col_email: hashedmailaddress
+    col_amount: amount
+    col_member_id: userid
+    col_phone: hashed_user_global_phone_number
+    col_country: hashed_user_country
+    col_user_agent: td_user_agent
+    col_ip: td_ip
+    col_url: td_path
+    col_fbc: fbc                         # Facebook専用（他は ""）
+    col_fbp: fbp                         # Facebook専用（他は ""）
+
+    ## --- 購買データ カラム名 ---
+    pcol_order_id: order_id
+    pcol_email: email
+    pcol_amount: amount
+    pcol_member_id: member_id
+    pcol_time: time
+
+    ## --- フィルタ条件 ---
+    cnv_conditions: "transactionid != '' AND transactionid NOT IN ('undefined')"
+    purchase_conditions: "1=1"
+
+    ## --- プラットフォーム固有設定（該当しないものは "" ）---
+    yahoo_ydn_conv_io: ""                # Yahoo専用
+    yahoo_ydn_conv_label: ""             # Yahoo専用
+    google_conversion_action_id: ""      # Google専用
+
+  ## ----------------------------------------------------------
+  ## 設定例: Yahoo Ads Conversion
+  ## ----------------------------------------------------------
+  #- brand_name: brand_b
+  #  platform: yahoo
+  #  connector: brand_b_yahoo_conv
+  #  js_enabled: true
+  #  log_db: brand_b_db
+  #  log_tbl: pageviews
+  #  purchase_db: brand_b_db
+  #  purchase_tbl: purchases
+  #  has_email: true
+  #  member_db: ""
+  #  member_tbl: ""
+  #  member_id_col: ""
+  #  member_email_col: ""
+  #  col_order_id: transactionid
+  #  col_email: hashedmailaddress
+  #  col_amount: amount
+  #  col_member_id: userid
+  #  col_phone: hashed_user_global_phone_number
+  #  col_country: ""
+  #  col_user_agent: td_user_agent
+  #  col_ip: td_ip
+  #  col_url: td_path
+  #  col_fbc: ""
+  #  col_fbp: ""
+  #  pcol_order_id: order_id
+  #  pcol_email: email
+  #  pcol_amount: amount
+  #  pcol_member_id: member_id
+  #  pcol_time: time
+  #  cnv_conditions: "transactionid != ''"
+  #  purchase_conditions: "1=1"
+  #  yahoo_ydn_conv_io: "xxxxxxxx"
+  #  yahoo_ydn_conv_label: "yyyyyy"
+  #  google_conversion_action_id: ""
+
+  ## ----------------------------------------------------------
+  ## 設定例: LINE Conversion
+  ## ----------------------------------------------------------
+  #- brand_name: brand_c
+  #  platform: line
+  #  connector: brand_c_line_conv
+  #  ... (同構造。col_fbc/col_fbp/yahoo_*/google_* は全て "")
+
+  ## ----------------------------------------------------------
+  ## 設定例: TikTok Events
+  ## ----------------------------------------------------------
+  #- brand_name: brand_d
+  #  platform: tiktok
+  #  connector: brand_d_tiktok_events
+  #  ... (同構造)
+
+  ## ----------------------------------------------------------
+  ## 設定例: Google Enhanced Conversions (Store Sales)
+  ## ----------------------------------------------------------
+  #- brand_name: brand_e
+  #  platform: google_store_sales
+  #  connector: brand_e_google_ss
+  #  google_conversion_action_id: "123456789"
+  #  ... (同構造)
+
+  ## ----------------------------------------------------------
+  ## 設定例: Google Enhanced Conversions (Web)
+  ## ----------------------------------------------------------
+  #- brand_name: brand_f
+  #  platform: google_enhanced_web
+  #  connector: brand_f_google_ew
+  #  google_conversion_action_id: "123456789"
+  #  ... (同構造)
+
+  ## ----------------------------------------------------------
+  ## 設定例: Pinterest CAPI
+  ## ----------------------------------------------------------
+  #- brand_name: brand_g
+  #  platform: pinterest
+  #  connector: brand_g_pinterest_capi
+  #  ... (同構造)
+
+  ## ----------------------------------------------------------
+  ## 設定例: Snapchat CAPI
+  ## ----------------------------------------------------------
+  #- brand_name: brand_h
+  #  platform: snapchat
+  #  connector: brand_h_snapchat_capi
+  #  ... (同構造)

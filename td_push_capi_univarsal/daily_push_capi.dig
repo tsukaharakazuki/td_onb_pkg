@@ -1,0 +1,129 @@
+## ======================================================================
+## CAPI 汎用送信ワークフロー - 日次補完送信 (Daily)
+## ======================================================================
+## 購買データから、毎時送信で漏れた未送信分を補完送信する。
+## - js_enabled: true  → 毎時で送れなかった分の補完
+## - js_enabled: false → 購買データのみ運用（このWFが唯一の送信手段）
+##
+## デフォルト: 毎日10:00 JST
+## オーダーIDをKeyに送信済み/未送信を判定する。
+## ======================================================================
+timezone: "Asia/Tokyo"
+
+schedule:
+  cron>: 0 10 * * *
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: ${common.database}
+
++for_each_brands:
+  for_each>:
+    b: ${brand}
+  _do:
+
+    ## Step 1: ベースデータ作成
+    +create_daily_base:
+      if>: ${b.has_email}
+      _do:
+        +create_daily_base_with_email:
+          td>: query/create_daily_base.sql
+          create_table: capi_base_${b.brand_name}
+      _else_do:
+        +create_daily_base_join_email:
+          td>: query/create_daily_base_join_email.sql
+          create_table: capi_base_${b.brand_name}
+
+    ## Step 2: 送信済み除外
+    +exclude_already_sent:
+      td>: query/exclude_sent.sql
+      create_table: capi_send_${b.brand_name}
+
+    ## Step 3: 送信ログ記録
+    +insert_push_log:
+      td>: query/insert_push_log.sql
+      insert_into: capi_push_log
+
+    ## Step 4: 送信件数チェック
+    +check_count:
+      td>:
+      query: SELECT COUNT(*) AS cnt FROM capi_send_${b.brand_name}
+      store_last_results: true
+
+    ## Step 5: プラットフォーム別送信
+    +send_if_exists:
+      if>: ${td.last_results.cnt > 0}
+      _do:
+
+        +send_facebook:
+          if>: ${b.platform == 'facebook'}
+          _do:
+            +send_facebook_exec:
+              td>: query/push_facebook.sql
+              result_connection: ${b.connector}
+              result_settings:
+                skip_invalid: true
+
+        +send_yahoo:
+          if>: ${b.platform == 'yahoo'}
+          _do:
+            +send_yahoo_exec:
+              td>: query/push_yahoo.sql
+              result_connection: ${b.connector}
+              result_settings:
+                ignore_invalid_records: true
+
+        +send_line:
+          if>: ${b.platform == 'line'}
+          _do:
+            +send_line_exec:
+              td>: query/push_line.sql
+              result_connection: ${b.connector}
+              result_settings:
+                ignore_invalid_records: true
+
+        +send_tiktok:
+          if>: ${b.platform == 'tiktok'}
+          _do:
+            +send_tiktok_exec:
+              td>: query/push_tiktok.sql
+              result_connection: ${b.connector}
+              result_settings:
+                skip_invalid_record: true
+
+        +send_google_store_sales:
+          if>: ${b.platform == 'google_store_sales'}
+          _do:
+            +send_google_store_sales_exec:
+              td>: query/push_google_store_sales.sql
+              result_connection: ${b.connector}
+              result_settings:
+                skip_invalid: true
+
+        +send_google_enhanced_web:
+          if>: ${b.platform == 'google_enhanced_web'}
+          _do:
+            +send_google_enhanced_web_exec:
+              td>: query/push_google_enhanced_web.sql
+              result_connection: ${b.connector}
+              result_settings:
+                skip_invalid: true
+
+        +send_pinterest:
+          if>: ${b.platform == 'pinterest'}
+          _do:
+            +send_pinterest_exec:
+              td>: query/push_pinterest.sql
+              result_connection: ${b.connector}
+              result_settings:
+                skip_invalid: true
+
+        +send_snapchat:
+          if>: ${b.platform == 'snapchat'}
+          _do:
+            +send_snapchat_exec:
+              td>: query/push_snapchat.sql
+              result_connection: ${b.connector}
+              result_settings:
+                skip_invalid: true
