@@ -1,8 +1,10 @@
 ## ======================================================================
-## CAPI 汎用送信ワークフロー - 毎時送信 (Hourly)
+## CAPI 送信ワークフロー - 毎時送信 (Hourly)
 ## ======================================================================
-## JS-SDKから取り込まれたデータを1時間に1回CAPIに送信する。
-## js_enabled: true のブランドのみ処理対象。
+## 1. 共通ベースデータを1回作成（全PF分のカラムを網羅）
+## 2. 送信済み除外 → 送信対象テーブル作成
+## 3. 送信件数チェック
+## 4. for_each で各PFに送信（リネームして出力）
 ## ======================================================================
 timezone: "Asia/Tokyo"
 
@@ -10,51 +12,65 @@ schedule:
   cron>: 1 * * * *
 
 _export:
-  !include : 'config/params.yml'
+  \!include : 'config/params.yml'
   td:
     database: ${common.database}
 
-+for_each_brands:
-  for_each>:
-    b: ${brand}
+## Step 1: 共通ベースデータ作成（js_has_email で分岐）
++create_base:
+  if>: ${common.js_has_email}
   _do:
-    +check_js_enabled:
-      if>: ${b.js_enabled}
+    +create_base_with_email:
+      td>: query/create_hourly_base.sql
+      create_table: capi_base
+  _else_do:
+    +create_base_join_email:
+      td>: query/create_hourly_base_join_email.sql
+      create_table: capi_base
+
+## Step 2: 送信済み除外（テーブル存在確認込み）
++check_push_log:
+  td>: query/check_push_log_exists.sql
+  store_last_results: true
+
++exclude_already_sent:
+  if>: ${td.last_results.log_exists > 0}
+  _do:
+    +exclude_with_log:
+      td>: query/exclude_sent.sql
+      create_table: capi_send
+  _else_do:
+    +exclude_initial:
+      td>: query/exclude_sent_initial.sql
+      create_table: capi_send
+
+## Step 3: 送信件数チェック
++check_count:
+  td>:
+  query: SELECT COUNT(*) AS cnt FROM capi_send
+  store_last_results: true
+
+## Step 4: 送信対象ありの場合のみ処理
++process_if_exists:
+  if>: ${td.last_results.cnt > 0}
+  _do:
+
+    ## 各PFに送信（送信済みチェック → 送信 → ログ記録）
+    +for_each_brands:
+      for_each>:
+        b: ${brand}
       _do:
 
-        ## Step 1: ベースデータ作成
-        +create_hourly_base:
-          if>: ${b.has_email}
-          _do:
-            +create_hourly_base_with_email:
-              td>: query/create_hourly_base.sql
-              create_table: capi_base_${b.brand_name}
-          _else_do:
-            +create_hourly_base_join_email:
-              td>: query/create_hourly_base_join_email.sql
-              create_table: capi_base_${b.brand_name}
-
-        ## Step 2: 送信済み除外
-        +exclude_already_sent:
-          td>: query/exclude_sent.sql
-          create_table: capi_send_${b.brand_name}
-
-        ## Step 3: 送信ログ記録
-        +insert_push_log:
-          td>: query/insert_push_log.sql
-          insert_into: capi_push_log
-
-        ## Step 4: 送信件数チェック
-        +check_count:
-          td>:
-          query: SELECT COUNT(*) AS cnt FROM capi_send_${b.brand_name}
+        ## 送信済みチェック（リトライ時に成功済みPFをスキップ）
+        +check_brand_sent:
+          td>: query/check_brand_sent.sql
           store_last_results: true
 
-        ## Step 5: プラットフォーム別送信
-        +send_if_exists:
-          if>: ${td.last_results.cnt > 0}
+        +skip_or_send:
+          if>: ${td.last_results.already_sent == 0}
           _do:
 
+            ## PF別送信
             +send_facebook:
               if>: ${b.platform == 'facebook'}
               _do:
@@ -64,15 +80,6 @@ _export:
                   result_settings:
                     skip_invalid: true
 
-            +send_yahoo:
-              if>: ${b.platform == 'yahoo'}
-              _do:
-                +send_yahoo_exec:
-                  td>: query/push_yahoo.sql
-                  result_connection: ${b.connector}
-                  result_settings:
-                    ignore_invalid_records: true
-
             +send_line:
               if>: ${b.platform == 'line'}
               _do:
@@ -80,6 +87,8 @@ _export:
                   td>: query/push_line.sql
                   result_connection: ${b.connector}
                   result_settings:
+                    line_tag_id: ${b.line_tag_id}
+                    access_token: ${b.line_access_token}
                     ignore_invalid_records: true
 
             +send_tiktok:
@@ -90,6 +99,17 @@ _export:
                   result_connection: ${b.connector}
                   result_settings:
                     skip_invalid_record: true
+                    event_source: ${b.tiktok_event_data_source}
+                    event_source_id: ${b.tiktok_event_source_id}
+
+            +send_yahoo:
+              if>: ${b.platform == 'yahoo'}
+              _do:
+                +send_yahoo_exec:
+                  td>: query/push_yahoo.sql
+                  result_connection: ${b.connector}
+                  result_settings:
+                    skip_invalid: true
 
             +send_google_store_sales:
               if>: ${b.platform == 'google_store_sales'}
@@ -98,6 +118,8 @@ _export:
                   td>: query/push_google_store_sales.sql
                   result_connection: ${b.connector}
                   result_settings:
+                    customer_id: ${b.google_customer_id}
+                    conversion_type: upload_store_sales
                     skip_invalid: true
 
             +send_google_enhanced_web:
@@ -107,6 +129,8 @@ _export:
                   td>: query/push_google_enhanced_web.sql
                   result_connection: ${b.connector}
                   result_settings:
+                    customer_id: ${b.google_customer_id}
+                    conversion_type: upload_enhanced_for_web
                     skip_invalid: true
 
             +send_pinterest:
@@ -126,3 +150,8 @@ _export:
                   result_connection: ${b.connector}
                   result_settings:
                     skip_invalid: true
+
+            ## 送信成功後にログ記録
+            +insert_push_log:
+              td>: query/insert_push_log.sql
+              insert_into: capi_push_log

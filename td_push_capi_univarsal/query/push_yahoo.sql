@@ -1,21 +1,16 @@
 -- ======================================================================
--- Yahoo Ads Conversion 送信用フォーマット
+-- Yahoo 広告 コンバージョン送信用フォーマット
 -- ======================================================================
--- 必須: event_time(Long), yahoo_ydn_conv_io, yahoo_ydn_conv_label
--- 識別子: hashed_email / hashed_phone_number / yclid のうち最低1つ
--- TDコネクタが自動でSHA-256ハッシュを行う
--- ======================================================================
-
 SELECT
-    em AS hashed_email
-    , ph AS hashed_phone_number
-    , event_time
+    event_time
     , '${b.yahoo_ydn_conv_io}' AS yahoo_ydn_conv_io
     , '${b.yahoo_ydn_conv_label}' AS yahoo_ydn_conv_label
-    , event_id AS yahoo_ydn_conv_transaction_id
-    , CAST(value AS BIGINT) AS yahoo_ydn_conv_value
+    , em AS hashed_email
+    , event_id AS transaction_id
+    , CAST(value AS DOUBLE) AS conv_value
+    , currency AS conv_value_currency
 FROM
-    capi_send_${b.brand_name}
+    capi_send
 WHERE
     em IS NOT NULL
-    AND em != ''
+    AND em \!= ''

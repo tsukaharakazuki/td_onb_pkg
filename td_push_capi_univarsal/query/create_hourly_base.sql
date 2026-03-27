@@ -1,28 +1,26 @@
 -- ======================================================================
 -- 毎時送信: JS-SDKデータからベースデータ作成（メアドあり）
 -- ======================================================================
--- configで "" のカラムは NULLIF で NULL に変換される。
--- 各CAPIが必要とする最低限のカラムのみ共通ベースとして抽出。
--- プラットフォーム固有のフォーマットは push_*.sql 側で行う。
+-- 全PF共通のベーステーブルを1つ作成する。
+-- 全PFで必要なカラムを網羅（ないものはNULL）。
 -- ======================================================================
 
 WITH raw_data AS (
     SELECT
-        ${b.col_order_id} AS event_id
-        , ${b.col_email} AS em
-        , NULLIF('${b.col_phone}', '') AS _has_phone
-        , CASE WHEN '${b.col_phone}' != '' THEN ${b.col_phone} ELSE NULL END AS ph
-        , CASE WHEN '${b.col_country}' != '' THEN ${b.col_country} ELSE NULL END AS country
-        , ${b.col_amount} AS raw_amount
-        , CASE WHEN '${b.col_member_id}' != '' THEN ${b.col_member_id} ELSE NULL END AS member_id
-        , CASE WHEN '${b.col_user_agent}' != '' THEN ${b.col_user_agent} ELSE NULL END AS client_user_agent
-        , CASE WHEN '${b.col_ip}' != '' THEN ${b.col_ip} ELSE NULL END AS client_ip_address
-        , CASE WHEN '${b.col_url}' != '' THEN ${b.col_url} ELSE NULL END AS event_source_url
-        , CASE WHEN '${b.col_fbc}' != '' THEN ${b.col_fbc} ELSE NULL END AS fbc
-        , CASE WHEN '${b.col_fbp}' != '' THEN ${b.col_fbp} ELSE NULL END AS fbp
+        ${common.col_order_id} AS event_id
+        , ${common.col_email} AS em
+        , CAST(NULL AS VARCHAR) AS ph
+        , CAST(NULL AS VARCHAR) AS country
+        , ${common.col_amount} AS raw_amount
+        , ${common.col_member_id} AS member_id
+        , ${common.col_user_agent} AS client_user_agent
+        , ${common.col_ip} AS client_ip_address
+        , ${common.col_url} AS event_source_url
+        , CAST(NULL AS VARCHAR) AS fbc
+        , CAST(NULL AS VARCHAR) AS fbp
         , time
     FROM
-        ${b.log_db}.${b.log_tbl}
+        ${common.log_db}.${common.log_tbl}
     WHERE
         TD_TIME_RANGE(
             time
@@ -30,7 +28,7 @@ WITH raw_data AS (
             , TD_TIME_ADD(TD_DATE_TRUNC('hour', TD_SCHEDULED_TIME(), 'JST'), '-1h', 'JST')
             , 'JST'
         )
-        AND ${b.cnv_conditions}
+        AND ${common.cnv_conditions}
 )
 
 , deduped AS (
@@ -41,7 +39,7 @@ WITH raw_data AS (
         raw_data
     WHERE
         event_id IS NOT NULL
-        AND CAST(event_id AS VARCHAR) != ''
+        AND CAST(event_id AS VARCHAR) \!= ''
 )
 
 , aggregated AS (
@@ -50,7 +48,7 @@ WITH raw_data AS (
         , em
         , ph
         , country
-        , SUM(CAST(raw_amount AS BIGINT)) AS value
+        , MAX(CAST(CAST(raw_amount AS DOUBLE) AS BIGINT)) AS value
         , member_id
         , client_user_agent
         , client_ip_address
@@ -85,7 +83,6 @@ SELECT
     , fbc
     , fbp
     , CAST(member_id AS VARCHAR) AS member_id
-    , '${b.brand_name}' AS brand_name
     , 'hourly' AS source_type
 FROM
     aggregated

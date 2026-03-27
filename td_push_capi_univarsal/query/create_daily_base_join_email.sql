@@ -1,18 +1,22 @@
 -- ======================================================================
--- 日次補完: 購買データからベースデータ作成（メアドなし→会員IDでJOIN）
+-- 日次補完: 購買データからベースデータ作成（メアドなし→JOIN）
+-- ======================================================================
+-- 全PF共通のベーステーブルを1つ作成する。
+-- 会員マスタからメアドをJOIN。
+-- 購買データにはWeb情報がないためNULL。
 -- ======================================================================
 
 WITH purchase_data AS (
     SELECT
-        ${b.pcol_order_id} AS event_id
-        , ${b.pcol_amount} AS raw_amount
-        , ${b.pcol_member_id} AS member_id
-        , ${b.pcol_time} AS event_time
+        ${common.pcol_order_id} AS event_id
+        , ${common.pcol_amount} AS raw_amount
+        , ${common.pcol_member_id} AS member_id
+        , ${common.pcol_time} AS event_time
     FROM
-        ${b.purchase_db}.${b.purchase_tbl}
+        ${common.purchase_db}.${common.purchase_tbl}
     WHERE
-        TD_INTERVAL(${b.pcol_time}, '-1d', 'JST')
-        AND ${b.purchase_conditions}
+        TD_INTERVAL(${common.pcol_time}, '-1d', 'JST')
+        AND ${common.purchase_conditions}
 )
 
 , deduped AS (
@@ -23,13 +27,13 @@ WITH purchase_data AS (
         purchase_data
     WHERE
         event_id IS NOT NULL
-        AND CAST(event_id AS VARCHAR) != ''
+        AND CAST(event_id AS VARCHAR) \!= ''
 )
 
 , aggregated AS (
     SELECT
         event_id
-        , SUM(CAST(raw_amount AS BIGINT)) AS value
+        , SUM(CAST(CAST(raw_amount AS DOUBLE) AS BIGINT)) AS value
         , member_id
         , event_time
     FROM
@@ -44,12 +48,12 @@ WITH purchase_data AS (
 , with_email AS (
     SELECT
         a.*
-        , m.${b.member_email_col} AS em
+        , m.${common.member_email_col} AS em
     FROM
         aggregated a
     LEFT JOIN
-        ${b.member_db}.${b.member_tbl} m
-        ON CAST(a.member_id AS VARCHAR) = CAST(m.${b.member_id_col} AS VARCHAR)
+        ${common.member_db}.${common.member_tbl} m
+        ON CAST(a.member_id AS VARCHAR) = CAST(m.${common.member_id_col} AS VARCHAR)
 )
 
 SELECT
@@ -68,7 +72,6 @@ SELECT
     , CAST(NULL AS VARCHAR) AS fbc
     , CAST(NULL AS VARCHAR) AS fbp
     , CAST(member_id AS VARCHAR) AS member_id
-    , '${b.brand_name}' AS brand_name
     , 'daily' AS source_type
 FROM
     with_email

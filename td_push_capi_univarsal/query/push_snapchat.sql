@@ -1,26 +1,19 @@
 -- ======================================================================
 -- Snapchat CAPI 送信用フォーマット
 -- ======================================================================
--- 必須: event_name, event_time, action_source
--- 識別子: em / ph / client_ip_address+client_user_agent のうち最低1つ
--- PURCHASE時は currency, value も必須
--- TDコネクタが自動で正規化・ハッシュを処理
--- ======================================================================
-
 SELECT
     'PURCHASE' AS event_name
-    , CAST(event_time AS BIGINT) AS event_time
-    , em
-    , ph
-    , country
-    , event_source_url
-    , client_user_agent
-    , client_ip_address
+    , event_time
+    , 'WEB' AS action_source
+    , em AS email
+    , ph AS phone_number
+    , client_user_agent AS user_agent
+    , client_ip_address AS ip_address
+    , CAST(value AS DOUBLE) AS price
     , currency
-    , CAST(value AS DOUBLE) AS value
-    , event_id AS order_id
+    , event_id AS transaction_id
 FROM
-    capi_send_${b.brand_name}
+    capi_send
 WHERE
     em IS NOT NULL
-    AND em != ''
+    AND em \!= ''

@@ -1,12 +1,10 @@
 ## ======================================================================
-## CAPI 汎用送信ワークフロー - 日次補完送信 (Daily)
+## CAPI 送信ワークフロー - 日次補完送信 (Daily)
 ## ======================================================================
-## 購買データから、毎時送信で漏れた未送信分を補完送信する。
-## - js_enabled: true  → 毎時で送れなかった分の補完
-## - js_enabled: false → 購買データのみ運用（このWFが唯一の送信手段）
-##
-## デフォルト: 毎日10:00 JST
-## オーダーIDをKeyに送信済み/未送信を判定する。
+## 1. 共通ベースデータを1回作成（全PF分のカラムを網羅）
+## 2. 送信済み除外 → 送信対象テーブル作成
+## 3. 送信件数チェック
+## 4. for_each で各PFに送信（リネームして出力）
 ## ======================================================================
 timezone: "Asia/Tokyo"
 
@@ -14,116 +12,146 @@ schedule:
   cron>: 0 10 * * *
 
 _export:
-  !include : 'config/params.yml'
+  \!include : 'config/params.yml'
   td:
     database: ${common.database}
 
-+for_each_brands:
-  for_each>:
-    b: ${brand}
+## Step 1: 共通ベースデータ作成（purchase_has_email で分岐）
++create_base:
+  if>: ${common.purchase_has_email}
+  _do:
+    +create_base_with_email:
+      td>: query/create_daily_base.sql
+      create_table: capi_base
+  _else_do:
+    +create_base_join_email:
+      td>: query/create_daily_base_join_email.sql
+      create_table: capi_base
+
+## Step 2: 送信済み除外（テーブル存在確認込み）
++check_push_log:
+  td>: query/check_push_log_exists.sql
+  store_last_results: true
+
++exclude_already_sent:
+  if>: ${td.last_results.log_exists > 0}
+  _do:
+    +exclude_with_log:
+      td>: query/exclude_sent.sql
+      create_table: capi_send
+  _else_do:
+    +exclude_initial:
+      td>: query/exclude_sent_initial.sql
+      create_table: capi_send
+
+## Step 3: 送信件数チェック
++check_count:
+  td>:
+  query: SELECT COUNT(*) AS cnt FROM capi_send
+  store_last_results: true
+
+## Step 4: 送信対象ありの場合のみ処理
++process_if_exists:
+  if>: ${td.last_results.cnt > 0}
   _do:
 
-    ## Step 1: ベースデータ作成
-    +create_daily_base:
-      if>: ${b.has_email}
-      _do:
-        +create_daily_base_with_email:
-          td>: query/create_daily_base.sql
-          create_table: capi_base_${b.brand_name}
-      _else_do:
-        +create_daily_base_join_email:
-          td>: query/create_daily_base_join_email.sql
-          create_table: capi_base_${b.brand_name}
-
-    ## Step 2: 送信済み除外
-    +exclude_already_sent:
-      td>: query/exclude_sent.sql
-      create_table: capi_send_${b.brand_name}
-
-    ## Step 3: 送信ログ記録
-    +insert_push_log:
-      td>: query/insert_push_log.sql
-      insert_into: capi_push_log
-
-    ## Step 4: 送信件数チェック
-    +check_count:
-      td>:
-      query: SELECT COUNT(*) AS cnt FROM capi_send_${b.brand_name}
-      store_last_results: true
-
-    ## Step 5: プラットフォーム別送信
-    +send_if_exists:
-      if>: ${td.last_results.cnt > 0}
+    ## 各PFに送信（送信済みチェック → 送信 → ログ記録）
+    +for_each_brands:
+      for_each>:
+        b: ${brand}
       _do:
 
-        +send_facebook:
-          if>: ${b.platform == 'facebook'}
-          _do:
-            +send_facebook_exec:
-              td>: query/push_facebook.sql
-              result_connection: ${b.connector}
-              result_settings:
-                skip_invalid: true
+        ## 送信済みチェック（リトライ時に成功済みPFをスキップ）
+        +check_brand_sent:
+          td>: query/check_brand_sent.sql
+          store_last_results: true
 
-        +send_yahoo:
-          if>: ${b.platform == 'yahoo'}
+        +skip_or_send:
+          if>: ${td.last_results.already_sent == 0}
           _do:
-            +send_yahoo_exec:
-              td>: query/push_yahoo.sql
-              result_connection: ${b.connector}
-              result_settings:
-                ignore_invalid_records: true
 
-        +send_line:
-          if>: ${b.platform == 'line'}
-          _do:
-            +send_line_exec:
-              td>: query/push_line.sql
-              result_connection: ${b.connector}
-              result_settings:
-                ignore_invalid_records: true
+            ## PF別送信
+            +send_facebook:
+              if>: ${b.platform == 'facebook'}
+              _do:
+                +send_facebook_exec:
+                  td>: query/push_facebook.sql
+                  result_connection: ${b.connector}
+                  result_settings:
+                    skip_invalid: true
 
-        +send_tiktok:
-          if>: ${b.platform == 'tiktok'}
-          _do:
-            +send_tiktok_exec:
-              td>: query/push_tiktok.sql
-              result_connection: ${b.connector}
-              result_settings:
-                skip_invalid_record: true
+            +send_line:
+              if>: ${b.platform == 'line'}
+              _do:
+                +send_line_exec:
+                  td>: query/push_line.sql
+                  result_connection: ${b.connector}
+                  result_settings:
+                    line_tag_id: ${b.line_tag_id}
+                    access_token: ${b.line_access_token}
+                    ignore_invalid_records: true
 
-        +send_google_store_sales:
-          if>: ${b.platform == 'google_store_sales'}
-          _do:
-            +send_google_store_sales_exec:
-              td>: query/push_google_store_sales.sql
-              result_connection: ${b.connector}
-              result_settings:
-                skip_invalid: true
+            +send_tiktok:
+              if>: ${b.platform == 'tiktok'}
+              _do:
+                +send_tiktok_exec:
+                  td>: query/push_tiktok.sql
+                  result_connection: ${b.connector}
+                  result_settings:
+                    skip_invalid_record: true
+                    event_source: ${b.tiktok_event_data_source}
+                    event_source_id: ${b.tiktok_event_source_id}
 
-        +send_google_enhanced_web:
-          if>: ${b.platform == 'google_enhanced_web'}
-          _do:
-            +send_google_enhanced_web_exec:
-              td>: query/push_google_enhanced_web.sql
-              result_connection: ${b.connector}
-              result_settings:
-                skip_invalid: true
+            +send_yahoo:
+              if>: ${b.platform == 'yahoo'}
+              _do:
+                +send_yahoo_exec:
+                  td>: query/push_yahoo.sql
+                  result_connection: ${b.connector}
+                  result_settings:
+                    skip_invalid: true
 
-        +send_pinterest:
-          if>: ${b.platform == 'pinterest'}
-          _do:
-            +send_pinterest_exec:
-              td>: query/push_pinterest.sql
-              result_connection: ${b.connector}
-              result_settings:
-                skip_invalid: true
+            +send_google_store_sales:
+              if>: ${b.platform == 'google_store_sales'}
+              _do:
+                +send_google_store_sales_exec:
+                  td>: query/push_google_store_sales.sql
+                  result_connection: ${b.connector}
+                  result_settings:
+                    customer_id: ${b.google_customer_id}
+                    conversion_type: upload_store_sales
+                    skip_invalid: true
 
-        +send_snapchat:
-          if>: ${b.platform == 'snapchat'}
-          _do:
-            +send_snapchat_exec:
-              td>: query/push_snapchat.sql
-              result_connection: ${b.connector}
-              result_settings:
-                skip_invalid: true
+            +send_google_enhanced_web:
+              if>: ${b.platform == 'google_enhanced_web'}
+              _do:
+                +send_google_enhanced_web_exec:
+                  td>: query/push_google_enhanced_web.sql
+                  result_connection: ${b.connector}
+                  result_settings:
+                    customer_id: ${b.google_customer_id}
+                    conversion_type: upload_enhanced_for_web
+                    skip_invalid: true
+
+            +send_pinterest:
+              if>: ${b.platform == 'pinterest'}
+              _do:
+                +send_pinterest_exec:
+                  td>: query/push_pinterest.sql
+                  result_connection: ${b.connector}
+                  result_settings:
+                    skip_invalid: true
+
+            +send_snapchat:
+              if>: ${b.platform == 'snapchat'}
+              _do:
+                +send_snapchat_exec:
+                  td>: query/push_snapchat.sql
+                  result_connection: ${b.connector}
+                  result_settings:
+                    skip_invalid: true
+
+            ## 送信成功後にログ記録
+            +insert_push_log:
+              td>: query/insert_push_log.sql
+              insert_into: capi_push_log

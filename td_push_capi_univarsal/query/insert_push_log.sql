@@ -1,17 +1,13 @@
 -- ======================================================================
 -- 共通: 送信ログ記録
 -- ======================================================================
--- 送信対象データのオーダーIDをログテーブルに記録する。
--- 次回以降の送信で重複送信を防ぐ。
--- ======================================================================
-
 SELECT
     event_name
     , event_time
     , em
     , ph
-    , fn
-    , ln
+    , CAST(NULL AS VARCHAR) AS fn
+    , CAST(NULL AS VARCHAR) AS ln
     , country
     , value
     , currency
@@ -24,4 +20,4 @@ SELECT
     , '${b.brand_name}' AS brand_name
     , source_type
 FROM
-    capi_send_${b.brand_name}
+    capi_send

@@ -1,11 +1,9 @@
 -- ======================================================================
 -- Google Enhanced Conversions - Store Sales 送信用フォーマット
 -- ======================================================================
--- 必須: email or phone_number (最低1つ), tran_datetime, tran_amount,
---       tran_currency, conversion_action_id
--- TDコネクタが自動でハッシュ処理
+-- conversion_type: upload_store_sales
+-- 注意: Store Sales は tran_datetime/tran_amount/tran_currency を使用
 -- ======================================================================
-
 SELECT
     em AS email
     , ph AS phone_number
@@ -15,7 +13,7 @@ SELECT
     , '${b.google_conversion_action_id}' AS conversion_action_id
     , event_id AS order_id
 FROM
-    capi_send_${b.brand_name}
+    capi_send
 WHERE
     em IS NOT NULL
-    AND em != ''
+    AND em \!= ''

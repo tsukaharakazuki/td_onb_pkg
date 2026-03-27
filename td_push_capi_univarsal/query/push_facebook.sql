@@ -1,13 +1,6 @@
 -- ======================================================================
 -- Facebook CAPI 送信用フォーマット
 -- ======================================================================
--- 必須: event_name(String), event_time(Long)
--- 顧客情報: em/ph/country等のうち最低1つ
--- client_ip_address + client_user_agent はペアで必要
--- fbc/fbp はオプション（あれば送信精度向上）
--- TDコネクタが自動でハッシュ・正規化を行う
--- ======================================================================
-
 SELECT
     event_name
     , event_time
@@ -32,7 +25,7 @@ SELECT
     , fbp
     , event_id
 FROM
-    capi_send_${b.brand_name}
+    capi_send
 WHERE
     em IS NOT NULL
-    AND em != ''
+    AND em \!= ''
