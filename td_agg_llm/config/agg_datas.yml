@@ -1,0 +1,13 @@
+datas:
+  data1:
+    db: database1
+    tbl: table1
+    output_tbl_name: output_table1
+    where_condition: 
+      #- TD_INTERVAL(time,'-360d','JST')
+  data2:
+    db: database2
+    tbl: table2
+    output_tbl_name: output_table2
+    where_condition: 
+      #- TD_INTERVAL(time,'-360d','JST')

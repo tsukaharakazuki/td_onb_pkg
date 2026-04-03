@@ -1,0 +1,57 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  cron>: 0 18 * * *
+  
+_export:
+  !include : 'config/agg_datas.yml'
+  td:
+    database: td_llm_support #ベースの参照・出力先Database
+  td_endpoint: api-cdp.treasuredata.com
+  unification_name: agg_llm
+  canonical_id_name: unif_id
+
++main:
+  for_each>:
+    param: ${Object.keys(datas)}
+  _do:
+    +proc:
+      td>: queries/main.sql
+      create_table: ${datas[param].output_tbl_name}
+      engine: hive 
+      engine_version: stable #Tez
+
++call_unification:
+  http_call>: https://${td_endpoint}/unifications/workflow_call
+  headers:
+    - authorization: ${secret:td.apikey}
+  method: POST
+  retry: true
+  content_format: json
+  content:
+    run_canonical_ids: true
+    run_enrichments: true
+    run_master_tables: false
+
+    full_refresh: true
+    keep_debug_tables: true
+    use_hive_engine: true
+
+    unification:
+      !include : unification_setting.yml
+
++push_llm_db:
+  td_for_each>: queries/target_table.sql
+  _do:
+    +proc:
+      td>:
+      query: SELECT * FROM cdp_unification_${unification_name}.${td.each.table_name}
+      create_table: ${td.each.table_name}
+
++drop_tmp_table:
+  td_for_each>: queries/drop_tmp_table.sql
+  _do:
+    +drop_tables:
+      td_ddl>:
+      drop_tables: 
+        - "${td.each.table_name}"

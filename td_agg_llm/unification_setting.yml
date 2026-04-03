@@ -1,0 +1,25 @@
+name: ${unification_name}
+
+keys:
+  - name: email
+    invalid_texts: ['']
+  - name: uid
+    invalid_texts: ['']
+
+tables:
+  - database: ${td.database}
+    table: output_table1
+    key_columns:
+      - {column: email, key: email}
+      - {column: user_id, key: uid}
+  - database: ${td.database}
+    table: output_table2
+    key_columns:
+      - {column: email, key: email}
+
+canonical_ids:
+  - name: ${canonical_id_name}
+    merge_by_keys: [email, uid]
+    merge_iterations: 5
+    incremental_merge_iterations: 3
+    #do_not_merge_key: email
