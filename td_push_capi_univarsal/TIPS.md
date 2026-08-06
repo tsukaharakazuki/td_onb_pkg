@@ -198,3 +198,35 @@ brand:           # PF別送信先設定（そのPFに必要な設定のみ）
 ```
 
 **ベースデータは1回だけ作成し、各PF送信時にSQLでリネーム・フィルタする。**
+
+---
+
+## 11. X (Twitter) はコネクタなし、`py>` で直接API送信
+
+### 問題
+X (Twitter) Ads API にはTDのResult Exportコネクタが存在しない。
+他PFと同じ `td>` + `result_connection` パターンが使えない。
+
+### 対策
+`py_scripts/push_x.py` を作成し、`py>` オペレーターで直接 X Ads API
+(`POST /12/measurement/conversions/:pixel_id`) にリクエストする。
+認証は OAuth 1.0a（`requests_oauthlib.OAuth1`）で、Consumer Key/Secret と
+Access Token/Secret の4点が必要。`requirements.txt` をプロジェクトルートに
+配置し、`py>` タスク内で実行時にインストールする（TD の py> はDocker起動時に
+自動でrequirements.txtを読まないため、スクリプト冒頭で明示的にpip installする）。
+
+### `event_id` と `conversion_id` の混同に注意
+X APIの `event_id` は Events Manager で作成した**固定の**イベントIDで、
+全リクエストで同じ1つの値を使う。TD側のオーダーID（他PFの `event_id` カラムに相当する値）は
+`conversion_id` として送信し、Pixel側の重複排除キーとして使われる。
+ここを混同すると、Xの計測画面で正しくコンバージョンが認識されない。
+
+### 識別子のハッシュ・正規化ルール
+- メールアドレス: SHA256（**ソルトなし**、小文字化・trimしてからハッシュ）
+- 電話番号: E.164形式（`+`付き国番号）に正規化した後にSHA256ハッシュ
+- `email_hashed` / `phone_hashed` が既に `true`（会員テーブル等で事前ハッシュ済み）の場合は二重ハッシュしない
+- メール・電話のいずれか1つ以上の識別子が必須（IP+UAだけでは不十分な場合がある）
+
+### レート制限
+60,000イベント/アカウント/15分。大量データを一度に流す場合は
+1000件程度のバッチに分割してリクエストする。

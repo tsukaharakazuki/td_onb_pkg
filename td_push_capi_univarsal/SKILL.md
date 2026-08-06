@@ -32,10 +32,12 @@ git clone <github_url> /tmp/common_push_capi
 
 ```
 どの広告プラットフォームに送信しますか？
-→ facebook / yahoo / line / tiktok / google_store_sales / google_enhanced_web / pinterest / snapchat
+→ facebook / yahoo / line / tiktok / google_store_sales / google_enhanced_web / pinterest / snapchat / x
 ```
 
 複数選択可。複数選択された場合はブランドごとに1エントリずつ作成する。
+
+**X (Twitter) を選択した場合の注意:** X にはTDのResult Exportコネクタが存在しないため、`py>` オペレーターで直接 X Ads API (Conversion API) へOAuth1.0a署名付きリクエストを送信する。`connector` は不要（`""` のままでよい）。
 
 #### 1-2. ブランド基本情報
 
@@ -128,6 +130,7 @@ tdx query -e presto "SELECT * FROM {db}.{table} ORDER BY time DESC LIMIT 10" -f 
 
 - **Yahoo** → `yahoo_ydn_conv_io`, `yahoo_ydn_conv_label`
 - **Google (Store Sales / Enhanced Web)** → `google_conversion_action_id`
+- **X (Twitter)** → `x_pixel_id`（Events Managerで発行）, `x_event_id`（Events Managerで作成した固定イベントID。注文IDではない点に注意）, `x_consumer_key`, `x_consumer_secret`, `x_access_token`, `x_access_token_secret`（Developer Portal で発行するOAuth1.0a認証情報）
 - その他 → 該当パラメータは `""` を自動設定
 
 #### 1-8. 共通設定
@@ -178,3 +181,6 @@ tdx wf run daily_push_capi
 - 既存の params.yml に追記したい場合 → 既存のブランド設定を保持しつつ新規ブランドを追加
 - `tdx describe` が権限エラーで失敗した場合 → ユーザーにカラム名を手動で入力してもらう
 - 同じブランドを複数プラットフォームに送信したい場合 → brand_name を `{brand}_{platform}` の形式で区別する
+- **X (Twitter) はコネクタ非対応**: `py_scripts/push_x.py` が `capi_send` テーブルを直接クエリし、X Ads API へ送信する。デプロイ前に `requirements.txt` がプロジェクトルートに存在することを確認する
+- **X の event_id と conversion_id の違いに注意**: `x_event_id` はEvents Managerで作成した固定のイベントID（全送信で共通の1つの値）。注文ごとに変わる値は `conversion_id`（TD側の `event_id`/注文IDをそのまま使用）であり、重複排除に使われる。ここを混同するとX側で正しく計測されない
+

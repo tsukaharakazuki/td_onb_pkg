@@ -145,3 +145,18 @@ brand: []
   #   platform: snapchat
   #   connector: brand_snapchat_capi
   #   snapchat_pixel_id: ""
+
+  ## ----------------------------------------------------------
+  ## X (Twitter) Conversion API
+  ## ----------------------------------------------------------
+  ## コネクタが存在しないため connector は不要（"" のままでよい）。
+  ## X Ads API の OAuth1.0a 認証情報（Developer Portal で発行）を直接指定する。
+  # - brand_name: brand_x
+  #   platform: x
+  #   connector: ""
+  #   x_pixel_id: ""              # Events Manager で発行される Pixel ID
+  #   x_event_id: ""              # Events Manager で作成したイベントID（固定値。注文IDではない）
+  #   x_consumer_key: ""
+  #   x_consumer_secret: ""
+  #   x_access_token: ""
+  #   x_access_token_secret: ""

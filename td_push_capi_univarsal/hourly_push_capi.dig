@@ -151,6 +151,27 @@ _export:
                   result_settings:
                     skip_invalid: true
 
+            ## X (Twitter) はコネクタが存在しないため py> で直接 API 送信する
+            +send_x:
+              if>: ${b.platform == 'x'}
+              _do:
+                +send_x_exec:
+                  py>: py_scripts.push_x.PushX.run
+                  docker:
+                    image: "treasuredata/customscript-python:3.12.11-td1"
+                  brand_name: ${b.brand_name}
+                  database: ${common.database}
+                  x_pixel_id: ${b.x_pixel_id}
+                  x_event_id: ${b.x_event_id}
+                  x_consumer_key: ${b.x_consumer_key}
+                  x_consumer_secret: ${b.x_consumer_secret}
+                  x_access_token: ${b.x_access_token}
+                  x_access_token_secret: ${b.x_access_token_secret}
+                  email_hashed: ${common.email_hashed}
+                  phone_hashed: ${common.phone_hashed}
+                  _env:
+                    TD_API_KEY: ${secret:td.apikey}
+
             ## 送信成功後にログ記録
             +insert_push_log:
               td>: query/insert_push_log.sql

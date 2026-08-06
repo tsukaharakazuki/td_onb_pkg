@@ -14,6 +14,7 @@
 | Google Enhanced Web | `google_enhanced_web` | Google Enhanced Conversions (ウェブ) |
 | Pinterest | `pinterest` | Pinterest CAPI |
 | Snapchat | `snapchat` | Snapchat CAPI |
+| X (Twitter) | `x` | X Ads Conversion API（コネクタ非対応、`py>` で直接送信） |
 
 ## Treasure Studio で対話的にセットアップ
 
@@ -71,7 +72,11 @@ common_push_capi/
     ├── push_google_store_sales.sql        # Google Store Sales フォーマット
     ├── push_google_enhanced_web.sql       # Google Enhanced Web フォーマット
     ├── push_pinterest.sql                 # Pinterest フォーマット
-    └── push_snapchat.sql                  # Snapchat フォーマット
+    ├── push_snapchat.sql                  # Snapchat フォーマット
+    └── push_x.sql                         # X (Twitter) 送信対象抽出
+├── py_scripts/
+│   └── push_x.py                          # X Conversion API 送信（py> で直接API送信）
+└── requirements.txt                       # py> タスク用の依存パッケージ
 ```
 
 ## 動作概要
@@ -111,9 +116,10 @@ JS-SDK で取得したページビュー/購買データを **1時間ごと** �
 
 ### 事前準備
 
-1. **Treasure Data コネクタの作成**: 各プラットフォームの Result Export コネクタを作成
+1. **Treasure Data コネクタの作成**: 各プラットフォームの Result Export コネクタを作成（X は不要、下記参照）
 2. **出力先データベースの作成**: `config/params.yml` の `common.database` で指定するDB
 3. **送信ログテーブルの作成**: `capi_push_log` テーブルを出力先DBに作成
+4. **X (Twitter) を使う場合のみ**: `requirements.txt` がプロジェクトルートに配置されていることを確認（`py>` タスクが実行時に自動インストールする）
 
 ### config/params.yml の編集
 
@@ -218,6 +224,20 @@ JS-SDKのカラム名はサイトごとに異なるため、設定で指定し�
 | `yahoo_ydn_conv_io` | Yahoo | コンバージョンIO | `"12345678"` |
 | `yahoo_ydn_conv_label` | Yahoo | コンバージョンラベル | `"abcdef"` |
 | `google_conversion_action_id` | Google (両方) | コンバージョンアクションID | `"123456789"` |
+| `x_pixel_id` | X | Events Manager で発行される Pixel ID | `"oka17"` |
+| `x_event_id` | X | Events Manager で作成した**固定**のイベントID（注文IDではない） | `"ol288"` |
+| `x_consumer_key` / `x_consumer_secret` | X | Developer Portal で発行するOAuth1.0a Consumer Key/Secret | - |
+| `x_access_token` / `x_access_token_secret` | X | Developer Portal で発行するOAuth1.0a Access Token/Secret | - |
+
+### X (Twitter) 固有の注意事項
+
+X にはTDのResult Exportコネクタが存在しないため、`py>` オペレーターで `py_scripts/push_x.py` を実行し、X Ads API (`POST /12/measurement/conversions/:pixel_id`) へ直接送信します。
+
+- **認証**: OAuth 1.0a（`x_consumer_key` / `x_consumer_secret` / `x_access_token` / `x_access_token_secret` の4点）
+- **識別子**: メール・電話番号は SHA256 でハッシュ化（ソルトなし）。電話番号は E.164 形式（`+`付き）に正規化してからハッシュ化する。少なくとも1つの識別子（メール or 電話）が必須
+- **`event_id` と `conversion_id` の違い**: `x_event_id` は Events Manager で作成した固定のイベントID（全リクエスト共通の1値）。TD側のオーダーID（他PFの `event_id` 相当）は `conversion_id` として送信し、Pixel との重複排除に使われる
+- **`email_hashed` / `phone_hashed`**: `common` 設定が既にハッシュ済みの値なら `true` を設定し、二重ハッシュを避ける
+- **レート制限**: 60,000イベント/アカウント/15分
 
 ## 設定例
 
@@ -389,6 +409,8 @@ tdx wf push
 | コネクタエラー | TDコネクタ名の設定間違い、または認証切れ | `connector` の値とTDコンソールのコネクタ名を照合 |
 | hourly で何も処理されない | `js_enabled: false` になっている | params.yml の設定を確認 |
 | 金額が0や NULL | `col_amount` / `pcol_amount` のカラム名が間違い | 実テーブルのカラム名を確認 |
+| X への送信が失敗する（401） | OAuth1.0a認証情報の間違い、またはトークンの権限不足（`AD_MANAGER`/`ACCOUNT_ADMIN` 権限が必要） | `x_consumer_key` 等をDeveloper Portalで再確認 |
+| X で計測されない | `x_event_id`（固定値）と `conversion_id`（注文ID）を混同している | `x_event_id` は全送信共通の固定値であることを確認 |
 
 ## 注意事項
 
@@ -433,6 +455,9 @@ tdx wf push
 | Google Enhanced Web | `google_enhanced_web` |
 | Pinterest | `pinterest` |
 | Snapchat | `snapchat` |
+| X (Twitter) | `x` |
+
+**X を選択した場合の注意:** X にはTDのResult Exportコネクタが存在しないため、`connector` は不要（`""` のままでよい）。`py>` オペレーターが `py_scripts/push_x.py` を実行し、X Ads API へ直接送信する。
 
 **2-2. ブランド基本情報（プラットフォームごとに）**
 
@@ -538,6 +563,7 @@ JS-SDK カラム（`js_enabled: true` の場合）:
 
 - Yahoo → `yahoo_ydn_conv_io`, `yahoo_ydn_conv_label` を質問
 - Google (両方) → `google_conversion_action_id` を質問
+- X (Twitter) → `x_pixel_id`（Events Managerで発行）, `x_event_id`（Events Managerで作成した固定イベントID。注文IDではない点に注意）, `x_consumer_key`, `x_consumer_secret`, `x_access_token`, `x_access_token_secret`（Developer Portal で発行するOAuth1.0a認証情報）を質問
 - その他 → 該当パラメータは `""` を自動設定
 
 **2-9. 共通設定**
@@ -592,6 +618,12 @@ brand:
     yahoo_ydn_conv_io: ""
     yahoo_ydn_conv_label: ""
     google_conversion_action_id: ""
+    x_pixel_id: ""
+    x_event_id: ""
+    x_consumer_key: ""
+    x_consumer_secret: ""
+    x_access_token: ""
+    x_access_token_secret: ""
 ```
 
 #### Step 4: 確認・修正
