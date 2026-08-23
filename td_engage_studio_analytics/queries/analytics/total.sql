@@ -12,10 +12,10 @@ SELECT
   COUNT(DISTINCT CASE WHEN click_unix is not NULL THEN to_email END) AS click_actual ,
   COUNT(DISTINCT CASE WHEN bounce_unix is not NULL THEN message_id END) AS bounce ,
   COUNT(DISTINCT CASE WHEN bounce_unix is not NULL THEN to_email END) AS bounce_actual ,
-  ROUND((COUNT(CASE WHEN open_unix is not NULL THEN to_email END) * 100.0 / NULLIF(COUNT(CASE WHEN send_unix is not NULL THEN to_email END), 0)), 2) AS pct_opened,
+  CAST(ROUND((COUNT(CASE WHEN open_unix is not NULL THEN to_email END) * 100.0 / NULLIF(COUNT(CASE WHEN send_unix is not NULL THEN to_email END), 0)), 2) AS DOUBLE) AS pct_opened,
   COUNT(DISTINCT CASE WHEN click_unix is not NULL THEN to_email END) AS clicked_people,
-  ROUND((COUNT(DISTINCT CASE WHEN click_unix is not NULL THEN to_email END) * 100.0 / NULLIF(COUNT(CASE WHEN send_unix is not NULL THEN to_email END), 0)) , 2) AS pct_clicked,
-  ROUND((COUNT(DISTINCT CASE WHEN click_unix is not NULL THEN to_email END) * 100.0 / NULLIF(COUNT(DISTINCT CASE WHEN open_unix is not NULL THEN to_email END), 0)), 2) AS clicked_to_open
+  CAST(ROUND((COUNT(DISTINCT CASE WHEN click_unix is not NULL THEN to_email END) * 100.0 / NULLIF(COUNT(CASE WHEN send_unix is not NULL THEN to_email END), 0)), 2) AS DOUBLE) AS pct_clicked,
+  CAST(ROUND((COUNT(DISTINCT CASE WHEN click_unix is not NULL THEN to_email END) * 100.0 / NULLIF(COUNT(DISTINCT CASE WHEN open_unix is not NULL THEN to_email END), 0)), 2) AS DOUBLE) AS clicked_to_open
 FROM
   agg_engage_event_data
 GROUP BY
