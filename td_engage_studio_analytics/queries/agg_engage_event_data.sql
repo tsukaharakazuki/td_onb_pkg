@@ -1,11 +1,11 @@
 SELECT
-  "to" AS to_email,
+  `to` AS to_email,
   message_id,
   email_message_id,
   subject,
   custom_event_id,
   MAX(campaign_name) AS campaign_name,
-  MAX("from") AS sender,
+  MAX(`from`) AS sender,
   MAX(from_email) AS from_email,
   MAX(IF(event_type = 'Send', event_timestamp, NULL)) AS send_unix,
   MAX(IF(event_type = 'Delivery', event_timestamp, NULL)) AS delivery_unix,
