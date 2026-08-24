@@ -2,6 +2,8 @@ SELECT
   custom_event_id ,
   from_email ,
   email_message_id ,
+  subject,
+  campaign_name,
   COUNT(DISTINCT CASE WHEN send_unix is not NULL THEN message_id END) AS send ,
   COUNT(DISTINCT CASE WHEN send_unix is not NULL THEN to_email END) AS send_actual ,
   COUNT(DISTINCT CASE WHEN delivery_unix is not NULL THEN message_id END) AS delivery ,
@@ -19,4 +21,4 @@ SELECT
 FROM
   agg_engage_event_data
 GROUP BY
-  1,2,3
+  1,2,3,4,5
