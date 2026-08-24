@@ -7,7 +7,7 @@ SELECT
   subject,
   campaign_name,
   COUNT(DISTINCT message_id) AS cnt,
-  COUNT(DISTINCT to) AS cnt_actual
+  COUNT(DISTINCT `to`) AS cnt_actual
 FROM
   organize_engage_event_data
 GROUP BY
