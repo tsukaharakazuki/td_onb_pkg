@@ -2,7 +2,7 @@ SELECT
   custom_event_id,
   from_email,
   email_message_id,
-  TD_TIME_STRING(event_timestamp, 'yyyy-MM-dd', 'JST') AS `date`,
+  TD_TIME_FORMAT(event_timestamp, 'yyyy-MM-dd', 'JST') AS `date`,
   event_type,
   subject,
   campaign_name,
