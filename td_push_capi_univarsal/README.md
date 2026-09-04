@@ -12,6 +12,7 @@
 | TikTok | `tiktok` | TikTok Events API |
 | Google Store Sales | `google_store_sales` | Google Enhanced Conversions (店舗売上) |
 | Google Enhanced Web | `google_enhanced_web` | Google Enhanced Conversions (ウェブ) |
+| Google Data Manager for Conversions | `google_data_manager_for_conversions` | Google AdsへのOffline / Online / Store Salesコンバージョン送信 |
 | Pinterest | `pinterest` | Pinterest CAPI |
 | Snapchat | `snapchat` | Snapchat CAPI |
 | X (Twitter) | `x` | X Ads Conversion API（コネクタ非対応、`py>` で直接送信） |
@@ -28,7 +29,7 @@ Treasure Studio のチャットで以下のように伝えてください:
 
 README.md が読み込まれると、AI が対話形式でヒアリングを開始し、以下を順番に質問します:
 
-1. 送信先プラットフォーム (Facebook / Yahoo / LINE / TikTok / Google / Pinterest / Snapchat)
+1. 送信先プラットフォーム (Facebook / Yahoo / LINE / TikTok / Google / Google Data Manager for Conversions / Pinterest / Snapchat / X)
 2. ブランド名・コネクタ名
 3. JS-SDK の有無・データソース
 4. メアドの取得方法
@@ -61,16 +62,19 @@ common_push_capi/
 └── query/
     ├── create_hourly_base.sql             # 毎時: ベースデータ作成 (メアドあり)
     ├── create_hourly_base_join_email.sql  # 毎時: ベースデータ作成 (メアドなし→JOIN)
+    ├── create_empty_hourly_base.sql       # js_enabled=false時の空ベース
     ├── create_daily_base.sql              # 日次: ベースデータ作成 (メアドあり)
     ├── create_daily_base_join_email.sql   # 日次: ベースデータ作成 (メアドなし→JOIN)
     ├── exclude_sent.sql                   # 送信済みデータ除外
-    ├── insert_push_log.sql                # 送信ログ記録
+    ├── insert_push_log.sql                # 共通送信ログ記録
+    ├── insert_google_data_manager_push_log.sql # Google Data Manager送信対象ログ記録
     ├── push_facebook.sql                  # Facebook CAPI フォーマット
     ├── push_yahoo.sql                     # Yahoo Ads フォーマット
     ├── push_line.sql                      # LINE フォーマット
     ├── push_tiktok.sql                    # TikTok フォーマット
     ├── push_google_store_sales.sql        # Google Store Sales フォーマット
     ├── push_google_enhanced_web.sql       # Google Enhanced Web フォーマット
+    ├── push_google_data_manager_for_conversions.sql # Google Data Manager for Conversions フォーマット
     ├── push_pinterest.sql                 # Pinterest フォーマット
     ├── push_snapchat.sql                  # Snapchat フォーマット
     └── push_x.sql                         # X (Twitter) 送信対象抽出
@@ -154,7 +158,7 @@ brand:
 | パラメータ | 必須 | 説明 | 例 |
 |---|---|---|---|
 | `brand_name` | Yes | ブランド識別子 (テーブル名に使用、英数字とアンダースコアのみ) | `brand_a` |
-| `platform` | Yes | 送信先 (`facebook` / `yahoo` / `line` / `tiktok` / `google_store_sales` / `google_enhanced_web` / `pinterest` / `snapchat`) | `facebook` |
+| `platform` | Yes | 送信先 (`facebook` / `yahoo` / `line` / `tiktok` / `google_store_sales` / `google_enhanced_web` / `google_data_manager_for_conversions` / `pinterest` / `snapchat` / `x`) | `facebook` |
 | `connector` | Yes | TDのResult Exportコネクタ名 | `brand_a_fb_capi` |
 
 #### データソース設定
@@ -206,7 +210,7 @@ JS-SDKのカラム名はサイトごとに異なるため、設定で指定し�
 | `pcol_email` | メアド (has_email=true時) | `email` | has_email=true |
 | `pcol_amount` | 売上金額 | `amount` | Yes |
 | `pcol_member_id` | 会員ID | `member_id` | Yes |
-| `pcol_time` | タイムスタンプカラム | `time` | Yes |
+| `pcol_time` | TDのUnix秒タイムスタンプカラム（Google送信時にepoch msへ変換） | `time` | Yes |
 
 #### フィルタ条件
 
@@ -223,11 +227,72 @@ JS-SDKのカラム名はサイトごとに異なるため、設定で指定し�
 |---|---|---|---|
 | `yahoo_ydn_conv_io` | Yahoo | コンバージョンIO | `"12345678"` |
 | `yahoo_ydn_conv_label` | Yahoo | コンバージョンラベル | `"abcdef"` |
-| `google_conversion_action_id` | Google (両方) | コンバージョンアクションID | `"123456789"` |
+| `google_conversion_action_id` | Google (既存Store Sales / Enhanced Web) | コンバージョンアクションID | `"123456789"` |
+| `google_dm_conversion_type` | Google Data Manager | 送信種別 (`OFFLINE` / `ONLINE` / `STORE_SALES`) | `ONLINE` |
+| `google_dm_operating_account_id` | Google Data Manager | 送信先Google Ads Customer ID（ハイフン可） | `"123456789"` |
+| `google_dm_login_account_id` | Google Data Manager | MCC経由時のManager Account ID。直接アクセス時は `""` | `""` |
+| `google_dm_conversion_action_id` | Google Data Manager | Google Ads Conversion Action ID | `"conv-123"` |
+| `google_dm_event_source` | Google Data Manager | `OFFLINE`時のイベント種別 (`WEB` / `APP` / `PHONE` / `MESSAGE` / `OTHER`) | `WEB` |
+| `google_dm_store_id` | Google Data Manager | `STORE_SALES`時の店舗ID | `"store-001"` |
+| `google_dm_ad_user_data_consent` | Google Data Manager | ユーザーデータ利用同意 | `CONSENT_GRANTED` |
+| `google_dm_ad_personalization_consent` | Google Data Manager | 広告パーソナライズ同意 | `CONSENT_GRANTED` |
+| `google_dm_skip_invalid_records` | Google Data Manager | 不正レコードをスキップするか。送信ログの正確性を優先して `false` 推奨 | `false` |
+| `google_dm_waiting_for_request_status` | Google Data Manager | API処理結果をポーリングするか。毎時処理は `false`、最終結果を同期確認する場合のみ `true` | `false` |
 | `x_pixel_id` | X | Events Manager で発行される Pixel ID | `"oka17"` |
 | `x_event_id` | X | Events Manager で作成した**固定**のイベントID（注文IDではない） | `"ol288"` |
 | `x_consumer_key` / `x_consumer_secret` | X | Developer Portal で発行するOAuth1.0a Consumer Key/Secret | - |
 | `x_access_token` / `x_access_token_secret` | X | Developer Portal で発行するOAuth1.0a Access Token/Secret | - |
+
+### Google Data Manager for Conversions 固有の注意事項
+
+仕様: [Google Data Manager for Conversions Export Integration](https://docs.treasure.ai/int/google-data-manager-for-conversions-export-integration)
+
+Integration Hub で **Google Data Manager for Conversions** のOAuthコネクタを作成し、
+その名前を `connector` に指定します。オーディエンスリスト用の
+**Google Data Manager** コネクタとは別のコネクタです。
+
+```yaml
+brand:
+  - brand_name: my_brand_google_dm
+    platform: google_data_manager_for_conversions
+    connector: my_google_dm_conversions
+    google_dm_conversion_type: ONLINE
+    google_dm_operating_account_id: "123456789"
+    google_dm_login_account_id: ""          # MCC経由時のみ指定
+    google_dm_conversion_action_id: "conv-123"
+    google_dm_event_source: WEB              # OFFLINE時のみ使用
+    google_dm_store_id: ""                  # STORE_SALES時は必須
+    google_dm_ad_user_data_consent: CONSENT_GRANTED
+    google_dm_ad_personalization_consent: CONSENT_GRANTED
+    google_dm_skip_invalid_records: false
+    google_dm_waiting_for_request_status: false
+```
+
+| conversion_type | 必須データ |
+|---|---|
+| `OFFLINE` | `event_timestamp`、`event_source`、Google Click ID / email / IPのいずれか。加えて本WFでは送信ログ用の`event_id`が必要 |
+| `ONLINE` | `event_timestamp`、`transaction_id`、Google Click ID / email / IPのいずれか |
+| `STORE_SALES` | `event_timestamp`、`transaction_id`、金額、通貨、`store_id`、email |
+
+`push_google_data_manager_for_conversions.sql` は共通ベースを次のように変換します。
+
+- `event_time`（TDのUnix秒）→ `event_timestamp`（epoch milliseconds）
+- `event_id` → `transaction_id`
+- `value` / `currency` → `conversion_value` / `currency`
+- `event_source_url` → URLパラメータの `gclid` / `gbraid` / `wbraid` / `dclid`
+- `em` / `client_ip_address` → `email` / `ip_address`
+- `client_user_agent` → `device_user_agent`
+
+メールアドレスは、未ハッシュならコネクタが正規化してSHA-256ハッシュ化し、
+64文字の16進ハッシュ値ならそのまま利用します。現在の共通ベースが送信する識別子は
+URL内のGoogle Click ID、email、IPです。phone / address / mobile device ID等を
+使う場合は、共通ベースへのカラム追加が必要です。
+
+`STORE_SALES` は日次WFのみから送信され、Google側のallowlist登録も必要です。
+送信対象外レコードを誤って送信済みにしないよう、専用ログSQLで送信クエリと
+同じ適格条件を適用します。`skip_invalid_records: false` を推奨します。
+`waiting_for_request_status: false` では送信ログはリクエスト受付成功を表し、
+最終処理結果まで同期確認する場合のみ `true` にします。
 
 ### X (Twitter) 固有の注意事項
 
@@ -384,7 +449,7 @@ tdx wf push
    ├─ has_email=true  → データソースから直接メアド取得
    └─ has_email=false → 会員IDで会員マスタをLEFT JOIN
 2. exclude_sent.sql         送信済み除外 (capi_send_{brand_name})
-3. insert_push_log.sql      送信ログ記録 (capi_push_log)
+3. insert_push_log.sql      送信ログ記録 (Google Data Managerは専用ログSQL)
 4. COUNT(*) check           送信件数チェック (0件ならスキップ)
 5. push_{platform}.sql      プラットフォーム別フォーマットで送信
 ```
@@ -453,6 +518,7 @@ tdx wf push
 | TikTok | `tiktok` |
 | Google Store Sales | `google_store_sales` |
 | Google Enhanced Web | `google_enhanced_web` |
+| Google Data Manager for Conversions | `google_data_manager_for_conversions` |
 | Pinterest | `pinterest` |
 | Snapchat | `snapchat` |
 | X (Twitter) | `x` |
@@ -499,7 +565,7 @@ tdx query -e presto "SELECT * FROM {db}.{table} ORDER BY time DESC LIMIT 10" -f 
 | `col_url` | `url`, `path`, `page`, `td_path`, `td_url` を含む | URL文字列 |
 | `col_fbc` | `fbc`, `click_id` を含む | `fb.1.`で始まる文字列 |
 | `col_fbp` | `fbp`, `pixel` を含む | `fb.1.`で始まる文字列 |
-| `pcol_time` | `time`, `timestamp`, `created`, `date` を含む | UNIXタイムスタンプまたは日時文字列 |
+| `pcol_time` | `time`, `timestamp`, `created`, `date` を含む | TDのUnix秒タイムスタンプ（日時文字列は事前変換が必要） |
 
 **提案フォーマット:**
 
@@ -562,7 +628,8 @@ JS-SDK カラム（`js_enabled: true` の場合）:
 **2-8. プラットフォーム固有設定**
 
 - Yahoo → `yahoo_ydn_conv_io`, `yahoo_ydn_conv_label` を質問
-- Google (両方) → `google_conversion_action_id` を質問
+- Google (既存Store Sales / Enhanced Web) → `google_conversion_action_id` を質問
+- Google Data Manager for Conversions → `google_dm_conversion_type`, `google_dm_operating_account_id`, `google_dm_login_account_id`（MCC経由時のみ）, `google_dm_conversion_action_id`, `google_dm_event_source`（OFFLINE時）, `google_dm_store_id`（STORE_SALES時）, 同意設定、無効レコード・ステータス待機設定を質問
 - X (Twitter) → `x_pixel_id`（Events Managerで発行）, `x_event_id`（Events Managerで作成した固定イベントID。注文IDではない点に注意）, `x_consumer_key`, `x_consumer_secret`, `x_access_token`, `x_access_token_secret`（Developer Portal で発行するOAuth1.0a認証情報）を質問
 - その他 → 該当パラメータは `""` を自動設定
 
@@ -618,6 +685,16 @@ brand:
     yahoo_ydn_conv_io: ""
     yahoo_ydn_conv_label: ""
     google_conversion_action_id: ""
+    google_dm_conversion_type: ""
+    google_dm_operating_account_id: ""
+    google_dm_login_account_id: ""
+    google_dm_conversion_action_id: ""
+    google_dm_event_source: ""
+    google_dm_store_id: ""
+    google_dm_ad_user_data_consent: CONSENT_GRANTED
+    google_dm_ad_personalization_consent: CONSENT_GRANTED
+    google_dm_skip_invalid_records: false
+    google_dm_waiting_for_request_status: false
     x_pixel_id: ""
     x_event_id: ""
     x_consumer_key: ""

@@ -131,6 +131,26 @@ brand: []
   #   google_conversion_action_id: ""
 
   ## ----------------------------------------------------------
+  ## Google Data Manager for Conversions
+  ## ----------------------------------------------------------
+  ## conversion_type: OFFLINE / ONLINE / STORE_SALES
+  ## OFFLINE の event_source: WEB / APP / PHONE / MESSAGE / OTHER
+  ## STORE_SALES は Google 側の allowlist 登録と store_id が必要。
+  # - brand_name: brand_google_dm
+  #   platform: google_data_manager_for_conversions
+  #   connector: brand_google_dm_conversions
+  #   google_dm_conversion_type: ONLINE
+  #   google_dm_operating_account_id: "123456789"
+  #   google_dm_login_account_id: ""          # MCC経由時のみ指定
+  #   google_dm_conversion_action_id: "conv-123"
+  #   google_dm_event_source: WEB              # OFFLINE時のみ使用
+  #   google_dm_store_id: ""                  # STORE_SALES時は必須
+  #   google_dm_ad_user_data_consent: CONSENT_GRANTED
+  #   google_dm_ad_personalization_consent: CONSENT_GRANTED
+  #   google_dm_skip_invalid_records: false
+  #   google_dm_waiting_for_request_status: false
+
+  ## ----------------------------------------------------------
   ## Pinterest CAPI
   ## ----------------------------------------------------------
   # - brand_name: brand_pinterest

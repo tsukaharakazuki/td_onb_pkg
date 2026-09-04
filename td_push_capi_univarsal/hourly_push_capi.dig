@@ -16,16 +16,23 @@ _export:
   td:
     database: ${common.database}
 
-## Step 1: 共通ベースデータ作成（js_has_email で分岐）
+## Step 1: 共通ベースデータ作成（js_enabled / js_has_email で分岐）
 +create_base:
-  if>: ${common.js_has_email}
+  if>: ${common.js_enabled}
   _do:
-    +create_base_with_email:
-      td>: query/create_hourly_base.sql
-      create_table: capi_base
+    +create_base_enabled:
+      if>: ${common.js_has_email}
+      _do:
+        +create_base_with_email:
+          td>: query/create_hourly_base.sql
+          create_table: capi_base
+      _else_do:
+        +create_base_join_email:
+          td>: query/create_hourly_base_join_email.sql
+          create_table: capi_base
   _else_do:
-    +create_base_join_email:
-      td>: query/create_hourly_base_join_email.sql
+    +create_empty_base:
+      td>: query/create_empty_hourly_base.sql
       create_table: capi_base
 
 ## Step 2: 送信済み除外（テーブル存在確認込み）
@@ -133,6 +140,40 @@ _export:
                     conversion_type: upload_enhanced_for_web
                     skip_invalid: true
 
+            +send_google_data_manager_for_conversions:
+              if>: ${b.platform == 'google_data_manager_for_conversions' && b.google_dm_conversion_type != 'STORE_SALES'}
+              _do:
+                +validate_google_dm_account:
+                  if>: ${b.google_dm_operating_account_id == '' || b.google_dm_conversion_action_id == ''}
+                  _do:
+                    +invalid_google_dm_account:
+                      fail>: "Google Data Manager requires operating_account_id and conversion_action_id"
+
+                +validate_google_dm_conversion_type:
+                  if>: ${b.google_dm_conversion_type != 'OFFLINE' && b.google_dm_conversion_type != 'ONLINE'}
+                  _do:
+                    +invalid_google_dm_conversion_type:
+                      fail>: "Hourly Google Data Manager conversion_type must be OFFLINE or ONLINE"
+
+                +validate_google_dm_event_source:
+                  if>: ${b.google_dm_conversion_type == 'OFFLINE' && b.google_dm_event_source != 'WEB' && b.google_dm_event_source != 'APP' && b.google_dm_event_source != 'PHONE' && b.google_dm_event_source != 'MESSAGE' && b.google_dm_event_source != 'OTHER'}
+                  _do:
+                    +invalid_google_dm_event_source:
+                      fail>: "OFFLINE requires event_source: WEB, APP, PHONE, MESSAGE, or OTHER"
+
+                +send_google_data_manager_for_conversions_exec:
+                  td>: query/push_google_data_manager_for_conversions.sql
+                  result_connection: ${b.connector}
+                  result_settings:
+                    conversion_type: ${b.google_dm_conversion_type}
+                    operating_account_id: ${b.google_dm_operating_account_id}
+                    login_account_id: ${b.google_dm_login_account_id}
+                    conversion_action_id: ${b.google_dm_conversion_action_id}
+                    ad_user_data_consent: ${b.google_dm_ad_user_data_consent}
+                    ad_personalization_consent: ${b.google_dm_ad_personalization_consent}
+                    skip_invalid_records: ${b.google_dm_skip_invalid_records}
+                    waiting_for_request_status: ${b.google_dm_waiting_for_request_status}
+
             +send_pinterest:
               if>: ${b.platform == 'pinterest'}
               _do:
@@ -172,7 +213,17 @@ _export:
                   _env:
                     TD_API_KEY: ${secret:td.apikey}
 
-            ## 送信成功後にログ記録
-            +insert_push_log:
-              td>: query/insert_push_log.sql
-              insert_into: capi_push_log
+            ## 送信成功後に、実際の送信対象のみログ記録
+            +insert_google_data_manager_push_log:
+              if>: ${b.platform == 'google_data_manager_for_conversions' && b.google_dm_conversion_type != 'STORE_SALES'}
+              _do:
+                +insert_google_data_manager_push_log_exec:
+                  td>: query/insert_google_data_manager_push_log.sql
+                  insert_into: capi_push_log
+
+            +insert_other_push_log:
+              if>: ${b.platform != 'google_data_manager_for_conversions'}
+              _do:
+                +insert_other_push_log_exec:
+                  td>: query/insert_push_log.sql
+                  insert_into: capi_push_log

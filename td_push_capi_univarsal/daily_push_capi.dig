@@ -133,6 +133,46 @@ _export:
                     conversion_type: upload_enhanced_for_web
                     skip_invalid: true
 
+            +send_google_data_manager_for_conversions:
+              if>: ${b.platform == 'google_data_manager_for_conversions'}
+              _do:
+                +validate_google_dm_account:
+                  if>: ${b.google_dm_operating_account_id == '' || b.google_dm_conversion_action_id == ''}
+                  _do:
+                    +invalid_google_dm_account:
+                      fail>: "Google Data Manager requires operating_account_id and conversion_action_id"
+
+                +validate_google_dm_conversion_type:
+                  if>: ${b.google_dm_conversion_type != 'OFFLINE' && b.google_dm_conversion_type != 'ONLINE' && b.google_dm_conversion_type != 'STORE_SALES'}
+                  _do:
+                    +invalid_google_dm_conversion_type:
+                      fail>: "google_dm_conversion_type must be OFFLINE, ONLINE, or STORE_SALES"
+
+                +validate_google_dm_event_source:
+                  if>: ${b.google_dm_conversion_type == 'OFFLINE' && b.google_dm_event_source != 'WEB' && b.google_dm_event_source != 'APP' && b.google_dm_event_source != 'PHONE' && b.google_dm_event_source != 'MESSAGE' && b.google_dm_event_source != 'OTHER'}
+                  _do:
+                    +invalid_google_dm_event_source:
+                      fail>: "OFFLINE requires event_source: WEB, APP, PHONE, MESSAGE, or OTHER"
+
+                +validate_google_dm_store_id:
+                  if>: ${b.google_dm_conversion_type == 'STORE_SALES' && b.google_dm_store_id == ''}
+                  _do:
+                    +missing_google_dm_store_id:
+                      fail>: "STORE_SALES requires google_dm_store_id"
+
+                +send_google_data_manager_for_conversions_exec:
+                  td>: query/push_google_data_manager_for_conversions.sql
+                  result_connection: ${b.connector}
+                  result_settings:
+                    conversion_type: ${b.google_dm_conversion_type}
+                    operating_account_id: ${b.google_dm_operating_account_id}
+                    login_account_id: ${b.google_dm_login_account_id}
+                    conversion_action_id: ${b.google_dm_conversion_action_id}
+                    ad_user_data_consent: ${b.google_dm_ad_user_data_consent}
+                    ad_personalization_consent: ${b.google_dm_ad_personalization_consent}
+                    skip_invalid_records: ${b.google_dm_skip_invalid_records}
+                    waiting_for_request_status: ${b.google_dm_waiting_for_request_status}
+
             +send_pinterest:
               if>: ${b.platform == 'pinterest'}
               _do:
@@ -172,7 +212,17 @@ _export:
                   _env:
                     TD_API_KEY: ${secret:td.apikey}
 
-            ## 送信成功後にログ記録
-            +insert_push_log:
-              td>: query/insert_push_log.sql
-              insert_into: capi_push_log
+            ## 送信成功後に、実際の送信対象のみログ記録
+            +insert_google_data_manager_push_log:
+              if>: ${b.platform == 'google_data_manager_for_conversions'}
+              _do:
+                +insert_google_data_manager_push_log_exec:
+                  td>: query/insert_google_data_manager_push_log.sql
+                  insert_into: capi_push_log
+
+            +insert_other_push_log:
+              if>: ${b.platform != 'google_data_manager_for_conversions'}
+              _do:
+                +insert_other_push_log_exec:
+                  td>: query/insert_push_log.sql
+                  insert_into: capi_push_log
