@@ -32,10 +32,12 @@ git clone <github_url> /tmp/common_push_capi
 
 ```
 どの広告プラットフォームに送信しますか？
-→ facebook / yahoo / line / tiktok / google_store_sales / google_enhanced_web / pinterest / snapchat / x
+→ facebook / yahoo / line / tiktok / google_store_sales / google_enhanced_web / google_data_manager_for_conversions / pinterest / snapchat / x
 ```
 
 複数選択可。複数選択された場合はブランドごとに1エントリずつ作成する。
+
+**Google Data Manager for Conversions を選択した場合の注意:** Integration Hub のオーディエンスリスト用「Google Data Manager」ではなく、「Google Data Manager for Conversions」OAuthコネクタを作成する。現在の共通ベースが送る識別子はURL内のGoogle Click ID、email、IPで、`STORE_SALES` はemail必須・日次WFのみ。Google側のallowlist登録と `store_id` も必要。不正行を送信済みにしないため `google_dm_skip_invalid_records: false` を推奨する。`google_dm_waiting_for_request_status` は毎時処理では `false`、最終処理結果まで同期確認する場合のみ `true` とする。
 
 **X (Twitter) を選択した場合の注意:** X にはTDのResult Exportコネクタが存在しないため、`py>` オペレーターで直接 X Ads API (Conversion API) へOAuth1.0a署名付きリクエストを送信する。`connector` は不要（`""` のままでよい）。
 
@@ -84,7 +86,7 @@ tdx query -e presto "SELECT * FROM {db}.{table} ORDER BY time DESC LIMIT 10" -f 
 | `col_url` | `url`, `path`, `page`, `td_path`, `td_url` を含む | URL文字列 |
 | `col_fbc` | `fbc`, `click_id` を含む | `fb.1.`で始まる文字列 |
 | `col_fbp` | `fbp`, `pixel` を含む | `fb.1.`で始まる文字列 |
-| `pcol_time` | `time`, `timestamp`, `created`, `date` を含む | UNIXタイムスタンプまたは日時文字列 |
+| `pcol_time` | `time`, `timestamp`, `created`, `date` を含む | TDのUnix秒タイムスタンプ（日時文字列は事前変換） |
 
 **提案フォーマット:**
 
@@ -130,6 +132,7 @@ tdx query -e presto "SELECT * FROM {db}.{table} ORDER BY time DESC LIMIT 10" -f 
 
 - **Yahoo** → `yahoo_ydn_conv_io`, `yahoo_ydn_conv_label`
 - **Google (Store Sales / Enhanced Web)** → `google_conversion_action_id`
+- **Google Data Manager for Conversions** → `google_dm_conversion_type` (`OFFLINE` / `ONLINE` / `STORE_SALES`), `google_dm_operating_account_id`, `google_dm_login_account_id`（MCC経由時のみ）, `google_dm_conversion_action_id`, `google_dm_event_source`（OFFLINE時）, `google_dm_store_id`（STORE_SALES時）, `google_dm_ad_user_data_consent`, `google_dm_ad_personalization_consent`, `google_dm_skip_invalid_records`, `google_dm_waiting_for_request_status`
 - **X (Twitter)** → `x_pixel_id`（Events Managerで発行）, `x_event_id`（Events Managerで作成した固定イベントID。注文IDではない点に注意）, `x_consumer_key`, `x_consumer_secret`, `x_access_token`, `x_access_token_secret`（Developer Portal で発行するOAuth1.0a認証情報）
 - その他 → 該当パラメータは `""` を自動設定
 

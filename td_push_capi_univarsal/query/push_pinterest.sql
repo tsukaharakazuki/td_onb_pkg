@@ -17,4 +17,4 @@ FROM
     capi_send
 WHERE
     em IS NOT NULL
-    AND em \!= ''
+    AND em != ''

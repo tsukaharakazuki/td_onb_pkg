@@ -174,6 +174,7 @@ check_brand_sent → skip_or_send → [PF送信] → insert_push_log
 
 - 送信成功 → ログ記録 → 次回スキップ
 - 送信失敗 → ログ未記録 → 次回リトライ
+- Google Data Managerは送信SQLと同じ適格条件を専用ログSQLにも適用し、SQLで除外した行を記録しない
 
 ---
 
@@ -230,3 +231,43 @@ X APIの `event_id` は Events Manager で作成した**固定の**イベントI
 ### レート制限
 60,000イベント/アカウント/15分。大量データを一度に流す場合は
 1000件程度のバッチに分割してリクエストする。
+
+---
+
+## 12. Google Data Manager for Conversions のイベント種別
+
+### 問題
+Google Data Managerにはオーディエンスリスト用とコンバージョン用の別コネクタがあり、
+さらにコンバージョン用では `OFFLINE` / `ONLINE` / `STORE_SALES` ごとに必須項目が異なる。
+
+### 対策
+Integration Hubで **Google Data Manager for Conversions** コネクタを作成し、
+`platform: google_data_manager_for_conversions` を指定する。
+
+| conversion_type | 必須項目 |
+|---|---|
+| `OFFLINE` | `event_timestamp`, `event_source`, 識別子 |
+| `ONLINE` | `event_timestamp`, `transaction_id`, 識別子 |
+| `STORE_SALES` | `event_timestamp`, `transaction_id`, `conversion_value`, `currency`, `store_id`, PII識別子 |
+
+この汎用WFでは `event_time` をTDのUnix秒に統一する。送信SQLでは
+`CAST(event_time AS BIGINT) * 1000` としてData Managerが受け付けるepoch millisecondsへ変換する。
+日時文字列や既にepoch millisecondsのカラムは、共通ベースに入れる前にUnix秒へ変換する。
+
+現在の共通ベースがGoogle Data Managerへ渡す識別子はURL内の
+`gclid` / `gbraid` / `wbraid` / `dclid`、email、IPで、`STORE_SALES` は
+email必須・日次WFのみとする。phone / address / mobile device ID等を使う場合は
+共通ベースと送信SQLの両方へカラムを追加する。
+
+`waiting_for_request_status: false` の場合、受付後の最終処理結果を待たずに送信タスクが完了する。
+不正レコードを送信済みログへ残さないため、通常は `skip_invalid_records: false` を使用する。
+毎時WFでは長時間のブロックを避けるため `waiting_for_request_status: false` を標準とし、
+送信ログはGoogleのリクエスト受付成功を表す。最終処理結果まで同期確認する必要がある場合のみ
+`true` にする（Google側の処理完了までタスクが長時間待機する可能性がある）。
+
+---
+
+## 13. 外部SQLファイルの不等号はエスケープしない
+
+`.dig` 内の式ではなく `query/*.sql` に記述する不等号は、Trinoへそのまま送られる。
+`\!=` と書くとバックスラッシュもSQLに含まれて構文エラーになるため、必ず `!=` を使用する。

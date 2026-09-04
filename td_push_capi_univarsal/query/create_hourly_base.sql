@@ -39,7 +39,7 @@ WITH raw_data AS (
         raw_data
     WHERE
         event_id IS NOT NULL
-        AND CAST(event_id AS VARCHAR) \!= ''
+        AND CAST(event_id AS VARCHAR) != ''
 )
 
 , aggregated AS (

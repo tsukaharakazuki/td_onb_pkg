@@ -15,4 +15,4 @@ FROM
     capi_send
 WHERE
     event_id IS NOT NULL
-    AND event_id \!= ''
+    AND event_id != ''

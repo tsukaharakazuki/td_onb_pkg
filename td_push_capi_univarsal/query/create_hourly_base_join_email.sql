@@ -2,14 +2,13 @@
 -- 毎時送信: JS-SDKデータからベースデータ作成（メアドなし→JOIN）
 -- ======================================================================
 -- 全PF共通のベーステーブルを1つ作成する。
--- JS-SDK側のメアドと会員マスタのメアドをCOALESCEで補完。
+-- 会員マスタからメアドを補完。
 -- 全PFで必要なカラムを網羅（ないものはNULL）。
 -- ======================================================================
 
 WITH raw_data AS (
     SELECT
         ${common.col_order_id} AS event_id
-        , ${common.col_email} AS js_email
         , CAST(NULL AS VARCHAR) AS ph
         , CAST(NULL AS VARCHAR) AS country
         , ${common.col_amount} AS raw_amount
@@ -40,13 +39,12 @@ WITH raw_data AS (
         raw_data
     WHERE
         event_id IS NOT NULL
-        AND CAST(event_id AS VARCHAR) \!= ''
+        AND CAST(event_id AS VARCHAR) != ''
 )
 
 , aggregated AS (
     SELECT
         event_id
-        , js_email
         , ph
         , country
         , MAX(CAST(CAST(raw_amount AS DOUBLE) AS BIGINT)) AS value
@@ -63,7 +61,7 @@ WITH raw_data AS (
         rn = 1
         AND raw_amount IS NOT NULL
     GROUP BY
-        event_id, js_email, ph, country, member_id
+        event_id, ph, country, member_id
         , client_user_agent, client_ip_address, event_source_url
         , fbc, fbp, time
 )
@@ -71,7 +69,7 @@ WITH raw_data AS (
 , with_email AS (
     SELECT
         a.*
-        , COALESCE(a.js_email, m.${common.member_email_col}) AS em
+        , m.${common.member_email_col} AS em
     FROM
         aggregated a
     LEFT JOIN

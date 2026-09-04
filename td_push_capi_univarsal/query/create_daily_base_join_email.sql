@@ -27,7 +27,7 @@ WITH purchase_data AS (
         purchase_data
     WHERE
         event_id IS NOT NULL
-        AND CAST(event_id AS VARCHAR) \!= ''
+        AND CAST(event_id AS VARCHAR) != ''
 )
 
 , aggregated AS (
