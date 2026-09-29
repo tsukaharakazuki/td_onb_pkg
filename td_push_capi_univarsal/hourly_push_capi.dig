@@ -12,7 +12,7 @@ schedule:
   cron>: 1 * * * *
 
 _export:
-  \!include : 'config/params.yml'
+  !include : 'config/params.yml'
   td:
     database: ${common.database}
 
