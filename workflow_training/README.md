@@ -307,9 +307,9 @@ https://plazma.red/user_engagement/howto/0108
   tbl_name: ${py_tbl}
   train: train_${py_name}
   preprocessed: preprocessed_${py_name}
+```
 
 ## AudienceStudioの実行.
-```
 +kick_audience_v2:
   require>: audience
   project_name: cdp_audience_XXXXXX
