@@ -1,0 +1,137 @@
+timezone: "Asia/Tokyo"
+
+#schedule:
+#  daily>: 03:00:00
+
+_export:
+  !include : 'config/common_params.yml'
+  !include : 'config/zerocopy_setting.yml'
+
+# ----------------------------------------------------------------------
+# 1. full_import : 1クエリで全件取り込み（BQ読み込み量が10GB未満のテーブルのみ）
+# ----------------------------------------------------------------------
++full_import:
+  for_each>:
+    dp: ${full_import}
+  _parallel: true
+  _do:
+    # replace : 一時テーブルに取り込み → 本テーブルへ置き換え
+    +replace:
+      if>: ${dp.write_mode == 'replace'}
+      _do:
+        +empty_tmp_table:
+          td_ddl>:
+          empty_tables:
+            - "${dp.td_table}${zc.tmp_suffix}"
+          database: ${dp.td_database}
+
+        +load:
+          _retry: 2
+          _export:
+            target_table: ${dp.td_table}${zc.tmp_suffix}
+            load_from: ${session_date}
+            load_to: ${session_date}
+            load_key: ${session_date}
+            delete_before_insert: false
+          call>: subflow/load_unit.dig
+
+        +swap_table:
+          td_ddl>:
+          rename_tables:
+            - {from: "${dp.td_table}${zc.tmp_suffix}", to: "${dp.td_table}"}
+          database: ${dp.td_database}
+
+    # append : 本テーブルへ追記（同じ session_date の再実行時は該当分を削除してから追記）
+    +append:
+      if>: ${dp.write_mode != 'replace'}
+      _do:
+        +create_table:
+          td_ddl>:
+          create_tables:
+            - "${dp.td_table}"
+          database: ${dp.td_database}
+
+        +load:
+          _retry: 2
+          _export:
+            target_table: ${dp.td_table}
+            load_from: ${session_date}
+            load_to: ${session_date}
+            load_key: ${session_date}
+            delete_before_insert: true
+          call>: subflow/load_unit.dig
+
+# ----------------------------------------------------------------------
+# 2. incremental_import : 対象日（session_date - offset_days）の1日分を追記
+#    クエリ内の __FROM__ = 対象日 / __TO__ = 対象日の翌日（YYYY-MM-DD）
+# ----------------------------------------------------------------------
++incremental_import:
+  for_each>:
+    dp: ${incremental_import}
+  _parallel: true
+  _do:
+    +create_table:
+      td_ddl>:
+      create_tables:
+        - "${dp.td_table}"
+      database: ${dp.td_database}
+
+    +load:
+      _retry: 2
+      _export:
+        target_table: ${dp.td_table}
+        load_from: ${moment(session_date).subtract(dp.offset_days, 'days').format('YYYY-MM-DD')}
+        load_to: ${moment(session_date).subtract(dp.offset_days, 'days').add(1, 'days').format('YYYY-MM-DD')}
+        load_key: ${moment(session_date).subtract(dp.offset_days, 'days').format('YYYY-MM-DD')}
+        delete_before_insert: true
+      call>: subflow/load_unit.dig
+
+# ----------------------------------------------------------------------
+# 3. split_import : 10GBを超えるテーブルを分割キー単位でループ取り込み
+#    split_list_query の結果1行 = 1クエリ（split_from / split_to が __FROM__ / __TO__ に入る）
+# ----------------------------------------------------------------------
++split_import:
+  for_each>:
+    dp: ${split_import}
+  _parallel: false
+  _do:
+    +prepare_replace:
+      if>: ${dp.write_mode == 'replace'}
+      _do:
+        td_ddl>:
+        empty_tables:
+          - "${dp.td_table}${zc.tmp_suffix}"
+        database: ${dp.td_database}
+
+    +prepare_append:
+      if>: ${dp.write_mode != 'replace'}
+      _do:
+        td_ddl>:
+        create_tables:
+          - "${dp.td_table}"
+        database: ${dp.td_database}
+
+    +each_split:
+      td_for_each>: queries/split_list.sql
+      database: ${dp.td_database}
+      engine: presto
+      # 並列にするとBQ側・TD側の同時実行数が増えるため、まずは直列を推奨
+      _parallel: false
+      _do:
+        +load:
+          _retry: 2
+          _export:
+            target_table: ${dp.write_mode == 'replace' ? dp.td_table + zc.tmp_suffix : dp.td_table}
+            load_from: ${td.each.split_from}
+            load_to: ${td.each.split_to}
+            load_key: ${td.each.split_from}
+            delete_before_insert: ${dp.write_mode != 'replace'}
+          call>: subflow/load_unit.dig
+
+    +swap_table:
+      if>: ${dp.write_mode == 'replace'}
+      _do:
+        td_ddl>:
+        rename_tables:
+          - {from: "${dp.td_table}${zc.tmp_suffix}", to: "${dp.td_table}"}
+        database: ${dp.td_database}

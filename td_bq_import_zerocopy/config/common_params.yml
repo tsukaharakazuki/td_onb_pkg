@@ -1,0 +1,10 @@
+td:
+  database: IMPORT_DB  # td_for_each> などのデフォルトDB（各設定の td_database が優先）
+
+# Zero-Copy（BigQuery）側の設定
+zc:
+  # Integration Hub で作成した Zero-Copy ソース名（= Trinoカタログ名）
+  # 「bigquery_」で始まり、64文字以内であること
+  catalog: bigquery_xxx
+  # replace モードで使う一時テーブルのサフィックス
+  tmp_suffix: _zc_tmp

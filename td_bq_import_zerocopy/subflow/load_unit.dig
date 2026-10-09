@@ -1,0 +1,35 @@
+# 1ロード単位（= BigQueryへのフェデレーテッドクエリ1本）の取り込み処理
+# 呼び出し元から受け取るパラメータ:
+#   dp                   : zerocopy_setting.yml の1設定
+#   target_table         : 出力先テーブル
+#   load_from / load_to  : クエリ内の __FROM__ / __TO__ に置換する値
+#   load_key             : td_load_key カラムに入れる値（再実行時の削除キー）
+#   delete_before_insert : true の場合、同じ load_key のデータを削除してから追記
+
+_export:
+  load_query: ${dp.query.split('__CATALOG__').join(zc.catalog).split('__FROM__').join(load_from).split('__TO__').join(load_to)}
+  time_expr: ${dp.time_expr ? dp.time_expr : session_unixtime}
+
+# 再実行時の重複防止（初回はtd_load_keyカラムが存在しないため削除をスキップ）
++delete_existing:
+  if>: ${delete_before_insert}
+  _do:
+    +check_column:
+      td>: queries/check_load_key_column.sql
+      database: ${dp.td_database}
+      engine: presto
+      store_last_results: true
+
+    +delete:
+      if>: ${td.last_results.cnt > 0}
+      _do:
+        td>: queries/delete_by_load_key.sql
+        database: ${dp.td_database}
+        engine: presto
+
+# BigQueryからTDへINSERT（フェデレーテッドクエリはTrinoのみ対応）
++insert:
+  td>: queries/load.sql
+  database: ${dp.td_database}
+  insert_into: ${target_table}
+  engine: presto

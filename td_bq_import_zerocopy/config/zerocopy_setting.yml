@@ -1,0 +1,101 @@
+# ======================================================================
+# Zero-Copy 取り込み設定
+#  - 取り込みテーブルを追加するときは、該当モードのリストに1ブロック追加するだけでOK
+#  - query 内で使えるプレースホルダ
+#      __CATALOG__ : common_params.yml の zc.catalog（例: bigquery_xxx）
+#      __FROM__    : incremental = 対象日 / split = split_from
+#      __TO__      : incremental = 対象日の翌日 / split = split_to
+#  - query で time カラムは SELECT しないこと（time は time_expr から自動付与）
+#  - 自動で td_load_key カラム（再実行時の削除キー）が付与される
+#  - BigQuery側の dataset / table / column 名は小文字のみアクセス可能
+#  - 1クエリでBigQueryから読む量が10GBを超えるとクエリが中断される
+#    → 事前にサイズを確認し（bq_size_check/）、10GB超は split_import を使う
+# ======================================================================
+
+# ----------------------------------------------------------------------
+# full_import : 1クエリで全件取り込み（読み込み量 10GB 未満のテーブル）
+#   write_mode : replace（洗い替え） / append（追記）
+# ----------------------------------------------------------------------
+full_import:
+  - name: customers
+    td_database: TD_OUTPUT_DB
+    td_table: bq_customers
+    write_mode: replace
+    time_expr: TO_UNIXTIME(updated_at)  # 省略時は session_unixtime
+    query: |-
+      SELECT
+        customer_id
+        , email
+        , CAST(birthday AS VARCHAR) AS birthday  -- DATE / NUMERIC / STRUCT等は型を明示変換すると安全
+        , updated_at
+      FROM __CATALOG__.crm.customers
+
+# ----------------------------------------------------------------------
+# incremental_import : 対象日（session_date - offset_days）の1日分を追記
+#   パーティション列・日付列に関数をかけず、そのまま比較するとBQへのプッシュダウンが効く
+# ----------------------------------------------------------------------
+incremental_import:
+  - name: orders
+    td_database: TD_OUTPUT_DB
+    td_table: bq_orders
+    offset_days: 1
+    time_expr: TO_UNIXTIME(ordered_at)
+    query: |-
+      SELECT
+        order_id
+        , customer_id
+        , CAST(amount AS DOUBLE) AS amount
+        , ordered_at
+      FROM __CATALOG__.sales.orders
+      WHERE ordered_at >= TIMESTAMP '__FROM__ 00:00:00 Asia/Tokyo'
+        AND ordered_at <  TIMESTAMP '__TO__ 00:00:00 Asia/Tokyo'
+
+# ----------------------------------------------------------------------
+# split_import : 10GB を超えるテーブルを分割キーで区切ってループ取り込み
+#   split_list_query : split_from / split_to を返すTrinoクエリ（1行 = 1クエリ）
+#     - SEQUENCE で作るとBigQueryを読まずに分割リストを作れる（推奨）
+#     - 1分割あたりの読み込み量が 7GB 程度以下（余裕をみて）になる粒度にする
+#   write_mode : replace（全分割を一時テーブルに入れてから置き換え） / append
+# ----------------------------------------------------------------------
+split_import:
+  # 例1: 日付パーティションテーブルを月単位で分割
+  - name: events_monthly
+    td_database: TD_OUTPUT_DB
+    td_table: bq_events
+    write_mode: replace
+    time_expr: TO_UNIXTIME(event_timestamp)
+    split_list_query: |-
+      SELECT
+        CAST(d AS VARCHAR) AS split_from
+        , CAST(d + INTERVAL '1' MONTH AS VARCHAR) AS split_to
+      FROM UNNEST(SEQUENCE(DATE '2024-01-01', DATE '2026-09-01', INTERVAL '1' MONTH)) AS t(d)
+    query: |-
+      SELECT
+        event_id
+        , user_id
+        , event_name
+        , event_date
+        , event_timestamp
+      FROM __CATALOG__.analytics.events
+      WHERE event_date >= DATE '__FROM__'
+        AND event_date <  DATE '__TO__'
+
+  # 例2: 日付を持たないテーブルを数値IDのレンジで分割
+  - name: members_by_id
+    td_database: TD_OUTPUT_DB
+    td_table: bq_members
+    write_mode: replace
+    time_expr: ""
+    split_list_query: |-
+      SELECT
+        CAST(s AS VARCHAR) AS split_from
+        , CAST(s + 5000000 AS VARCHAR) AS split_to
+      FROM UNNEST(SEQUENCE(0, 50000000, 5000000)) AS t(s)
+    query: |-
+      SELECT
+        member_id
+        , member_rank
+        , CAST(registered_at AS VARCHAR) AS registered_at
+      FROM __CATALOG__.crm.members
+      WHERE member_id >= __FROM__
+        AND member_id <  __TO__
