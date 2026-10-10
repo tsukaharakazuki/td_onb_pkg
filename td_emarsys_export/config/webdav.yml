@@ -1,0 +1,49 @@
+# ============================================================
+# 2. WebDAV（Custom Script / Python）送信の設定
+#   - Emarsys 管理 > セキュリティ設定 > WebDAV Users でユーザーを作成し、
+#     表示されたディレクトリ・ユーザー名・シークレットを使用する
+#   - 認証情報は TD Workflow Secrets に登録する
+#       td.apikey / emarsys.webdav_user / emarsys.webdav_password
+#   - Emarsys 側: 連絡先 > データインポート > ファイルのインポート で
+#     「Emarsys WebDAV」ソース・ファイル名パターン（例: contacts_*.csv）を設定しておく
+#   - 取込後、Emarsys がファイルを *.done / *.error / *.ignore にリネームする
+# ============================================================
+webdav:
+  base_url: "https://webdav.emarsys.net"  # 末尾スラッシュなし
+  directory: "xxxxx_account_dir"          # WebDAV Users 画面に表示されるディレクトリ
+  newline: "CRLF"                         # CRLF / LF / CR
+  skip_if_empty: true                     # 0件の場合はアップロードしない
+  timeout_sec: 600
+
+# ------------------------------------------------------------
+# 送信データ定義（キーごとに for_each で同一タスクを実行）
+#   項目は config/sftp.yml の targets と同じ
+# ------------------------------------------------------------
+targets:
+  contacts:
+    enabled: true
+    query_file: export_select
+    engine: presto
+    source_db: "cdp_audience_xxxxx"
+    source_table: "customers"
+    columns: >-
+      customer_id AS external_id
+      , email
+      , last_name
+      , first_name
+    where: "TD_INTERVAL(time, '-1d', 'JST')"
+    file_prefix: "contacts"
+    delimiter: ","
+
+  contacts_optout:
+    enabled: false
+    query_file: export_select
+    engine: presto
+    source_db: "cdp_audience_xxxxx"
+    source_table: "customers"
+    columns: >-
+      customer_id AS external_id
+      , CASE WHEN mail_optin = 1 THEN 'TRUE' ELSE 'FALSE' END AS optin
+    where: "TD_INTERVAL(time, '-1d', 'JST')"
+    file_prefix: "contacts_optout"
+    delimiter: ","

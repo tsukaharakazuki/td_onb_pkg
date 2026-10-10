@@ -1,0 +1,15 @@
+# ============================================================
+# 共通設定
+# ============================================================
+
+# 送信方式の切り替え（true / false）
+#   sftp  : TDのSFTPコネクタ（result_connection）で送信 → config/sftp.yml
+#   webdav: Custom Script(Python)で Emarsys WebDAV へ直接送信 → config/webdav.yml
+send_method:
+  sftp: true
+  webdav: false
+
+# WebDAV送信時に Python から TD ジョブ結果を取得する API エンドポイント
+#   Tokyo: https://api.treasuredata.co.jp / US: https://api.treasuredata.com
+#   EU01 : https://api.eu01.treasuredata.com
+td_api_endpoint: "https://api.treasuredata.co.jp"

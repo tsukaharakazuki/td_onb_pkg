@@ -1,0 +1,58 @@
+# ============================================================
+# 1. SFTPコネクタ送信の設定
+#   - 接続情報（host / user / 鍵）は TD コンソールの Authentication で作成し、名前のみ指定する
+#   - Emarsys 側: 連絡先 > データインポート > ファイルのインポート で
+#     「SFTP」ソース・パス・ファイル名パターン（例: contacts_*.csv）を設定しておく
+# ============================================================
+sftp:
+  connection_name: "emarsys_sftp"     # TDのAuthentication名
+  user_directory_is_root: true        # true: base_dir をユーザーホーム基準で解釈
+  base_dir: "/import"                 # アップロード先ディレクトリ（末尾スラッシュなし）
+  newline: "CRLF"                     # CRLF / LF / CR
+
+# ------------------------------------------------------------
+# 送信データ定義（キーごとに for_each で同一タスクを実行）
+#   enabled      : true / false
+#   query_file   : query/ 配下のSQLファイル名（拡張子なし）。通常は export_select
+#   engine       : presto / hive
+#   source_db    : 抽出元DB（td> の database にも使用）
+#   source_table : 抽出元テーブル
+#   columns      : SELECT句（出力カラム名 = Emarsys側のヘッダー名）
+#   where        : WHERE句（不要なら "1 = 1"）
+#   file_prefix  : 出力ファイル名の接頭辞 → {file_prefix}_{yyyyMMdd}.csv
+#   delimiter    : "," / "\t" / "|"
+# ------------------------------------------------------------
+targets:
+  contacts:
+    enabled: true
+    query_file: export_select
+    engine: presto
+    source_db: "cdp_audience_xxxxx"
+    source_table: "customers"
+    columns: >-
+      customer_id AS external_id
+      , email
+      , last_name
+      , first_name
+      , DATE_FORMAT(FROM_UNIXTIME(birthday_unixtime), '%d.%m.%Y') AS birth_date
+    where: "TD_INTERVAL(time, '-1d', 'JST')"
+    file_prefix: "contacts"
+    delimiter: ","
+
+  sales_items:
+    enabled: false
+    query_file: export_select
+    engine: presto
+    source_db: "ec_db"
+    source_table: "order_items"
+    # Emarsys販売データ: ヘッダーは小文字・必須列 item/price/order/timestamp/customer/quantity
+    columns: >-
+      item_id AS item
+      , CAST(unit_price * quantity AS DOUBLE) AS price
+      , order_id AS "order"
+      , TO_ISO8601(FROM_UNIXTIME(order_time)) AS "timestamp"
+      , customer_id AS customer
+      , quantity
+    where: "TD_INTERVAL(time, '-1d', 'JST')"
+    file_prefix: "sales_items"
+    delimiter: ","

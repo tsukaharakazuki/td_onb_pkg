@@ -1,0 +1,90 @@
+timezone: Asia/Tokyo
+
+# schedule:
+#   daily>: 06:00:00
+
+_export:
+  !include : config/common.yml
+
++echo_settings:
+  echo>: "send_method: sftp=${send_method.sftp} / webdav=${send_method.webdav} / session_date=${session_date_compact}"
+
+# ------------------------------------------------------------
+# 1. SFTPコネクタ経由で送信（config/sftp.yml の targets を for_each）
+# ------------------------------------------------------------
++sftp:
+  if>: ${send_method.sftp}
+  _do:
+    _export:
+      !include : config/sftp.yml
+
+    +sftp_export:
+      for_each>:
+        target: ${Object.keys(targets)}
+      _do:
+        +sftp_check:
+          if>: ${targets[target].enabled}
+          _do:
+            +sftp_echo:
+              echo>: "[sftp] ${target} -> ${sftp.base_dir}/${targets[target].file_prefix}_${session_date_compact}.csv"
+
+            +sftp_send:
+              td>: query/${targets[target].query_file}.sql
+              database: ${targets[target].source_db}
+              engine: ${targets[target].engine}
+              result_connection: ${sftp.connection_name}
+              result_settings:
+                user_directory_is_root: ${sftp.user_directory_is_root}
+                path_prefix: ${sftp.base_dir}/${targets[target].file_prefix}_${session_date_compact}.csv
+                sequence_format: ""
+                rename_file_after_upload: true
+                header_line: true
+                delimiter: ${targets[target].delimiter}
+                quote_policy: MINIMAL
+                null_string: ""
+                newline: ${sftp.newline}
+
+# ------------------------------------------------------------
+# 2. Custom Script(Python)で Emarsys WebDAV に直接送信
+#    （config/webdav.yml の targets を for_each）
+# ------------------------------------------------------------
++webdav:
+  if>: ${send_method.webdav}
+  _do:
+    _export:
+      !include : config/webdav.yml
+
+    +webdav_export:
+      for_each>:
+        target: ${Object.keys(targets)}
+      _do:
+        +webdav_check:
+          if>: ${targets[target].enabled}
+          _do:
+            +webdav_echo:
+              echo>: "[webdav] ${target} -> ${webdav.base_url}/${webdav.directory}/${targets[target].file_prefix}_${session_date_compact}.csv"
+
+            # 送信データを抽出（結果はジョブ結果として保持し、次タスクで取得）
+            +webdav_query:
+              td>: query/${targets[target].query_file}.sql
+              database: ${targets[target].source_db}
+              engine: ${targets[target].engine}
+
+            # ジョブ結果をCSV化して WebDAV へ PUT
+            +webdav_upload:
+              py>: scripts.webdav_upload.main
+              job_id: ${td.last_job_id}
+              td_endpoint: ${td_api_endpoint}
+              base_url: ${webdav.base_url}
+              directory: ${webdav.directory}
+              file_name: ${targets[target].file_prefix}_${session_date_compact}.csv
+              delimiter: ${targets[target].delimiter}
+              newline: ${webdav.newline}
+              skip_if_empty: ${webdav.skip_if_empty}
+              timeout_sec: ${webdav.timeout_sec}
+              _env:
+                TD_API_KEY: ${secret:td.apikey}
+                WEBDAV_USER: ${secret:emarsys.webdav_user}
+                WEBDAV_PASSWORD: ${secret:emarsys.webdav_password}
+              docker:
+                image: "digdag/digdag-python:3.10"
