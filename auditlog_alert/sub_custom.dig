@@ -1,0 +1,33 @@
+# =====================================================================
+# 【部品】モード3: 企業別チェックの処理本体
+# ---------------------------------------------------------------------
+# custom_check.dig / dev_run.dig から call> されます（直接実行しない）
+# 呼び出し元で custom_group（config/custom_checks.yml の custom_groups のキー）を指定します
+# =====================================================================
+
+# --- この実行で使う値（本番: config/custom_checks.yml / 開発: config/dev.yml） ---
+_export:
+  alert_mode: custom
+  report_title: ${modes.custom.title + '（' + custom_groups[custom_group].title + '）'}
+  report_description: ${modes.custom.description}
+  lookback_minutes: ${run_env == 'dev' ? dev.lookback_minutes.custom : custom_groups[custom_group].lookback_hours * 60}
+  cooldown_minutes: ${run_env == 'dev' && dev.ignore_cooldown ? 0 : modes.custom.cooldown_minutes}
+  send_when_no_findings: ${run_env == 'dev' && dev.always_notify ? true : modes.custom.send_when_no_findings}
+
++show_settings:
+  echo>: "[custom] run_env=${run_env} / group=${custom_group} / lookback=${lookback_minutes}min / output=${output_db}.*${table_suffix}"
+
+# --- 検知: custom_group に属するチェックを1件ずつ ---
++checks:
+  for_each>:
+    check_id: ${Object.keys(custom_checks)}
+  _do:
+    +check:
+      if>: ${custom_checks[check_id].enabled && custom_checks[check_id].group == custom_group}
+      _do:
+        +check_exec:
+          td>: ${custom_checks[check_id].query}
+
+# --- 通知 ---
++notify:
+  call>: sub_notify.dig

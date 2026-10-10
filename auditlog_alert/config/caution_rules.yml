@@ -1,0 +1,141 @@
+---
+# =====================================================================
+# モード2: 要注意ログ 日次レポート（caution_daily_report.dig / 1日1回）
+# =====================================================================
+# 監視期間は config/notification.yml の modes.caution.lookback_minutes（既定 1440分 = 24時間）
+#
+# ■ caution_rules（イベント条件型ルール）
+#   イベント名を列挙するだけで追加できます。ユーザー×IPごとに集計して報告します。
+#     title            : 通知に表示する名前
+#     severity         : critical（緊急） / high（高） / medium（中） / low（低）
+#     events           : 対象イベント名（https://docs.treasure.ai/products/control-panel/security/auditlogs/premium-audit-log-events）
+#     min_count        : ユーザー×IPあたり、この回数以上で報告
+#     include_internal : true にすると TD 内部（ワークフロー等, ip_address='internal'）の操作も含める
+#     enabled          : false で一時停止
+
+caution_rules:
+
+  permission_change:
+    title: "権限・ポリシーの変更"
+    severity: high
+    events: [permission_modify, permission_policy_create, permission_policy_modify, permission_policy_delete, permission_policy_attach_user, permission_policy_detach_user, database_permission_modify, role_create, role_delete]
+    min_count: 1
+    include_internal: true
+    enabled: true
+
+  security_setting_change:
+    title: "セキュリティ設定の変更（IP制限・パスワードポリシー・SSO等）"
+    severity: high
+    events: [ip_whitelist_modify, password_policy_modify, account_modify, sso_setting_create, sso_setting_update, sso_setting_delete, user_disable_sso, user_enable_sso, user_enforce_sso, user_update_sso]
+    min_count: 1
+    include_internal: true
+    enabled: true
+
+  user_management:
+    title: "ユーザーの追加・削除・変更"
+    severity: medium
+    events: [user_invite, user_invite_accepted, user_create, user_delete, user_modify, impersonate_approve]
+    min_count: 1
+    include_internal: true
+    enabled: true
+
+  apikey_operation:
+    title: "APIキーの発行・ダウンロード・変更"
+    severity: high
+    events: [user_apikey_generate, user_apikey_download, user_apikey_modify, user_apikey_delete]
+    min_count: 1
+    include_internal: true
+    enabled: true
+
+  data_download:
+    title: "データのダウンロード"
+    severity: medium
+    events: [job_result_download, syndication_execution_download, bulk_import_error_records_download]
+    min_count: 20
+    include_internal: false
+    enabled: true
+
+  data_export:
+    title: "データのExport（Result Export）"
+    severity: medium
+    events: [job_result_export]
+    min_count: 10
+    include_internal: false
+    enabled: true
+
+  audit_log_download:
+    title: "監査ログのダウンロード"
+    severity: high
+    events: [audit_log_download]
+    min_count: 1
+    include_internal: true
+    enabled: true
+
+  data_deletion:
+    title: "データベース・テーブルの削除（手動操作）"
+    severity: medium
+    events: [database_delete, table_delete, partial_delete_create]
+    min_count: 1
+    include_internal: false
+    enabled: true
+
+  sign_in_failure:
+    title: "ログイン失敗の繰り返し"
+    severity: medium
+    events: [sign_in_failed, sign_in_failed_sso, sign_in_failed_by_ipwhitelist, sign_in_failed_by_private_connect, sign_in_failed_by_enabled_sso, password_revalidate_failed, sso_revalidate_failed]
+    min_count: 3
+    include_internal: true
+    enabled: true
+
+  permission_denied:
+    title: "権限エラー（アクセス拒否）"
+    severity: medium
+    events: [unauthorized, permission_unauthorized_access, job_result_download_denied, insufficient_permission, column_unauthorized]
+    min_count: 3
+    include_internal: false
+    enabled: true
+
+  workflow_secret_change:
+    title: "ワークフローのシークレット・プロジェクト変更"
+    severity: low
+    events: [workflow_project_secret_create, workflow_project_secret_put, workflow_project_secret_delete, workflow_project_delete]
+    min_count: 1
+    include_internal: false
+    enabled: true
+
+  connection_change:
+    title: "外部接続（Authentication）の作成・変更"
+    severity: low
+    events: [connection_create, connection_modify, connection_modify_settings, connection_delete]
+    min_count: 1
+    include_internal: false
+    enabled: true
+
+  ai_foundry_integration:
+    title: "AI Foundry の外部連携・エージェント変更"
+    severity: low
+    events: [llm_integration_create, llm_integration_modify, llm_agent_create, llm_agent_delete]
+    min_count: 1
+    include_internal: false
+    enabled: true
+
+# ■ caution_special（専用SQLのルール）
+caution_special:
+
+  # 過去 history_days 日間に使われていないIPからのアクセス（ユーザーごと）
+  new_ip_for_user:
+    title: "普段と異なるIPアドレスからのアクセス"
+    severity: medium
+    history_days: 30
+    compare_subnet24: true      # true: IPv4 を /24 単位で比較（クラウドや回線のIP変動による誤検知を減らす）
+    enabled: true
+
+  # 業務時間外（JST）の重要操作
+  off_hours_activity:
+    title: "業務時間外の重要操作"
+    severity: low
+    business_hour_start: 8      # この時刻（時）から
+    business_hour_end: 21       # この時刻（時）の前まで を業務時間とする
+    include_weekend: true       # 土日を業務時間外として扱う
+    events: [job_result_download, job_result_export, user_apikey_generate, user_apikey_download, permission_policy_modify, ip_whitelist_modify, audit_log_download, database_delete, table_delete, user_invite]
+    enabled: true

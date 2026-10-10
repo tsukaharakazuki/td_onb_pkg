@@ -1,0 +1,23 @@
+# =====================================================================
+# 【部品】テーブル作成と履歴の初期投入
+# ---------------------------------------------------------------------
+# setup_tables.dig / dev_run.dig から call> されます（直接実行しない）
+# 何度実行しても安全です（既存テーブル・既存履歴はそのまま）
+# =====================================================================
+
++create_database:
+  td_ddl>:
+  create_databases: ["${output_db}"]
+
++create_findings_table:
+  td>: queries/setup/create_findings_table.sql
+
++create_notifications_table:
+  td>: queries/setup/create_notifications_table.sql
+
++create_activity_table:
+  td>: queries/setup/create_activity_table.sql
+
+# 休眠ユーザー判定用の履歴（過去 history_days 日分）を投入。履歴が空のときだけ実行される
++backfill_user_activity:
+  td>: queries/setup/backfill_user_activity.sql

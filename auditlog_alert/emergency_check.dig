@@ -1,0 +1,26 @@
+# =====================================================================
+# モード1: 緊急情報漏洩チェック（10分ごと）
+# ---------------------------------------------------------------------
+# - ホワイトリスト外IPからのアクセス
+# - 休眠ユーザーがログインせずに重要操作
+# - AI・自動化ツールによる探索とみられる挙動
+# を検知し、メール（＋設定したチャット）に通知します
+#
+# 初回は setup_tables.dig を先に実行してください
+# 設定が完了したら schedule のコメントを外して push してください
+# =====================================================================
+timezone: Asia/Tokyo
+
+#schedule:
+#  minutes_interval>: 10
+
+_export:
+  !include : 'config/common.yml'
+  !include : 'config/notification.yml'
+  !include : 'config/ip_whitelist.yml'
+  !include : 'config/emergency_rules.yml'
+  run_env: prod
+  table_suffix: ""
+
++emergency:
+  call>: sub_emergency.dig

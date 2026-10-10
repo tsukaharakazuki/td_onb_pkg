@@ -1,0 +1,95 @@
+# =====================================================================
+# 【部品】通知の共通処理
+# ---------------------------------------------------------------------
+# sub_emergency.dig / sub_caution.dig / sub_custom.dig から call> されます（直接実行しない）
+#
+#   1. 今回の検知結果から通知対象を確定（再通知抑止 cooldown を適用）
+#   2. メール本文（HTML）・チャット本文（テキスト）をSQLで作成
+#   3. メール（必ず送信）→ Slack / Teams / Google Chat（設定で ON のもの）
+# =====================================================================
+
++mark_notify_targets:
+  td>: queries/notify/mark_notify_targets.sql
+
++build_message:
+  td>: queries/notify/build_message.sql
+  store_last_results: true
+
++show_message_summary:
+  echo>: "[notify] should_send=${td.last_results.should_send} / findings=${td.last_results.finding_count} / subject=${td.last_results.subject}"
+
++send:
+  if>: ${td.last_results.should_send}
+  _do:
+
+    # -----------------------------------------------------------------
+    # メール（必ず送信）
+    #   本番 : config/send_email_list.yml
+    #   開発 : config/dev_send_email_list.yml
+    # -----------------------------------------------------------------
+    +mail_prod:
+      if>: ${run_env == 'prod'}
+      _do:
+        +send_mail_prod:
+          mail>: templates/mail_alert.html
+          subject: ${td.last_results.subject}
+          html: true
+          !include : 'config/send_email_list.yml'
+
+    +mail_dev:
+      if>: ${run_env == 'dev'}
+      _do:
+        +send_mail_dev:
+          mail>: templates/mail_alert.html
+          subject: ${td.last_results.subject}
+          html: true
+          !include : 'config/dev_send_email_list.yml'
+
+    # -----------------------------------------------------------------
+    # Slack（Incoming Webhook）
+    #   Secret: slack.webhook_url
+    # -----------------------------------------------------------------
+    +slack:
+      if>: ${run_env == 'dev' ? dev.chat.slack : notification.slack.enabled}
+      _do:
+        +post_slack:
+          http>: ${secret:slack.webhook_url}
+          method: POST
+          content:
+            text: "*${td.last_results.subject}*\n\n${td.last_results.text_body}\n\n<${console_url}|コンソールを開く>"
+          content_format: json
+          content_type: application/json
+
+    # -----------------------------------------------------------------
+    # Microsoft Teams（Workflows の Incoming Webhook / Custom Script）
+    #   Secret: teams.webhook_url
+    # -----------------------------------------------------------------
+    +teams:
+      if>: ${run_env == 'dev' ? dev.chat.teams : notification.teams.enabled}
+      _do:
+        +post_teams:
+          py>: scripts.notify_chat.post_teams
+          title: ${td.last_results.subject}
+          message: ${td.last_results.text_body}
+          header_color: ${td.last_results.header_color}
+          _env:
+            TEAMS_WEBHOOK_URL: ${secret:teams.webhook_url}
+          docker:
+            image: ${custom_script_image}
+
+    # -----------------------------------------------------------------
+    # Google Chat（スペースの Incoming Webhook / Custom Script）
+    #   Secret: google_chat.webhook_url
+    # -----------------------------------------------------------------
+    +google_chat:
+      if>: ${run_env == 'dev' ? dev.chat.google_chat : notification.google_chat.enabled}
+      _do:
+        +post_google_chat:
+          py>: scripts.notify_chat.post_google_chat
+          title: ${td.last_results.subject}
+          message: ${td.last_results.text_body}
+          header_color: ${td.last_results.header_color}
+          _env:
+            GOOGLE_CHAT_WEBHOOK_URL: ${secret:google_chat.webhook_url}
+          docker:
+            image: ${custom_script_image}

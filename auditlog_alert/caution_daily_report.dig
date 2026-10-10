@@ -1,0 +1,22 @@
+# =====================================================================
+# モード2: 要注意ログ 日次レポート（1日1回）
+# ---------------------------------------------------------------------
+# 緊急性は高くないが確認すべき操作・ユーザーを、過去24時間分まとめて報告します
+# 検知ルールは config/caution_rules.yml で追加・変更できます
+#
+# 設定が完了したら schedule のコメントを外して push してください
+# =====================================================================
+timezone: Asia/Tokyo
+
+#schedule:
+#  daily>: 09:00:00
+
+_export:
+  !include : 'config/common.yml'
+  !include : 'config/notification.yml'
+  !include : 'config/caution_rules.yml'
+  run_env: prod
+  table_suffix: ""
+
++caution:
+  call>: sub_caution.dig

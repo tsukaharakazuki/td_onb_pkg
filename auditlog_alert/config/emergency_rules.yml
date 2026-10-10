@@ -1,0 +1,101 @@
+---
+# =====================================================================
+# モード1: 緊急情報漏洩チェック（emergency_check.dig / 10分ごと）
+# =====================================================================
+# 監視期間・再通知抑止時間は config/notification.yml の modes.emergency で設定します
+
+emergency_rules:
+
+  # -------------------------------------------------------------------
+  # ルール1: ホワイトリスト外IPからのアクセス
+  #   config/ip_whitelist.yml に含まれないIPからの操作を、ユーザー×IPごとに報告します
+  #   - ログイン失敗だけ（IP制限でブロック済み）の場合 → 重要度「高」
+  #   - 1件でも成功した操作がある場合                → 重要度「緊急」
+  # -------------------------------------------------------------------
+  non_whitelist_ip:
+    enabled: true
+    min_events: 1          # ユーザー×IPあたり、この回数以上で報告
+
+  # -------------------------------------------------------------------
+  # ルール2: 休眠ユーザーの突然の操作
+  #   dormant_days 日以上アクセスがなかったユーザーが、直近 sign_in_grace_hours 時間に
+  #   ログインせずに（＝APIキー等で）重要な操作をした場合に報告します
+  # -------------------------------------------------------------------
+  dormant_user:
+    enabled: true
+    dormant_days: 30           # この日数以上アクセスがなければ「休眠」とみなす
+    history_days: 90           # 最終アクティビティを確認する期間（setup_tables.dig の初期投入期間）
+    sign_in_grace_hours: 24    # この時間内にログインしていれば対象外
+    # 監視する操作
+    sensitive_events:
+      - job_issue
+      - query_run
+      - query_create
+      - job_result_download
+      - job_result_export
+      - job_result_show
+      - table_preview
+      - user_apikey_generate
+      - user_apikey_download
+      - user_apikey_modify
+      - permission_modify
+      - permission_policy_create
+      - permission_policy_modify
+      - permission_policy_attach_user
+      - database_permission_modify
+      - ip_whitelist_modify
+      - password_policy_modify
+      - account_modify
+      - user_invite
+      - user_modify
+      - audit_log_download
+      - syndication_execution_download
+      - workflow_project_secret_create
+      - workflow_project_secret_put
+      - connection_create
+      - data_transfer_create
+      - database_delete
+      - table_delete
+    # 上記のうち、含まれていたら重要度を「緊急」にする操作（それ以外は「高」）
+    critical_events:
+      - job_result_download
+      - job_result_export
+      - user_apikey_generate
+      - user_apikey_download
+      - permission_policy_modify
+      - permission_policy_attach_user
+      - ip_whitelist_modify
+      - audit_log_download
+      - syndication_execution_download
+
+  # -------------------------------------------------------------------
+  # ルール3: AI・自動化ツールによる探索とみられる挙動
+  #   以下のシグナルを1ユーザーごとに集計し、1つ以上該当したら報告します
+  #   （2つ以上該当 → 重要度「緊急」、1つ → 「高」）
+  #   - 探索系クエリ  : 接続テストやスキーマ探索のクエリ（SELECT 1, SHOW TABLES など）
+  #   - バースト      : 1分間のイベント数が異常に多い
+  #   - 横断アクセス  : 短時間に多数のDBへクエリ
+  #   - 権限エラー    : 権限がないリソースへのアクセスを繰り返す
+  # -------------------------------------------------------------------
+  ai_probe:
+    enabled: true
+    probe_query_min: 3             # 探索系クエリがこの件数以上
+    burst_events_per_minute: 60    # 1分間のイベント数がこの件数以上
+    distinct_databases_min: 5      # クエリ対象DBがこの数以上
+    denied_events_min: 5           # 権限エラーがこの件数以上
+    # 探索系クエリとみなす正規表現（大文字小文字は区別しない・どれか1つに一致で該当）
+    # ※ シングルクォート ' は使わないでください
+    probe_query_patterns:
+      - '^\s*select\s+1\s*;?\s*$'
+      - '^\s*select\s+(version|current_user|current_catalog|current_schema)\b'
+      - '^\s*show\s+(catalogs|schemas|databases|tables|columns|create|functions|session)\b'
+      - '^\s*(describe|desc)\s+'
+      - 'information_schema\.'
+      - '^\s*select\s+\*\s+from\s+\S+\s+limit\s+([1-9]|10)\s*;?\s*$'
+    # 権限エラーとみなすイベント
+    denied_events:
+      - unauthorized
+      - permission_unauthorized_access
+      - job_result_download_denied
+      - insufficient_permission
+      - column_unauthorized

@@ -1,0 +1,49 @@
+---
+# =====================================================================
+# 通知設定
+# =====================================================================
+
+# --- モードごとの設定 --------------------------------------------------
+#   title                : メール件名・本文のタイトル
+#   description          : メール冒頭の説明文
+#   lookback_minutes     : 1回の実行でさかのぼって確認する時間（分）
+#                          監査ログの取り込み遅延を吸収するため、実行間隔より長めにします
+#   cooldown_minutes     : 同じ検知内容（ルール×ユーザー×IP）を再通知しない時間（分）
+#                          0 にすると毎回通知します
+#   send_when_no_findings: 検知0件でもメールを送るか（死活監視を兼ねる場合は true）
+modes:
+  emergency:
+    title: "【緊急】情報漏洩チェック"
+    description: "ホワイトリスト外IPからのアクセス、休眠ユーザーの突然の操作、AI・自動化ツールによる探索とみられる挙動を検知しました。至急ご確認ください。"
+    lookback_minutes: 30
+    cooldown_minutes: 120
+    send_when_no_findings: false
+  caution:
+    title: "要注意ログ 日次レポート"
+    description: "緊急性は高くないものの、確認が推奨される操作・イベントの一覧です。"
+    lookback_minutes: 1440
+    cooldown_minutes: 0
+    send_when_no_findings: true
+  custom:
+    title: "企業別チェックレポート"
+    description: "貴社で設定したチェック項目の結果です。"
+    # custom の lookback は config/custom_checks.yml の custom_groups で設定します
+    lookback_minutes: 0
+    cooldown_minutes: 0
+    send_when_no_findings: true
+
+# --- 追加の通知チャネル（メールは常に送信されます） -------------------------
+# Webhook URL はコードに書かず、Workflow の Secret に登録してください
+#   tdx wf secrets set <project> slack.webhook_url=https://hooks.slack.com/services/...
+#   tdx wf secrets set <project> teams.webhook_url=https://xxx.logic.azure.com/...
+#   tdx wf secrets set <project> google_chat.webhook_url=https://chat.googleapis.com/v1/spaces/...
+notification:
+  slack:
+    enabled: false
+  teams:
+    enabled: false       # Custom Script（Python）で送信
+  google_chat:
+    enabled: false       # Custom Script（Python）で送信
+
+# Custom Script（Teams / Google Chat 送信）で使う Docker イメージ
+custom_script_image: "digdag/digdag-python:3.10"

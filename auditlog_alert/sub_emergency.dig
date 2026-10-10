@@ -1,0 +1,50 @@
+# =====================================================================
+# 【部品】モード1: 緊急情報漏洩チェックの処理本体
+# ---------------------------------------------------------------------
+# emergency_check.dig / dev_run.dig から call> されます（直接実行しない）
+# =====================================================================
+
+# --- この実行で使う値（本番: config/notification.yml / 開発: config/dev.yml） ---
+_export:
+  alert_mode: emergency
+  report_title: ${modes.emergency.title}
+  report_description: ${modes.emergency.description}
+  lookback_minutes: ${run_env == 'dev' ? dev.lookback_minutes.emergency : modes.emergency.lookback_minutes}
+  cooldown_minutes: ${run_env == 'dev' && dev.ignore_cooldown ? 0 : modes.emergency.cooldown_minutes}
+  send_when_no_findings: ${run_env == 'dev' && dev.always_notify ? true : modes.emergency.send_when_no_findings}
+
++show_settings:
+  echo>: "[emergency] run_env=${run_env} / lookback=${lookback_minutes}min / cooldown=${cooldown_minutes}min / send_when_no_findings=${send_when_no_findings} / output=${output_db}.*${table_suffix} / whitelist=${ip_whitelist.cidrs.length}件"
+
+# --- 検知（3ルールを並列実行し、結果を findings テーブルへ） ---
++detect:
+  _parallel: true
+
+  # ルール1: ホワイトリスト外IPからのアクセス
+  +non_whitelist_ip:
+    if>: ${emergency_rules.non_whitelist_ip.enabled && ip_whitelist.enabled && ip_whitelist.cidrs.length > 0}
+    _do:
+      +non_whitelist_ip_exec:
+        td>: queries/emergency/non_whitelist_ip.sql
+
+  # ルール2: 休眠ユーザーのログインなし操作
+  +dormant_user:
+    if>: ${emergency_rules.dormant_user.enabled}
+    _do:
+      +dormant_user_exec:
+        td>: queries/emergency/dormant_user.sql
+
+  # ルール3: AI・自動化ツールによる探索とみられる挙動
+  +ai_probe:
+    if>: ${emergency_rules.ai_probe.enabled}
+    _do:
+      +ai_probe_exec:
+        td>: queries/emergency/ai_probe.sql
+
+# --- 通知 ---
++notify:
+  call>: sub_notify.dig
+
+# --- 休眠ユーザー判定用の履歴を更新（通知が失敗した場合は更新しない） ---
++update_user_activity:
+  td>: queries/emergency/update_user_activity.sql

@@ -1,0 +1,42 @@
+---
+# =====================================================================
+# 共通設定（全モード共通）
+# =====================================================================
+
+# --- td> オペレーターの既定設定 --------------------------------------
+# database は監査ログDB（audit_db と同じ値）を直接書いてください
+td:
+  database: td_audit_log
+  engine: presto
+
+# --- 監査ログの参照先 ------------------------------------------------
+# Premium Audit Log が有効なアカウントでは td_audit_log.access に格納されます
+audit_db: td_audit_log
+audit_table: access
+
+# --- 検知結果の保存先 ------------------------------------------------
+# setup_tables.dig を実行すると、このDBとテーブルが作成されます
+output_db: td_auditlog_alert
+findings_table: alert_findings            # 検知結果（全件）
+notifications_table: alert_notifications  # 実際に通知した検知結果（再通知抑止に使用）
+activity_table: alert_user_activity       # ユーザー×IP の最終アクティビティ履歴（休眠ユーザー判定に使用）
+
+# --- 表示用 ----------------------------------------------------------
+# メール件名・本文に表示するアカウント名
+account_label: "Sample Inc."
+# コンソールURL（リージョンに合わせて変更）
+#   US  : https://console.treasuredata.com
+#   東京 : https://console.treasuredata.co.jp
+#   EU  : https://console.eu01.treasuredata.com
+console_url: "https://console.treasuredata.com"
+
+# --- 通知に載せる最大件数 ----------------------------------------------
+# 超過分は「他 N 件」と表示し、全件は notifications_table で確認できます
+mail_max_rows: 50
+chat_max_rows: 10
+
+# --- 監視対象から除外するユーザー --------------------------------------
+# 連携用のサービスアカウントなど、常に大量アクセスするユーザーを列挙
+# 不要な場合は [] のままにしてください
+exclude_users: []
+#  - "etl-bot@example.com"

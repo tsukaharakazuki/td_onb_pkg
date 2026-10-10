@@ -1,0 +1,53 @@
+# =====================================================================
+# 開発モード（手動実行専用・スケジュールなし）
+# ---------------------------------------------------------------------
+# 本番と同じロジックで実データを検知し、通知内容を確認するためのワークフローです
+#   - 結果は「<テーブル名>_dev」に保存（本番の再通知抑止に影響しません）
+#   - メールは config/dev_send_email_list.yml 宛てに送信
+#   - 実行するモード・監視期間などは config/dev.yml で切り替え
+#     （値を変えたら push してから実行。-p での上書きは使いません）
+#
+# デバッグのポイント
+#   - 各モードの最初の echo> に、実際に使われた設定値が出力されます
+#   - 検知結果: <output_db>.alert_findings_dev
+#   - 通知した内容: <output_db>.alert_notifications_dev
+# =====================================================================
+timezone: Asia/Tokyo
+
+_export:
+  !include : 'config/common.yml'
+  !include : 'config/notification.yml'
+  !include : 'config/ip_whitelist.yml'
+  !include : 'config/emergency_rules.yml'
+  !include : 'config/caution_rules.yml'
+  !include : 'config/custom_checks.yml'
+  !include : 'config/dev.yml'
+  run_env: dev
+  table_suffix: "_dev"
+
++show_dev_settings:
+  echo>: "[dev] emergency=${dev.run_emergency} / caution=${dev.run_caution} / custom=${dev.run_custom}(${dev.custom_group}) / ignore_cooldown=${dev.ignore_cooldown} / always_notify=${dev.always_notify} / chat=slack:${dev.chat.slack},teams:${dev.chat.teams},google_chat:${dev.chat.google_chat}"
+
+# 開発用テーブル（*_dev）の作成と履歴の初期投入
++setup:
+  call>: sub_setup.dig
+
++emergency:
+  if>: ${dev.run_emergency}
+  _do:
+    +emergency_exec:
+      call>: sub_emergency.dig
+
++caution:
+  if>: ${dev.run_caution}
+  _do:
+    +caution_exec:
+      call>: sub_caution.dig
+
++custom:
+  if>: ${dev.run_custom}
+  _do:
+    +custom_exec:
+      _export:
+        custom_group: ${dev.custom_group}
+      call>: sub_custom.dig
