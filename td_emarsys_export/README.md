@@ -43,6 +43,11 @@ td_emarsys_export/
 - 出力ファイル名は `{file_prefix}_{yyyyMMdd}.csv`。Emarsys の自動インポートのファイル名パターン
   （例 `contacts_*.csv`）と合わせる。
 
+## AI アシスタントで設定する
+
+Treasure AI Studio / Claude Code でこのリポジトリを開くと、Skill [`td-emarsys-export-builder`](../.claude/skills/td-emarsys-export-builder/SKILL.md) が使えます（インストール不要）。
+「Emarsys連携を設定したい」などと依頼すると、ヒアリング → テーブル確認 → config 作成 → dry-run 付きのデプロイまでを案内します。
+
 ## 事前準備
 
 ### 共通（Emarsys 側）
