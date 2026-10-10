@@ -1,97 +1,107 @@
 ---
 name: auditlog-alert-builder
-description: Use when the user wants to set up, customize, or debug the Treasure Data audit-log alert workflow (auditlog_alert in tsukaharakazuki/td_onb_pkg) — information-leak / unauthorized-access monitoring using Premium Audit Log (td_audit_log.access). Interviews the user about recipients, IP whitelist, notification channels (email always; Slack / Microsoft Teams / Google Chat optional), which modes to run (緊急情報漏洩チェック 10分毎 / 要注意ログ日次レポート / 企業別チェック), thresholds, excluded service accounts and company-specific checks, then edits config/*.yml, verifies rules with read-only tdx queries, and guides setup_tables / dev_run / schedule activation. Trigger on 「監査ログ監視」「AuditLogアラート」「auditlog_alert」「情報漏洩チェック」「不正アクセス検知」「IPホワイトリスト外アクセス」「休眠ユーザー検知」「AIによる接続テスト検知」「要注意ログ」「監査ログをSlack/Teams/Google Chatに通知」「send_email_list.yml」, audit log alert, security monitoring workflow.
+description: Use when the user wants to set up, customize, or debug the Treasure Data audit-log alert workflow (auditlog_alert in tsukaharakazuki/td_onb_pkg) — information-leak / unauthorized-access monitoring using Premium Audit Log (td_audit_log.access). Explains in plain language which Audit Log events exist and which to use for each situation, suggests recommended detection patterns for TD administrators (account takeover, leaked API keys, AI/tool probing, insider data exfiltration, privilege abuse, dormant accounts), interviews the user about recipients, IP whitelist, channels (email always; Slack / Microsoft Teams / Google Chat optional), modes (緊急情報漏洩チェック 10分毎 / 要注意ログ日次 / 企業別チェック), thresholds and excluded service accounts, then edits config/*.yml, estimates alert volume with read-only tdx queries, and guides setup_tables / dev_run / schedule activation. Trigger on 「監査ログ監視」「AuditLogアラート」「auditlog_alert」「AuditLogのイベントを知りたい」「どのイベントを監視すべき」「情報漏洩チェック」「不正アクセス検知」「内部不正の検知」「APIキー漏洩」「IPホワイトリスト外アクセス」「休眠ユーザー検知」「AIによる接続テスト検知」「要注意ログ」「監査ログをSlack/Teams/Google Chatに通知」「send_email_list.yml」, audit log alert, security monitoring workflow.
 ---
 
 # Audit Log Alert Builder
 
-Configure the `auditlog_alert` Treasure Workflow for a customer by interviewing them and editing **only `config/*.yml`** (plus optional custom SQL). The workflow logic (digs, queries, templates, scripts) is shared across customers — keep it untouched so humans can diff and maintain it.
+Set up the `auditlog_alert` Treasure Workflow for a customer. First explain what the Audit Log can see, then propose detection patterns, interview the user, and finally edit **only `config/*.yml`** (plus optional custom SQL). The shared logic (digs, queries, templates, scripts) stays untouched so humans can diff and maintain it.
 
 - Template: https://github.com/tsukaharakazuki/td_onb_pkg/tree/main/auditlog_alert
-- Event reference: https://docs.treasure.ai/products/control-panel/security/auditlogs/premium-audit-log-events
+- **`references/event-catalog.md`** — Audit Log events by category in plain Japanese, and a "検知したい状態 → 使うイベント → 実装ルール" table. Read it before Step 3.
+- **`references/recommended-patterns.md`** — recommended patterns for TD admins (A: external compromise, B: insider misuse, C: hygiene) and three proposal sets. Read it before Step 4.
 
 ## Step 1. Fetch the template
-
-Clone into a new folder under the cwd (never overwrite an existing folder):
 
 ```bash
 git clone --depth 1 https://github.com/tsukaharakazuki/td_onb_pkg.git .td_onb_pkg_src
 cp -R .td_onb_pkg_src/auditlog_alert ./auditlog_alert_<customer>
 ```
 
-Read `README.md` and every file in `config/` before editing, so you follow the current template.
+Never overwrite an existing folder. Read `README.md` and all of `config/` so you follow the current template.
 
-## Step 2. Check prerequisites (read-only)
+## Step 2. Look at the account (read-only)
 
-```bash
-tdx describe td_audit_log.access
-tdx query "SELECT event_name, count(1) c FROM td_audit_log.access WHERE td_interval(time,'-1d') GROUP BY 1 ORDER BY 2 DESC LIMIT 20"
-```
+1. `tdx describe td_audit_log.access`. If it's missing, Premium Audit Log is not enabled; stop and tell the user.
+2. Run the category inventory query in `references/event-catalog.md` §3 (last 30 days, by category: events, users, external events).
+3. Find candidates for `exclude_users`, i.e. noisy external accounts such as ETL bots or BI tools:
+   ```bash
+   tdx query "SELECT user_email, count(1) c, approx_distinct(ip_address) ips FROM td_audit_log.access WHERE td_interval(time,'-1d') AND ip_address <> 'internal' AND event_name <> 'column_query' GROUP BY 1 ORDER BY 2 DESC LIMIT 10"
+   ```
 
-If the table is missing, Premium Audit Log is not enabled — stop and tell the user. Also identify noisy external users (likely service accounts / BI tools) to propose for `exclude_users`:
+Show aggregates only. Don't paste raw IPs or query text into the chat.
 
-```bash
-tdx query "SELECT user_email, count(1) c, approx_distinct(ip_address) ips FROM td_audit_log.access WHERE td_interval(time,'-1d') AND ip_address <> 'internal' AND event_name <> 'column_query' GROUP BY 1 ORDER BY 2 DESC LIMIT 10"
-```
+## Step 3. Explain the Audit Log (before asking anything)
 
-## Step 3. Interview (ask together in one message)
+Users usually don't know what the Audit Log records, so give a short overview in plain language. Don't list 600 event names.
+
+1. Show the inventory from Step 2 as a 10-row table: category, what it tells you, and this account's 30-day count.
+2. Explain the three things people misread most:
+   - `ip_address = 'internal'` is TD's own automation (scheduled workflows), not a person.
+   - `affected_user` is the person who *received* a permission or API key.
+   - `job_issue.query_text` holds the SQL, which is how AI/tool probing is detected.
+3. Show the "検知したい状態 → 使うイベント" table (`event-catalog.md` §2). Then ask: **「何を一番防ぎたいですか？」** (e.g. 顧客データの持ち出し / アカウント乗っ取り / 退職者 / 委託先 / AIツールの無断利用).
+
+## Step 4. Suggest patterns, then interview
+
+Based on the answer, introduce the matching patterns from `recommended-patterns.md`, using its structure: A, then B, then C. For each, give 1–2 lines: aim, signal, and what to do when it fires. Then offer the three sets (**ミニマム / スタンダード★ / ハイセキュリティ**) and let the user pick one, or adjust it.
+
+Then ask the remaining settings together in one message:
 
 | # | Question | Writes to |
 |---|---|---|
 | 1 | アカウント表示名 / リージョン（US・東京・EU） | `common.yml` `account_label`, `console_url` |
-| 2 | メール送信先 to / cc / bcc（必須） と、開発モードの送信先 | `send_email_list.yml`, `dev_send_email_list.yml` |
-| 3 | 追加チャネル: Slack / Teams / Google Chat のどれを使うか | `notification.yml` `notification.*.enabled` |
+| 2 | メール送信先 to / cc / bcc（必須） / 開発モードの送信先 | `send_email_list.yml`, `dev_send_email_list.yml` |
+| 3 | 追加チャネル: Slack / Teams / Google Chat | `notification.yml` |
 | 4 | 許可IP（オフィス・VPN・連携サーバー）を CIDR で | `ip_whitelist.yml` |
-| 5 | 使うモード（緊急 / 日次 / 企業別）と実行時刻 | 各エントリ dig の `schedule:` |
-| 6 | 除外するサービスアカウント（Step 2 の候補を提示） | `common.yml` `exclude_users` |
-| 7 | 企業固有で見たい項目（重要DB、特定ユーザー、期間） | `custom_checks.yml` + `queries/custom/*.sql` |
-| 8 | 休眠の定義（既定30日）、再通知抑止（既定120分）を変えるか | `emergency_rules.yml`, `notification.yml` |
+| 5 | 除外するサービスアカウント（Step 2 の候補を提示） | `common.yml` `exclude_users` |
+| 6 | 選んだセットに必要な値: 自社メールドメイン(B4)、重要DB(B7)、要注意ユーザー(B8)、業務時間(B6) | `custom_checks.yml`, `caution_rules.yml` |
+| 7 | 実行時刻（日次・企業別） | entry digs `schedule:` |
 
-Defaults are sensible — if the user has no preference, keep them and say so.
+Defaults are sensible. If the user has no preference, keep them and say so.
 
-## Step 4. Edit the config
+## Step 5. Edit the config
 
-- Edit YAML in place, keeping the existing comments. Humans maintain these files without AI.
-- Put lists of values (users, CIDRs, event names) in YAML lists — the SQL joins them.
-- Never write webhook URLs into files. Give the user the secret commands instead:
-  ```bash
-  tdx wf secrets set <project> slack.webhook_url=...
-  tdx wf secrets set <project> teams.webhook_url=...
-  tdx wf secrets set <project> google_chat.webhook_url=...
-  ```
-- For a company-specific check, copy an example in `queries/custom/` and follow `queries/custom/README.md`. Keep the 17 output columns in the same order, and don't put `${` inside SQL comments (digdag evaluates them).
-- To run checks at another interval, copy `custom_check.dig`, then change `schedule` and `custom_group`.
+- Enable or disable rules according to the chosen set:
+  - `emergency_rules.*.enabled`
+  - `caution_rules.*.enabled` / `caution_special.*.enabled`
+  - `custom_checks.*.enabled`
+- Daily admin patterns run from `custom_check_daily.dig` (group `daily`).
+- Edit YAML in place and keep the comments; humans maintain these files. Put values in YAML lists.
+- Never write webhook URLs into files. Give the user the secret commands: `tdx wf secrets set <project> slack.webhook_url=...` (likewise `teams.webhook_url`, `google_chat.webhook_url`).
+- For a company-specific check that doesn't exist yet, copy a file in `queries/custom/` and follow `queries/custom/README.md`. Keep the 17 output columns in order, and never put `${` in SQL comments.
 
-## Step 5. Verify rules with read-only queries
+## Step 6. Estimate alert volume (read-only)
 
-Before pushing, dry-run each detection SQL as a SELECT. Substitute the `${...}` values by hand, drop the `INSERT INTO` line, and wrap the query in `SELECT rule_id, severity, count(1) ... GROUP BY 1,2`. Report the expected volume per day. If a rule would fire dozens of times a day, propose an exclusion or a threshold change before activating it. Present aggregates only; don't dump raw emails or IPs.
+For each enabled rule, render its SQL by hand: substitute `${...}`, drop the `INSERT INTO` line, and wrap it in `SELECT count(1) findings, sum(event_count) events FROM (...)`. Use the last 1–7 days. Report the estimated alerts per day for each rule. If a rule exceeds roughly 10 per day, propose a threshold change or `exclude_users` before activating it. Users stop reading noisy alerts.
 
-## Step 6. Deploy and test (confirm before each run)
+## Step 7. Deploy and test (confirm before each run)
 
-1. `tdx wf push ./auditlog_alert_<customer>` (confirm the project name)
-2. `tdx wf run <project>.setup_tables` — creates tables and backfills 90 days of activity
-3. Edit `config/dev.yml` (modes, lookback, `always_notify`), push, then `tdx wf run <project>.dev_run`. Mail goes only to `dev_send_email_list.yml`, and results go to the `*_dev` tables.
-4. Have the user check the received mail and chat. Debug with `tdx wf timeline` and attempt logs; the `+show_settings` echo shows the effective values.
+1. `tdx wf push ./auditlog_alert_<customer>`
+2. `tdx wf run <project>.setup_tables` — creates tables and backfills activity history
+3. Set `config/dev.yml`, push, then `tdx wf run <project>.dev_run`. Mail goes only to `dev_send_email_list.yml`, and results go to the `*_dev` tables.
+4. Check the received mail and chat with the user. Debug with `tdx wf timeline` and attempt logs; `+show_settings` echoes the effective values.
 5. Uncomment `schedule:` in the entry digs that are in use, then push.
 
-`tdx wf run` sends real notifications. Explain the scope (which recipients and channels) and wait for explicit approval before every run. Don't rely on `-p` overrides; switch behavior via `config/dev.yml`.
+`tdx wf run` sends real notifications. State the recipients and channels, and wait for explicit approval each time. Don't use `-p` overrides; switch behavior through `config/dev.yml`.
 
 ## Output: setup summary
 
 ```
 ## auditlog_alert 設定サマリー（<customer>）
-- メール: to=… / cc=…（開発: …）
-- チャット: Slack ✅ / Teams ❌ / Google Chat ✅（Secret 登録: 要）
-- モード: 緊急(10分) ✅ / 日次 09:00 ✅ / 企業別 weekly ✅
-- ホワイトリスト: N件  除外ユーザー: N件
-- 想定通知量（直近の実データで試算）: 緊急 x件/日, 日次 y件
+- 目的: <ユーザーが最も防ぎたいこと>
+- セット: スタンダード（+ B7 重要DB監視）
+- 有効なルール: 緊急 3 / 日次 13+2 / 企業別 daily 5・weekly 2・monthly 1
+- 想定通知量: 緊急 約x件/日, 日次レポート y件, 企業別 z件
+- メール: to=…（開発: …） / チャット: Slack ✅ Teams ❌ Google Chat ✅（Secret 要登録）
+- ホワイトリスト: N件 / 除外ユーザー: N件
 - 次の手順: push → setup_tables → dev_run → schedule 有効化
 ```
 
 ## Edge cases
 
-- **Whitelist empty** → rule 1 is skipped automatically. Warn the user that IP-based detection is off.
-- **`ip_address = 'internal'`** = TD-internal (scheduled workflows); always excluded. A dormant user whose old workflows still run will not trigger.
-- **AI-probe false positives** come from BI tools issuing `SELECT 1` or `SHOW COLUMNS`. Exclude those accounts, or raise `probe_query_min`.
-- **`bytesize`** on downloads is compressed msgpack size, so set download thresholds low (MB, not GB).
-- **Teams**: the webhook must come from Teams Workflows ("Post to a channel when a webhook request is received"). Legacy Office 365 connector URLs are retired.
+- **Whitelist empty** → A1 is skipped automatically. Warn the user that IP-based detection is off.
+- **AI-probe false positives** come from BI keep-alive `SELECT 1` or sanctioned AI tools (tdx/MCP). Exclude those accounts or raise `probe_query_min`.
+- **`bytesize`** is compressed size, so keep download thresholds in MB.
+- **`user_email` is NULL** for some Audience Studio events. User-based rules don't see those events.
+- **Teams** webhooks must come from Teams Workflows ("Post to a channel when a webhook request is received"). Office 365 connector URLs are retired.

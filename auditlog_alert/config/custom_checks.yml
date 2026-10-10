@@ -9,6 +9,9 @@
 #     title          : 通知タイトルに付ける名前
 #     lookback_hours : さかのぼって確認する時間（時間）
 custom_groups:
+  daily:
+    title: "日次"
+    lookback_hours: 24
   weekly:
     title: "週次"
     lookback_hours: 168
@@ -55,3 +58,73 @@ custom_checks:
     params:
       inactive_days: 90
     enabled: true
+
+  # -------------------------------------------------------------------
+  # 管理者向けおすすめパターン（daily グループ / custom_check_daily.dig で実行）
+  # 詳細: skill/auditlog-alert-builder/references/recommended-patterns.md
+  # -------------------------------------------------------------------
+
+  brute_force_success:
+    title: "ログイン失敗の連続後にログイン成功（総当たりの成功）"
+    severity: critical
+    group: daily
+    query: queries/custom/brute_force_success.sql
+    params:
+      min_failures: 5          # この回数以上失敗した後の成功を検知
+      within_minutes: 60       # 最後の失敗からこの分数以内の成功
+    enabled: true
+
+  multi_ip_user:
+    title: "短時間に多数のネットワークからアクセス（アカウント共有・キー漏洩）"
+    severity: high
+    group: daily
+    query: queries/custom/multi_ip_user.sql
+    params:
+      min_networks: 4          # 1時間あたりの異なるネットワーク（/16）数
+    enabled: true
+
+  apikey_then_new_ip:
+    title: "APIキー発行直後に、普段と違うIPから利用"
+    severity: high
+    group: daily
+    query: queries/custom/apikey_then_new_ip.sql
+    params:
+      within_hours: 24
+    enabled: true
+
+  privilege_then_access:
+    title: "権限付与の直後にデータへ大量アクセス"
+    severity: high
+    group: daily
+    query: queries/custom/privilege_then_access.sql
+    params:
+      within_hours: 24
+      min_events: 20
+    enabled: true
+
+  new_connection_export:
+    title: "新しい外部接続の作成とデータ出力"
+    severity: medium
+    group: daily
+    query: queries/custom/new_connection_export.sql
+    params: {}
+    enabled: true
+
+  external_mail_send:
+    title: "ワークフローから社外ドメインへのメール送信"
+    severity: high
+    group: daily
+    query: queries/custom/external_mail_send.sql
+    params:
+      internal_domains: ["example.com"]           # 自社のメールドメイン（必ず変更）
+      allowed_external_domains: []                # 正規に送ってよい社外ドメイン
+    enabled: false             # internal_domains を設定してから true に
+
+  watch_list_users:
+    title: "要注意ユーザー（退職予定者・委託先など）の操作"
+    severity: medium
+    group: daily
+    query: queries/custom/watch_list_users.sql
+    params:
+      users: ["leaving-user@example.com"]         # 監視したいユーザー
+    enabled: false             # users を設定してから true に
