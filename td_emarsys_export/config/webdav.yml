@@ -1,4 +1,5 @@
 # ============================================================
+# 詳細: docs/config_webdav.md / docs/config_targets.md
 # 2. WebDAV（Custom Script / Python）送信の設定
 #   - Emarsys 管理 > セキュリティ設定 > WebDAV Users でユーザーを作成し、
 #     表示されたディレクトリ・ユーザー名・シークレットを使用する

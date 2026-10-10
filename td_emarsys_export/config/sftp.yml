@@ -1,4 +1,5 @@
 # ============================================================
+# 詳細: docs/config_sftp.md / docs/config_targets.md
 # 1. SFTPコネクタ送信の設定
 #   - 接続情報（host / user / 鍵）は TD コンソールの Authentication で作成し、名前のみ指定する
 #   - Emarsys 側: 連絡先 > データインポート > ファイルのインポート で

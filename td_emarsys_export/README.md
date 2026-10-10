@@ -18,9 +18,19 @@ td_emarsys_export/
 │   └── webdav.yml            # WebDAV 接続設定 + 送信データ定義(targets)
 ├── query/
 │   └── export_select.sql     # 汎用抽出SQL（targets の値で中身を切替）
-└── scripts/
-    └── webdav_upload.py      # ジョブ結果をCSV化して WebDAV に PUT
+├── scripts/
+│   └── webdav_upload.py      # ジョブ結果をCSV化して WebDAV に PUT
+└── docs/                     # 各 config の詳細設定ドキュメント
 ```
+
+## 詳細設定ドキュメント
+
+| ドキュメント | 内容 |
+|--------------|------|
+| [docs/config_common.md](docs/config_common.md) | `config/common.yml`: 送信方式の ON/OFF、TD API エンドポイント |
+| [docs/config_sftp.md](docs/config_sftp.md) | `config/sftp.yml`: SFTP 接続設定、事前準備、出力仕様、トラブルシューティング |
+| [docs/config_webdav.md](docs/config_webdav.md) | `config/webdav.yml`: WebDAV 接続設定、Secrets、Python 仕様、トラブルシューティング |
+| [docs/config_targets.md](docs/config_targets.md) | `targets`（送信データ定義）: 各キーの書き方、連絡先/販売データの例 |
 
 ## 設計
 
