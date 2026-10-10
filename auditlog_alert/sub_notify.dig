@@ -46,11 +46,17 @@
           !include : 'config/dev_send_email_list.yml'
 
     # -----------------------------------------------------------------
+    # チャット通知の ON/OFF 判定（本番: notification.yml / 開発: dev.yml の chat）
+    #   ※ if> は真偽値が必要なため、三項演算子（? :）ではなく && / || で書いています
+    #     （三項演算子の「: 」は TD のサーバー側 YAML 検証でエラーになります）
+    # -----------------------------------------------------------------
+
+    # -----------------------------------------------------------------
     # Slack（Incoming Webhook）
     #   Secret: slack.webhook_url
     # -----------------------------------------------------------------
     +slack:
-      if>: ${run_env == 'dev' ? dev.chat.slack : notification.slack.enabled}
+      if>: ${(run_env != 'dev' && notification.slack.enabled) || (run_env == 'dev' && dev.chat.slack)}
       _do:
         +post_slack:
           http>: ${secret:slack.webhook_url}
@@ -65,7 +71,7 @@
     #   Secret: teams.webhook_url
     # -----------------------------------------------------------------
     +teams:
-      if>: ${run_env == 'dev' ? dev.chat.teams : notification.teams.enabled}
+      if>: ${(run_env != 'dev' && notification.teams.enabled) || (run_env == 'dev' && dev.chat.teams)}
       _do:
         +post_teams:
           py>: scripts.notify_chat.post_teams
@@ -82,7 +88,7 @@
     #   Secret: google_chat.webhook_url
     # -----------------------------------------------------------------
     +google_chat:
-      if>: ${run_env == 'dev' ? dev.chat.google_chat : notification.google_chat.enabled}
+      if>: ${(run_env != 'dev' && notification.google_chat.enabled) || (run_env == 'dev' && dev.chat.google_chat)}
       _do:
         +post_google_chat:
           py>: scripts.notify_chat.post_google_chat

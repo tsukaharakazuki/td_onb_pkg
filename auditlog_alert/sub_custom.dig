@@ -6,13 +6,15 @@
 # =====================================================================
 
 # --- この実行で使う値（本番: config/custom_checks.yml / 開発: config/dev.yml） ---
+# ※ `${a ? b : c}` のように「: 」を含む式は、TD のサーバー側 YAML 検証でエラーになるため
+#    必ずダブルクォートで囲んでください（値は文字列になりますが、SQL 内の計算には影響しません）
 _export:
   alert_mode: custom
   report_title: ${modes.custom.title + '（' + custom_groups[custom_group].title + '）'}
   report_description: ${modes.custom.description}
-  lookback_minutes: ${run_env == 'dev' ? dev.lookback_minutes.custom : custom_groups[custom_group].lookback_hours * 60}
-  cooldown_minutes: ${run_env == 'dev' && dev.ignore_cooldown ? 0 : modes.custom.cooldown_minutes}
-  send_when_no_findings: ${run_env == 'dev' && dev.always_notify ? true : modes.custom.send_when_no_findings}
+  lookback_minutes: "${run_env == 'dev' ? dev.lookback_minutes.custom : custom_groups[custom_group].lookback_hours * 60}"
+  cooldown_minutes: "${run_env == 'dev' && dev.ignore_cooldown ? 0 : modes.custom.cooldown_minutes}"
+  send_when_no_findings: "${run_env == 'dev' && dev.always_notify ? true : modes.custom.send_when_no_findings}"
 
 +show_settings:
   echo>: "[custom] run_env=${run_env} / group=${custom_group} / lookback=${lookback_minutes}min / output=${output_db}.*${table_suffix}"

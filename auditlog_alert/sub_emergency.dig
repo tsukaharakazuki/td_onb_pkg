@@ -5,13 +5,15 @@
 # =====================================================================
 
 # --- この実行で使う値（本番: config/notification.yml / 開発: config/dev.yml） ---
+# ※ `${a ? b : c}` のように「: 」を含む式は、TD のサーバー側 YAML 検証でエラーになるため
+#    必ずダブルクォートで囲んでください（値は文字列になりますが、SQL 内の計算には影響しません）
 _export:
   alert_mode: emergency
   report_title: ${modes.emergency.title}
   report_description: ${modes.emergency.description}
-  lookback_minutes: ${run_env == 'dev' ? dev.lookback_minutes.emergency : modes.emergency.lookback_minutes}
-  cooldown_minutes: ${run_env == 'dev' && dev.ignore_cooldown ? 0 : modes.emergency.cooldown_minutes}
-  send_when_no_findings: ${run_env == 'dev' && dev.always_notify ? true : modes.emergency.send_when_no_findings}
+  lookback_minutes: "${run_env == 'dev' ? dev.lookback_minutes.emergency : modes.emergency.lookback_minutes}"
+  cooldown_minutes: "${run_env == 'dev' && dev.ignore_cooldown ? 0 : modes.emergency.cooldown_minutes}"
+  send_when_no_findings: "${run_env == 'dev' && dev.always_notify ? true : modes.emergency.send_when_no_findings}"
 
 +show_settings:
   echo>: "[emergency] run_env=${run_env} / lookback=${lookback_minutes}min / cooldown=${cooldown_minutes}min / send_when_no_findings=${send_when_no_findings} / output=${output_db}.*${table_suffix} / whitelist=${ip_whitelist.cidrs.length}件"

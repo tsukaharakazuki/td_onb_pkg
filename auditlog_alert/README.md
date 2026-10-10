@@ -78,12 +78,60 @@ auditlog_alert/
 
 1. **`config/common.yml`** — `output_db`、`account_label`、`console_url`（リージョン）、`exclude_users`
 2. **`config/send_email_list.yml`** — メール送信先（`to` は必須）
-3. **`config/ip_whitelist.yml`** — 許可するIPを CIDR で列挙（TD の IP Whitelist と同じ内容が基本）
+3. **`config/ip_whitelist.yml`** — 許可するIPを CIDR で列挙（TD の IP Whitelist と同じ内容が基本）。**先に下の「IPホワイトリストの事前確認」を実施してください**
 4. **`config/notification.yml`** — 使うチャットを `enabled: true` に
 5. 必要に応じて **`emergency_rules.yml` / `caution_rules.yml` / `custom_checks.yml`** のしきい値・ルールを調整
 6. **`config/dev_send_email_list.yml`** — 開発モードの送信先（自分のアドレス）
 
+#### IPホワイトリストの事前確認（推奨）
+
+ホワイトリストが空・不完全なまま運用を始めると、**初日から大量のアラート**（実例: 130 ユーザー×IP/日）が発生します。
+社内プロキシ・VPN・BIツールや連携サーバーの送信元IPが漏れていることが多いため、設定前に次のクエリで外部からのアクセス元を確認してください。
+
+```sql
+-- 外部IPからアクセスしている上位のユーザー×IP（直近1日）
+SELECT user_email, ip_address, COUNT(1) AS c
+FROM td_audit_log.access
+WHERE TD_INTERVAL(time, '-1d')
+  AND ip_address IS NOT NULL
+  AND ip_address <> 'internal'
+  AND event_name <> 'column_query'
+GROUP BY 1, 2
+ORDER BY 3 DESC
+LIMIT 20
+```
+
+```sql
+-- 複数ユーザーが共有しているIP（社内プロキシ・VPN出口の可能性が高い）
+SELECT ip_address, APPROX_DISTINCT(user_email) AS users, COUNT(1) AS c
+FROM td_audit_log.access
+WHERE TD_INTERVAL(time, '-7d')
+  AND ip_address IS NOT NULL
+  AND ip_address <> 'internal'
+  AND event_name <> 'column_query'
+GROUP BY 1
+HAVING APPROX_DISTINCT(user_email) >= 3
+ORDER BY 2 DESC
+LIMIT 20
+```
+
+- 複数ユーザーが使うIP → 社内の出口である可能性が高いので `ip_whitelist.yml` に追加
+- 1ユーザーが大量にアクセスするIP（ETL・BIツールなど）→ 正規の連携なら `ip_whitelist.yml` に追加、送信元IPが変わる場合は `common.yml` の `exclude_users` に追加
+
 ### 3-3. プロジェクトを push して Secret を登録
+
+`tdx wf push` は、push 先のプロジェクト名をフォルダ内の **`tdx.json`** から読み取ります。
+このテンプレートには `tdx.json` が同梱されているので、そのまま push できます。
+
+```json
+{
+  "workflow_project": "auditlog_alert"
+}
+```
+
+- 別のプロジェクト名で登録したい場合は、push 前に `workflow_project` を変更してください
+- 初回 push 後、`workflow_project_id` などが自動で書き込まれます（そのままで問題ありません）
+- `tdx.json` を消してしまった場合は、上の内容で作り直してください（ないと `No tdx.json found` エラーになります）
 
 ```bash
 tdx wf push ./auditlog_alert
@@ -93,6 +141,11 @@ tdx wf secrets set auditlog_alert slack.webhook_url=https://hooks.slack.com/serv
 tdx wf secrets set auditlog_alert teams.webhook_url=https://xxx.logic.azure.com/workflows/...
 tdx wf secrets set auditlog_alert google_chat.webhook_url=https://chat.googleapis.com/v1/spaces/...
 ```
+
+> **dig ファイルを編集する場合の注意**: `${a ? b : c}` のように **「: 」を含む式はダブルクォートで囲んでください**。
+> 囲まないと push 時（`tdx wf push` / `tdx wf upload` どちらも）に TD のサーバー側検証で
+> `mapping values are not allowed here` エラーになります（`--skip-validation` でも回避できません）。
+> `if>:` の条件は、クォートせずに済むよう三項演算子ではなく `&&` / `||` で書きます（例: `${(run_env != 'dev' && notification.slack.enabled) || (run_env == 'dev' && dev.chat.slack)}`）。
 
 | チャネル | Webhook URL の取得方法 |
 |---|---|

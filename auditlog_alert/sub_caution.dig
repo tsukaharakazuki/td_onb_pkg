@@ -5,13 +5,15 @@
 # =====================================================================
 
 # --- この実行で使う値（本番: config/notification.yml / 開発: config/dev.yml） ---
+# ※ `${a ? b : c}` のように「: 」を含む式は、TD のサーバー側 YAML 検証でエラーになるため
+#    必ずダブルクォートで囲んでください（値は文字列になりますが、SQL 内の計算には影響しません）
 _export:
   alert_mode: caution
   report_title: ${modes.caution.title}
   report_description: ${modes.caution.description}
-  lookback_minutes: ${run_env == 'dev' ? dev.lookback_minutes.caution : modes.caution.lookback_minutes}
-  cooldown_minutes: ${run_env == 'dev' && dev.ignore_cooldown ? 0 : modes.caution.cooldown_minutes}
-  send_when_no_findings: ${run_env == 'dev' && dev.always_notify ? true : modes.caution.send_when_no_findings}
+  lookback_minutes: "${run_env == 'dev' ? dev.lookback_minutes.caution : modes.caution.lookback_minutes}"
+  cooldown_minutes: "${run_env == 'dev' && dev.ignore_cooldown ? 0 : modes.caution.cooldown_minutes}"
+  send_when_no_findings: "${run_env == 'dev' && dev.always_notify ? true : modes.caution.send_when_no_findings}"
 
 +show_settings:
   echo>: "[caution] run_env=${run_env} / lookback=${lookback_minutes}min / cooldown=${cooldown_minutes}min / rules=${Object.keys(caution_rules).join(',')} / output=${output_db}.*${table_suffix}"
