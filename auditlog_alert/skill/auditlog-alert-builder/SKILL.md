@@ -28,6 +28,10 @@ Never overwrite an existing folder. Read `README.md` and all of `config/` so you
    ```bash
    tdx query "SELECT user_email, count(1) c, approx_distinct(ip_address) ips FROM td_audit_log.access WHERE td_interval(time,'-1d') AND ip_address <> 'internal' AND event_name <> 'column_query' GROUP BY 1 ORDER BY 2 DESC LIMIT 10"
    ```
+4. **Pre-check the IP whitelist before setting it.** An empty or incomplete whitelist produces a flood of alerts on day one (one real setup hit 130 user×IP pairs a day). Run the two queries in README §3-2 "IPホワイトリストの事前確認":
+   - top external user×IP pairs
+   - IPs shared by 3+ users
+   Shared IPs are almost always the office proxy or VPN egress, so propose them as whitelist candidates and confirm each with the user. Heavy single-user IPs are ETL/BI servers: whitelist them, or put the account in `exclude_users` when the IP rotates. After the whitelist is set, run the `non_whitelist_ip` estimate (Step 6) and repeat until the volume is reasonable.
 
 Show aggregates only. Don't paste raw IPs or query text into the chat.
 
@@ -69,6 +73,7 @@ Defaults are sensible. If the user has no preference, keep them and say so.
 - Daily admin patterns run from `custom_check_daily.dig` (group `daily`).
 - Edit YAML in place and keep the comments; humans maintain these files. Put values in YAML lists.
 - Never write webhook URLs into files. Give the user the secret commands: `tdx wf secrets set <project> slack.webhook_url=...` (likewise `teams.webhook_url`, `google_chat.webhook_url`).
+- If you edit a `.dig`, wrap any `${...}` containing `: ` (e.g. a ternary `a ? b : c`) in double quotes. Otherwise TD's server-side YAML validation rejects the push with `mapping values are not allowed here`, for both `tdx wf push` and `tdx wf upload`; `--skip-validation` doesn't help. For `if>:` conditions, use `&&` / `||` instead of a ternary so no quoting is needed.
 - For a company-specific check that doesn't exist yet, copy a file in `queries/custom/` and follow `queries/custom/README.md`. Keep the 17 output columns in order, and never put `${` in SQL comments.
 
 ## Step 6. Estimate alert volume (read-only)
@@ -77,7 +82,8 @@ For each enabled rule, render its SQL by hand: substitute `${...}`, drop the `IN
 
 ## Step 7. Deploy and test (confirm before each run)
 
-1. `tdx wf push ./auditlog_alert_<customer>`
+1. Check `tdx.json` in the project folder. It's bundled with `{"workflow_project": "auditlog_alert"}`, and `tdx wf push` reads the target project name from it. Without it, push fails with `No tdx.json found`. Change `workflow_project` if the user wants another project name. Never copy a `workflow_project_id` from a different environment.
+   Then run `tdx wf push --dry-run ./auditlog_alert_<customer>` to check, and `tdx wf push ./auditlog_alert_<customer>`.
 2. `tdx wf run <project>.setup_tables` — creates tables and backfills activity history
 3. Set `config/dev.yml`, push, then `tdx wf run <project>.dev_run`. Mail goes only to `dev_send_email_list.yml`, and results go to the `*_dev` tables.
 4. Check the received mail and chat with the user. Debug with `tdx wf timeline` and attempt logs; `+show_settings` echoes the effective values.
@@ -101,6 +107,8 @@ For each enabled rule, render its SQL by hand: substitute `${...}`, drop the `IN
 ## Edge cases
 
 - **Whitelist empty** → A1 is skipped automatically. Warn the user that IP-based detection is off.
+- **Whitelist incomplete** → a flood of A1 alerts. Do the Step 2-4 pre-check before enabling the schedule.
+- **Push errors**: `No tdx.json found` means recreate `tdx.json`. `mapping values are not allowed here` means an unquoted `${... ? ... : ...}` in a dig (see Step 5).
 - **AI-probe false positives** come from BI keep-alive `SELECT 1` or sanctioned AI tools (tdx/MCP). Exclude those accounts or raise `probe_query_min`.
 - **`bytesize`** is compressed size, so keep download thresholds in MB.
 - **`user_email` is NULL** for some Audience Studio events. User-based rules don't see those events.
