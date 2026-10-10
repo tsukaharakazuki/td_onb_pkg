@@ -1,0 +1,25 @@
+# =====================================================================
+# モード3: 企業別チェック（任意のスパン）
+# ---------------------------------------------------------------------
+# config/custom_checks.yml の custom_group = daily のチェック（管理者向けおすすめパターン）を実行します
+#
+# 別のスパン（例: 月次）でも実行したい場合は、このファイルをコピーして
+#   custom_check_monthly.dig を作り、schedule と custom_group を変更してください
+#
+# 設定が完了したら schedule のコメントを外して push してください
+# =====================================================================
+timezone: Asia/Tokyo
+
+#schedule:
+#  daily>: 08:30:00
+
+_export:
+  !include : 'config/common.yml'
+  !include : 'config/notification.yml'
+  !include : 'config/custom_checks.yml'
+  run_env: prod
+  table_suffix: ""
+  custom_group: daily       # config/custom_checks.yml の custom_groups のキー
+
++custom:
+  call>: sub_custom.dig

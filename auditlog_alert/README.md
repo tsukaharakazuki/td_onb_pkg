@@ -7,7 +7,7 @@ Treasure Data の **Premium Audit Log**（`td_audit_log.access`）を定期的�
 |---|---|---|---|
 | 1. 緊急情報漏洩チェック | `emergency_check.dig` | 10分ごと | ホワイトリスト外IPからのアクセス／休眠ユーザーのログインなし操作／AI・自動化ツールによる探索 |
 | 2. 要注意ログ報告 | `caution_daily_report.dig` | 1日1回 | 権限変更・APIキー操作・大量ダウンロード・ログイン失敗・新しいIP・業務時間外操作など |
-| 3. 企業別チェック | `custom_check.dig` | 任意 | 企業ごとに追加したSQLのチェック（重要テーブルへのアクセスなど） |
+| 3. 企業別チェック | `custom_check.dig`（週次） / `custom_check_daily.dig`（日次） | 任意 | 企業ごとのチェック。日次は管理者向けおすすめパターン（総当たり成功・APIキー直後の新IP・権限付与直後の大量アクセス など） |
 | 開発モード | `dev_run.dig` | 手動 | 本番と同じロジックを開発用テーブル・開発用宛先で実行し、通知内容を確認 |
 | 初回セットアップ | `setup_tables.dig` | 最初に1回 | 出力テーブルの作成と、休眠ユーザー判定用の履歴の初期投入 |
 
@@ -178,11 +178,17 @@ caution_rules:
 
 ---
 
-## 6. Treasure AI Studio 用 Skill
+## 6. どのイベントを監視すべきか（管理者向け）
+
+- イベントの種類と「検知したい状態 → 使うイベント」の早見表: `skill/auditlog-alert-builder/references/event-catalog.md`
+- 内部不正・外部からの不正アクセスのおすすめ検知パターンと提案セット（ミニマム / スタンダード / ハイセキュリティ）:
+  `skill/auditlog-alert-builder/references/recommended-patterns.md`
+
+## 7. Treasure AI Studio 用 Skill
 
 `skill/auditlog-alert-builder/SKILL.md` を Studio の Skill として登録すると、
 「監査ログ監視を設定したい」と話しかけるだけで、ヒアリング → config 編集 → 実データでの検知件数試算 → 開発モードでの確認 までを AI が進めます。
 
-## 7. メールの見た目
+## 8. メールの見た目
 
 `docs/mail_preview_sample.html` はダミーデータで作成したメールのプレビューです（ブラウザで開けます）。
