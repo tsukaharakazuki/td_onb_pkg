@@ -1,0 +1,45 @@
+# =====================================================================
+# 【部品】モード2: 要注意ログ 日次レポートの処理本体
+# ---------------------------------------------------------------------
+# caution_daily_report.dig / dev_run.dig から call> されます（直接実行しない）
+# =====================================================================
+
+# --- この実行で使う値（本番: config/notification.yml / 開発: config/dev.yml） ---
+_export:
+  alert_mode: caution
+  report_title: ${modes.caution.title}
+  report_description: ${modes.caution.description}
+  lookback_minutes: ${run_env == 'dev' ? dev.lookback_minutes.caution : modes.caution.lookback_minutes}
+  cooldown_minutes: ${run_env == 'dev' && dev.ignore_cooldown ? 0 : modes.caution.cooldown_minutes}
+  send_when_no_findings: ${run_env == 'dev' && dev.always_notify ? true : modes.caution.send_when_no_findings}
+
++show_settings:
+  echo>: "[caution] run_env=${run_env} / lookback=${lookback_minutes}min / cooldown=${cooldown_minutes}min / rules=${Object.keys(caution_rules).join(',')} / output=${output_db}.*${table_suffix}"
+
+# --- 検知: イベント条件型ルール（config/caution_rules.yml の caution_rules を1件ずつ） ---
++event_rules:
+  for_each>:
+    rule_id: ${Object.keys(caution_rules)}
+  _do:
+    +event_rule:
+      if>: ${caution_rules[rule_id].enabled}
+      _do:
+        +event_rule_exec:
+          td>: queries/caution/event_rule.sql
+
+# --- 検知: 専用SQLのルール ---
++new_ip_for_user:
+  if>: ${caution_special.new_ip_for_user.enabled}
+  _do:
+    +new_ip_for_user_exec:
+      td>: queries/caution/new_ip_for_user.sql
+
++off_hours_activity:
+  if>: ${caution_special.off_hours_activity.enabled}
+  _do:
+    +off_hours_activity_exec:
+      td>: queries/caution/off_hours_activity.sql
+
+# --- 通知 ---
++notify:
+  call>: sub_notify.dig

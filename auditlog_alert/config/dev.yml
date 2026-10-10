@@ -1,0 +1,36 @@
+---
+# =====================================================================
+# 開発モード設定（dev_run.dig 専用）
+# =====================================================================
+# 本番と同じロジックを、以下の違いで実行します
+#   - 結果は「<テーブル名>_dev」に保存（本番の再通知抑止に影響しません）
+#   - メールは config/dev_send_email_list.yml 宛てに送信
+#   - 件名の先頭に subject_prefix を付与
+#   - 監視期間を広げて、過去の実データで通知内容を確認できる
+#
+# 値を変更したら、プロジェクトを push してから dev_run.dig を実行してください
+# （-p による実行時パラメータ上書きは使いません）
+
+dev:
+  # 実行するモード（true のものだけ実行）
+  run_emergency: true
+  run_caution: true
+  run_custom: true
+  custom_group: weekly          # run_custom のとき実行する custom_groups のキー
+
+  # 監視期間（分）。過去データで動作確認したい場合は長めに
+  lookback_minutes:
+    emergency: 1440             # 24時間
+    caution: 10080              # 7日
+    custom: 10080               # 7日
+
+  ignore_cooldown: true         # true: 再通知抑止を無視して毎回通知
+  always_notify: true           # true: 検知0件でも通知（通知の見た目確認用）
+  subject_prefix: "[DEV] "
+
+  # チャット通知を開発モードでも送るか（本番と同じ Secret の Webhook を使用）
+  # テスト用チャンネルの Webhook を登録している場合のみ true にしてください
+  chat:
+    slack: false
+    teams: false
+    google_chat: false

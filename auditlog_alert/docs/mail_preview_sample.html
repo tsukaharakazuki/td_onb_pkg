@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<!--
+  通知メールのテンプレート（全モード共通）
+  - td.last_results.（列名） は queries/notify/build_message.sql の結果です
+  - デザインを変える場合は、このファイルと build_message.sql（カード部分）を編集してください
+-->
+<html lang="ja">
+<head>
+  <meta content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <title>[DEV] [緊急] 【緊急】情報漏洩チェック 4件 - Sample Inc.</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F5F5FF;-webkit-text-size-adjust:100%;">
+
+<!-- プレビューテキスト（受信一覧に表示される1行） -->
+<div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#F5F5FF;opacity:0;">
+  【緊急】情報漏洩チェック: 4件（緊急 2 / 高 2）
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5F5FF;">
+<tr><td align="center" style="padding:40px 0;">
+
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;border-radius:30px;">
+
+    <!-- ヘッダー（色 = 最も高い重要度の色） -->
+    <tr>
+      <td style="background-color:#D93025;border-radius:30px 30px 0 0;padding:32px 45px;">
+        <p style="margin:0 0 6px 0;font-family:Inter,Arial,sans-serif;font-size:13px;color:#ffffff;opacity:0.9;">Treasure AI Audit Log Monitor</p>
+        <h1 style="margin:0;font-family:Manrope,-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:24px;font-weight:600;line-height:1.3;color:#ffffff;">
+          【緊急】情報漏洩チェック
+        </h1>
+      </td>
+    </tr>
+
+    <!-- 本文 -->
+    <tr>
+      <td style="padding:40px 45px;font-family:Inter,Arial,sans-serif;font-size:16px;line-height:1.6;color:#000000;">
+
+        <p style="margin:0 0 8px 0;font-size:18px;font-weight:600;">Sample Inc. 様</p>
+        <p style="margin:0 0 24px 0;">ホワイトリスト外IPからのアクセス、休眠ユーザーの突然の操作、AI・自動化ツールによる探索とみられる挙動を検知しました。至急ご確認ください。</p>
+
+        <!-- 監視期間 -->
+        <p style="margin:0 0 8px 0;"><strong style="font-weight:600;">監視期間</strong></p>
+        <p style="margin:0 0 24px 0;font-size:14px;">2026-10-10 23:44:42 〜 2026-10-11 00:14:42（JST）</p>
+
+        <!-- 重要度別件数 -->
+        <p style="margin:0 0 8px 0;"><strong style="font-weight:600;">検知件数（4件）</strong></p>
+        <div style="margin:0 0 24px 0;"><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-color:#cccccc;width:100%;"><tr><th style="background-color:#f0f0f0;border:1px solid #cccccc;padding:10px 5px;font-family:Inter,Arial,sans-serif;font-size:14px;font-weight:normal;color:#333333;text-align:center;">緊急</th><th style="background-color:#f0f0f0;border:1px solid #cccccc;padding:10px 5px;font-family:Inter,Arial,sans-serif;font-size:14px;font-weight:normal;color:#333333;text-align:center;">高</th><th style="background-color:#f0f0f0;border:1px solid #cccccc;padding:10px 5px;font-family:Inter,Arial,sans-serif;font-size:14px;font-weight:normal;color:#333333;text-align:center;">中</th><th style="background-color:#f0f0f0;border:1px solid #cccccc;padding:10px 5px;font-family:Inter,Arial,sans-serif;font-size:14px;font-weight:normal;color:#333333;text-align:center;">低</th><th style="background-color:#f0f0f0;border:1px solid #cccccc;padding:10px 5px;font-family:Inter,Arial,sans-serif;font-size:14px;font-weight:normal;color:#333333;text-align:center;">対象ユーザー数</th></tr><tr><td style="border:1px solid #cccccc;padding:10px 5px;font-family:Inter,Arial,sans-serif;font-size:18px;font-weight:600;text-align:center;color:#D93025;">2</td><td style="border:1px solid #cccccc;padding:10px 5px;font-family:Inter,Arial,sans-serif;font-size:18px;font-weight:600;text-align:center;color:#E8710A;">2</td><td style="border:1px solid #cccccc;padding:10px 5px;font-family:Inter,Arial,sans-serif;font-size:18px;font-weight:600;text-align:center;color:#F9AB00;">0</td><td style="border:1px solid #cccccc;padding:10px 5px;font-family:Inter,Arial,sans-serif;font-size:18px;font-weight:600;text-align:center;color:#494FFF;">0</td><td style="border:1px solid #cccccc;padding:10px 5px;font-family:Inter,Arial,sans-serif;font-size:18px;font-weight:600;text-align:center;color:#000000;">4</td></tr></table></div>
+
+        <!-- 検知内容 -->
+        <p style="margin:0 0 8px 0;"><strong style="font-weight:600;">検知内容</strong></p>
+        <div style="margin:0 0 24px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 12px 0;border:1px solid #cccccc;border-left:6px solid #D93025;"><tr><td style="padding:12px 14px;font-family:Inter,Arial,sans-serif;font-size:14px;line-height:1.6;color:#333333;"><span style="display:inline-block;padding:2px 10px;border-radius:10px;background-color:#D93025;color:#ffffff;font-size:12px;font-weight:600;">緊急</span>&nbsp;<strong style="font-size:15px;color:#000000;">AI・自動化ツールによる探索とみられる挙動</strong><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;font-size:13px;line-height:1.5;"><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">ユーザー</td><td style="padding:2px 0;word-break:break-all;"><strong>svc-analytics@example.com</strong></td></tr><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">IPアドレス</td><td style="padding:2px 0;word-break:break-all;">198.51.100.77, 198.51.100.78</td></tr><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">イベント</td><td style="padding:2px 0;word-break:break-all;">job_issue×120 / table_preview×35</td></tr><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">期間</td><td style="padding:2px 0;">2026-10-10 02:20:00 〜 2026-10-10 02:29:41</td></tr><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">詳細</td><td style="padding:2px 0;">探索系クエリ 62件（例: show columns from customer_master.members） / 1分間に最大 88イベント</td></tr></table></td></tr></table><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 12px 0;border:1px solid #cccccc;border-left:6px solid #D93025;"><tr><td style="padding:12px 14px;font-family:Inter,Arial,sans-serif;font-size:14px;line-height:1.6;color:#333333;"><span style="display:inline-block;padding:2px 10px;border-radius:10px;background-color:#D93025;color:#ffffff;font-size:12px;font-weight:600;">緊急</span>&nbsp;<strong style="font-size:15px;color:#000000;">ホワイトリスト外IPからのアクセス</strong><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;font-size:13px;line-height:1.5;"><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">ユーザー</td><td style="padding:2px 0;word-break:break-all;"><strong>taro.yamada@example.com</strong></td></tr><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">IPアドレス</td><td style="padding:2px 0;word-break:break-all;">192.0.2.45</td></tr><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">イベント</td><td style="padding:2px 0;word-break:break-all;">job_issue×42 / job_result_download×18 / user_apikey_download×1</td></tr><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">期間</td><td style="padding:2px 0;">2026-10-10 02:11:05 〜 2026-10-10 02:34:52</td></tr><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">詳細</td><td style="padding:2px 0;">許可されていないIPから操作が成功しています。APIキー漏洩・不正ログインの可能性があります。</td></tr></table></td></tr></table><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 12px 0;border:1px solid #cccccc;border-left:6px solid #E8710A;"><tr><td style="padding:12px 14px;font-family:Inter,Arial,sans-serif;font-size:14px;line-height:1.6;color:#333333;"><span style="display:inline-block;padding:2px 10px;border-radius:10px;background-color:#E8710A;color:#ffffff;font-size:12px;font-weight:600;">高</span>&nbsp;<strong style="font-size:15px;color:#000000;">ホワイトリスト外IPからのアクセス</strong><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;font-size:13px;line-height:1.5;"><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">ユーザー</td><td style="padding:2px 0;word-break:break-all;"><strong>(不明なユーザー)</strong></td></tr><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">IPアドレス</td><td style="padding:2px 0;word-break:break-all;">203.0.113.9</td></tr><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">イベント</td><td style="padding:2px 0;word-break:break-all;">sign_in_failed_by_ipwhitelist×7</td></tr><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">期間</td><td style="padding:2px 0;">2026-10-10 02:01:00 〜 2026-10-10 02:03:44</td></tr><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">詳細</td><td style="padding:2px 0;">許可されていないIPからのアクセスを拒否しました（ログイン失敗のみ）。&lt;script&gt;</td></tr></table></td></tr></table><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 12px 0;border:1px solid #cccccc;border-left:6px solid #E8710A;"><tr><td style="padding:12px 14px;font-family:Inter,Arial,sans-serif;font-size:14px;line-height:1.6;color:#333333;"><span style="display:inline-block;padding:2px 10px;border-radius:10px;background-color:#E8710A;color:#ffffff;font-size:12px;font-weight:600;">高</span>&nbsp;<strong style="font-size:15px;color:#000000;">休眠ユーザーのログインなし操作</strong><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;font-size:13px;line-height:1.5;"><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">ユーザー</td><td style="padding:2px 0;word-break:break-all;"><strong>hanako.suzuki@example.com</strong></td></tr><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">IPアドレス</td><td style="padding:2px 0;word-break:break-all;">203.0.113.200</td></tr><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">イベント</td><td style="padding:2px 0;word-break:break-all;">query_run×3 / job_issue×3</td></tr><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">期間</td><td style="padding:2px 0;">2026-10-10 02:15:10 〜 2026-10-10 02:16:02</td></tr><tr><td width="80" style="color:#666666;vertical-align:top;padding:2px 0;">詳細</td><td style="padding:2px 0;">前回アクセス 2026-07-01（101日前）以来のアクセスで、ログインせずに操作しています。</td></tr></table></td></tr></table></div>
+
+        <!-- 確認方法 -->
+        <p style="margin:0 0 16px 0;font-size:14px;">
+          <strong style="font-weight:600;">確認方法:</strong><br>
+          ① <a href="https://console.treasuredata.com" target="_blank" style="color:#494FFF;text-decoration:underline;font-weight:500;">コンソール</a> にログインし、Control Panel ＞ Security ＞ Audit Logs で詳細を確認<br>
+          ② 心当たりのない操作の場合は、該当ユーザーの APIキー 無効化・パスワード変更・権限見直しを実施<br>
+          ③ 全件の検知結果は <code>td_auditlog_alert.alert_notifications_dev</code>（run_id = 1）を参照
+        </p>
+
+        <p style="margin:0;font-size:12px;color:#666666;">
+          本メールは Treasure Workflow「123456」（2026-10-11T00:14:42+09:00）から自動送信されています。<br>
+          送信先の変更は config/send_email_list.yml、検知条件の変更は config/ 配下の各設定ファイルで行えます。
+        </p>
+      </td>
+    </tr>
+
+    <!-- フッター -->
+    <tr>
+      <td align="center" style="padding:32px 40px 40px 40px;border-radius:0 0 30px 30px;border-top:1px solid #eeeeee;">
+        <img src="https://get.treasuredata.com/rs/714-XIJ-402/images/TD-symbol%402x.png" alt="Treasure AI" width="40" height="40" style="display:block;width:40px;height:40px;border:0;margin:0 auto 8px auto;">
+        <p style="margin:0;font-family:Manrope,Arial,sans-serif;font-size:16px;font-weight:600;color:#000000;">Treasure AI</p>
+        <p style="margin:4px 0 0 0;font-family:Inter,Arial,sans-serif;font-size:12px;color:#666666;">Audit Log Alert Workflow</p>
+      </td>
+    </tr>
+
+  </table>
+
+</td></tr>
+</table>
+</body>
+</html>

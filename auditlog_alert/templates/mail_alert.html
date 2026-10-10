@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<!--
+  通知メールのテンプレート（全モード共通）
+  - td.last_results.（列名） は queries/notify/build_message.sql の結果です
+  - デザインを変える場合は、このファイルと build_message.sql（カード部分）を編集してください
+-->
+<html lang="ja">
+<head>
+  <meta content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <title>${td.last_results.subject}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F5F5FF;-webkit-text-size-adjust:100%;">
+
+<!-- プレビューテキスト（受信一覧に表示される1行） -->
+<div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#F5F5FF;opacity:0;">
+  ${report_title}: ${td.last_results.finding_count}件（緊急 ${td.last_results.critical_count} / 高 ${td.last_results.high_count}）
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5F5FF;">
+<tr><td align="center" style="padding:40px 0;">
+
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;border-radius:30px;">
+
+    <!-- ヘッダー（色 = 最も高い重要度の色） -->
+    <tr>
+      <td style="background-color:${td.last_results.header_color};border-radius:30px 30px 0 0;padding:32px 45px;">
+        <p style="margin:0 0 6px 0;font-family:Inter,Arial,sans-serif;font-size:13px;color:#ffffff;opacity:0.9;">Treasure AI Audit Log Monitor</p>
+        <h1 style="margin:0;font-family:Manrope,-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:24px;font-weight:600;line-height:1.3;color:#ffffff;">
+          ${report_title}
+        </h1>
+      </td>
+    </tr>
+
+    <!-- 本文 -->
+    <tr>
+      <td style="padding:40px 45px;font-family:Inter,Arial,sans-serif;font-size:16px;line-height:1.6;color:#000000;">
+
+        <p style="margin:0 0 8px 0;font-size:18px;font-weight:600;">${account_label} 様</p>
+        <p style="margin:0 0 24px 0;">${report_description}</p>
+
+        <!-- 監視期間 -->
+        <p style="margin:0 0 8px 0;"><strong style="font-weight:600;">監視期間</strong></p>
+        <p style="margin:0 0 24px 0;font-size:14px;">${td.last_results.period_from} 〜 ${td.last_results.period_to}（JST）</p>
+
+        <!-- 重要度別件数 -->
+        <p style="margin:0 0 8px 0;"><strong style="font-weight:600;">検知件数（${td.last_results.finding_count}件）</strong></p>
+        <div style="margin:0 0 24px 0;">${td.last_results.summary_html}</div>
+
+        <!-- 検知内容 -->
+        <p style="margin:0 0 8px 0;"><strong style="font-weight:600;">検知内容</strong></p>
+        <div style="margin:0 0 24px 0;">${td.last_results.rows_html}</div>
+
+        <!-- 確認方法 -->
+        <p style="margin:0 0 16px 0;font-size:14px;">
+          <strong style="font-weight:600;">確認方法:</strong><br>
+          ① <a href="${console_url}" target="_blank" style="color:#494FFF;text-decoration:underline;font-weight:500;">コンソール</a> にログインし、Control Panel ＞ Security ＞ Audit Logs で詳細を確認<br>
+          ② 心当たりのない操作の場合は、該当ユーザーの APIキー 無効化・パスワード変更・権限見直しを実施<br>
+          ③ 全件の検知結果は <code>${output_db}.${notifications_table}${table_suffix}</code>（run_id = ${attempt_id}）を参照
+        </p>
+
+        <p style="margin:0;font-size:12px;color:#666666;">
+          本メールは Treasure Workflow「${session_id}」（${session_time}）から自動送信されています。<br>
+          送信先の変更は config/send_email_list.yml、検知条件の変更は config/ 配下の各設定ファイルで行えます。
+        </p>
+      </td>
+    </tr>
+
+    <!-- フッター -->
+    <tr>
+      <td align="center" style="padding:32px 40px 40px 40px;border-radius:0 0 30px 30px;border-top:1px solid #eeeeee;">
+        <img src="https://get.treasuredata.com/rs/714-XIJ-402/images/TD-symbol%402x.png" alt="Treasure AI" width="40" height="40" style="display:block;width:40px;height:40px;border:0;margin:0 auto 8px auto;">
+        <p style="margin:0;font-family:Manrope,Arial,sans-serif;font-size:16px;font-weight:600;color:#000000;">Treasure AI</p>
+        <p style="margin:4px 0 0 0;font-family:Inter,Arial,sans-serif;font-size:12px;color:#666666;">Audit Log Alert Workflow</p>
+      </td>
+    </tr>
+
+  </table>
+
+</td></tr>
+</table>
+</body>
+</html>

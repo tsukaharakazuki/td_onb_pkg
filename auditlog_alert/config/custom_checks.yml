@@ -1,0 +1,57 @@
+---
+# =====================================================================
+# モード3: 企業別チェック（custom_check.dig / 任意のスパン）
+# =====================================================================
+#
+# ■ custom_groups（実行スパンごとのグループ）
+#   custom_check.dig の custom_group で、どのグループを実行するか指定します。
+#   別スパンで実行したい場合は custom_check.dig をコピーし、schedule と custom_group を変更してください。
+#     title          : 通知タイトルに付ける名前
+#     lookback_hours : さかのぼって確認する時間（時間）
+custom_groups:
+  weekly:
+    title: "週次"
+    lookback_hours: 168
+  monthly:
+    title: "月次"
+    lookback_hours: 744
+
+# ■ custom_checks（チェック項目）
+#     title    : 通知に表示する名前
+#     severity : critical / high / medium / low
+#     group    : 上の custom_groups のキー
+#     query    : 実行するSQLファイル（queries/custom/ 配下）
+#     params   : SQL内で ${custom_checks[check_id].params.xxx} として参照できる値
+#     enabled  : false で一時停止
+#
+#   SQLの書き方は queries/custom/README.md を参照してください。
+custom_checks:
+
+  watched_table_access:
+    title: "重要テーブルへのアクセス"
+    severity: medium
+    group: weekly
+    query: queries/custom/watched_table_access.sql
+    params:
+      # 監視したいデータベース名（resource_name / target_table に含まれるもの）
+      watched_databases: ["customer_master", "member_pii"]
+    enabled: true
+
+  top_downloaders:
+    title: "ダウンロード量の多いユーザー"
+    severity: low
+    group: weekly
+    query: queries/custom/top_downloaders.sql
+    params:
+      top_n: 10
+      min_bytes: 10485760      # 10MB 以上のみ（bytesize は圧縮後 msgpack.gz のサイズ）
+    enabled: true
+
+  inactive_users:
+    title: "長期間ログインしていないユーザー（棚卸し候補）"
+    severity: low
+    group: monthly
+    query: queries/custom/inactive_users.sql
+    params:
+      inactive_days: 90
+    enabled: true
