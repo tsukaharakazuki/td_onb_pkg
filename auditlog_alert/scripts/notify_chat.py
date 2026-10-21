@@ -8,7 +8,7 @@ Teams / Google Chat への通知（Custom Script: py> オペレーターから�
 - 送信に失敗した場合は例外を投げ、ワークフローのタスクを失敗させます
 
 引数（sub_notify.dig から渡されます）
-    title        : 件名（例: [緊急] 【緊急】情報漏洩チェック 3件 - Sample Inc.）
+    title        : 件名（例: [緊急] TreasureData - 情報漏洩チェック 3件）
     message      : 本文テキスト（build_message.sql の text_body）
     header_color : 重要度の色（例: #D93025）
     console_url  : TD コンソールの URL

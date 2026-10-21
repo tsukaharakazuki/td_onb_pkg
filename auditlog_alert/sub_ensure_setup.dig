@@ -1,0 +1,17 @@
+# =====================================================================
+# 【部品】初回セットアップの自動実行
+# ---------------------------------------------------------------------
+# 各モードのエントリ（emergency_check / caution_daily_report / custom_check*）から call> されます
+# 出力テーブルがまだ無いときだけ sub_setup.dig（テーブル作成＋履歴の初期投入）を実行するため、
+# setup_tables.dig を手動実行しなくても、push してスケジュールが動けばそのまま使い始められます
+# =====================================================================
+
++check_tables:
+  td>: queries/setup/check_tables.sql
+  store_last_results: true
+
++setup_if_missing:
+  if>: ${td.last_results.table_count < 3}
+  _do:
+    +setup:
+      call>: sub_setup.dig

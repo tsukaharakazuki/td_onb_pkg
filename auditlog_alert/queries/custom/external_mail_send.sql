@@ -1,8 +1,9 @@
 -- =====================================================================
 -- おすすめパターン: ワークフローから社外ドメインへのメール送信
 -- ---------------------------------------------------------------------
--- workflow_email_send の宛先（mail_to / mail_cc / mail_bcc）に、params.internal_domains 以外の
+-- workflow_email_send の宛先（mail_to / mail_cc / mail_bcc）に、社内ドメイン以外の
 -- ドメインが含まれるものを、ワークフローの作成者ごとに報告します
+-- 社内ドメイン = ワークフロー作成者のメールドメイン（とそのサブドメイン）＋ params.internal_domains
 -- （ワークフローの mail> でデータを社外へ持ち出す経路の監視）
 -- ※ 正規の社外送信先は params.allowed_external_domains に追加してください
 -- =====================================================================
@@ -15,6 +16,7 @@ mails AS (
     COALESCE(user_email, revision_created_user, '(不明なユーザー)') AS user_email,
     COALESCE(target_workflow, resource_name, '-')                  AS workflow_name,
     mail_subject,
+    LOWER(SPLIT_PART(COALESCE(user_email, revision_created_user, ''), '@', 2)) AS sender_domain,
     -- 宛先のドメインを取り出す（形式に依存しないよう @ の後ろを抽出）
     REGEXP_EXTRACT_ALL(LOWER(COALESCE(mail_to, '') || ' ' || COALESCE(mail_cc, '') || ' ' || COALESCE(mail_bcc, '')),
                        '@([a-z0-9.-]+[a-z])', 1) AS domains
@@ -27,7 +29,9 @@ mails AS (
 external AS (
   SELECT
     *,
-    FILTER(domains, d -> NOT CONTAINS(ARRAY['${custom_checks[check_id].params.internal_domains.concat(custom_checks[check_id].params.allowed_external_domains).join("','")}'], d)) AS external_domains
+    FILTER(domains, d ->
+      NOT (sender_domain <> '' AND (d = sender_domain OR d LIKE '%.' || sender_domain))
+      AND NOT CONTAINS(ARRAY['${custom_checks[check_id].params.internal_domains.concat(custom_checks[check_id].params.allowed_external_domains).join("','")}'], d)) AS external_domains
   FROM mails
 ),
 
