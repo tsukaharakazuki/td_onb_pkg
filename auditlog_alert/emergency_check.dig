@@ -6,13 +6,13 @@
 # - AI・自動化ツールによる探索とみられる挙動
 # を検知し、メール（＋設定したチャット）に通知します
 #
-# 初回は setup_tables.dig を先に実行してください
-# 設定が完了したら schedule のコメントを外して push してください
+# 出力テーブルが無い場合は、最初に自動でセットアップします（setup_tables.dig の手動実行は不要）
+# スケジュールは既定で有効です。止めたい場合は schedule をコメントアウトして push してください
 # =====================================================================
 timezone: Asia/Tokyo
 
-#schedule:
-#  minutes_interval>: 10
+schedule:
+  minutes_interval>: 10
 
 _export:
   !include : 'config/common.yml'
@@ -21,6 +21,9 @@ _export:
   !include : 'config/emergency_rules.yml'
   run_env: prod
   table_suffix: ""
+
++ensure_setup:
+  call>: sub_ensure_setup.dig
 
 +emergency:
   call>: sub_emergency.dig

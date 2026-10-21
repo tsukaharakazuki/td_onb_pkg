@@ -1,0 +1,31 @@
+# =====================================================================
+# モード3: 企業別チェック（任意のスパン）
+# ---------------------------------------------------------------------
+# config/custom_checks.yml の custom_group = monthly のチェック（長期間ログインしていないユーザーの棚卸しなど）を実行します
+#
+# 別のスパンでも実行したい場合は、このファイルをコピーして
+#   schedule と custom_group を変更してください
+#
+# 出力テーブルが無い場合は、最初に自動でセットアップします（setup_tables.dig の手動実行は不要）
+# スケジュールは既定で有効です。止めたい場合は schedule をコメントアウトして push してください
+# =====================================================================
+timezone: Asia/Tokyo
+
+schedule:
+  monthly>: 1,09:00:00
+
+_export:
+  !include : 'config/common.yml'
+  !include : 'config/notification.yml'
+  !include : 'config/custom_checks.yml'
+  # emergency_rules.yml は自動セットアップ（休眠ユーザー判定用の履歴の初期投入）で使用
+  !include : 'config/emergency_rules.yml'
+  run_env: prod
+  table_suffix: ""
+  custom_group: monthly     # config/custom_checks.yml の custom_groups のキー
+
++ensure_setup:
+  call>: sub_ensure_setup.dig
+
++custom:
+  call>: sub_custom.dig

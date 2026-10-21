@@ -1,6 +1,6 @@
 ---
 name: auditlog-alert-builder
-description: Use when the user wants to set up, customize, or debug the Treasure Data audit-log alert workflow (auditlog_alert in tsukaharakazuki/td_onb_pkg) — information-leak / unauthorized-access monitoring using Premium Audit Log (td_audit_log.access). Explains in plain language which Audit Log events exist and which to use for each situation, suggests recommended detection patterns for TD administrators (account takeover, leaked API keys, AI/tool probing, insider data exfiltration, privilege abuse, dormant accounts), interviews the user about recipients, IP whitelist, channels (email always; Slack / Microsoft Teams / Google Chat optional), modes (緊急情報漏洩チェック 10分毎 / 要注意ログ日次 / 企業別チェック), thresholds and excluded service accounts, then edits config/*.yml, estimates alert volume with read-only tdx queries, and guides setup_tables / dev_run / schedule activation. Trigger on 「監査ログ監視」「AuditLogアラート」「auditlog_alert」「AuditLogのイベントを知りたい」「どのイベントを監視すべき」「情報漏洩チェック」「不正アクセス検知」「内部不正の検知」「APIキー漏洩」「IPホワイトリスト外アクセス」「休眠ユーザー検知」「AIによる接続テスト検知」「要注意ログ」「監査ログをSlack/Teams/Google Chatに通知」「send_email_list.yml」, audit log alert, security monitoring workflow.
+description: Use when the user wants to set up, customize, or debug the Treasure Data audit-log alert workflow (auditlog_alert in tsukaharakazuki/td_onb_pkg) — information-leak / unauthorized-access monitoring using Premium Audit Log (td_audit_log.access). Explains in plain language which Audit Log events exist and which to use for each situation, suggests recommended detection patterns for TD administrators (account takeover, leaked API keys, AI/tool probing, insider data exfiltration, privilege abuse, dormant accounts), interviews the user about recipients, IP whitelist, channels (email always; Slack / Microsoft Teams / Google Chat optional), modes (緊急情報漏洩チェック 10分毎 / 要注意ログ日次 / 企業別チェック), thresholds and excluded service accounts, then edits config/*.yml, estimates alert volume with read-only tdx queries, and guides push / dev_run / schedule control. When the customer has no preference, builds in default mode (all rules on, schedules active; only recipients and IP whitelist needed). Trigger on 「監査ログ監視」「AuditLogアラート」「auditlog_alert」「AuditLogのイベントを知りたい」「どのイベントを監視すべき」「情報漏洩チェック」「不正アクセス検知」「内部不正の検知」「APIキー漏洩」「IPホワイトリスト外アクセス」「休眠ユーザー検知」「AIによる接続テスト検知」「要注意ログ」「監査ログをSlack/Teams/Google Chatに通知」「send_email_list.yml」, audit log alert, security monitoring workflow.
 ---
 
 # Audit Log Alert Builder
@@ -19,6 +19,18 @@ cp -R .td_onb_pkg_src/auditlog_alert ./auditlog_alert_<customer>
 ```
 
 Never overwrite an existing folder. Read `README.md` and all of `config/` so you follow the current template.
+
+### Default mode (no customer preference)
+
+The template ships in **default mode**: every rule and every mode is enabled, and all entry digs have their `schedule:` active. Output tables are created automatically on the first run (`sub_ensure_setup.dig`), so `setup_tables` is optional.
+
+If the customer has no specific requirements ("おまかせ", "全部送って", "特に希望なし"), build in default mode:
+1. Skip Step 3–4 and the pattern/set interview.
+2. Ask only for **mail recipients** (`send_email_list.yml`) and the **IP whitelist** (`ip_whitelist.yml`). Still run the Step 2-4 whitelist pre-check, because an incomplete whitelist floods the 10-minute emergency mail.
+3. Optionally confirm `console_url` (region), `account_label` (greeting in the body; empty hides it), and `exclude_users`.
+4. Leave every other file untouched, then go to Step 6 (volume estimate) and Step 7.
+
+Because schedules are already active, **`tdx wf push` starts real notifications.** Tell the user this and get approval before pushing. To keep a mode off, comment out its `schedule:`.
 
 ## Step 2. Look at the account (read-only)
 
@@ -54,13 +66,13 @@ Then ask the remaining settings together in one message:
 
 | # | Question | Writes to |
 |---|---|---|
-| 1 | アカウント表示名 / リージョン（US・東京・EU） | `common.yml` `account_label`, `console_url` |
+| 1 | 本文の宛名（空なら非表示・件名には入らない） / リージョン（US・東京・EU） | `common.yml` `account_label`, `console_url` |
 | 2 | メール送信先 to / cc / bcc（必須） / 開発モードの送信先 | `send_email_list.yml`, `dev_send_email_list.yml` |
 | 3 | 追加チャネル: Slack / Teams / Google Chat | `notification.yml` |
 | 4 | 許可IP（オフィス・VPN・連携サーバー）を CIDR で | `ip_whitelist.yml` |
 | 5 | 除外するサービスアカウント（Step 2 の候補を提示） | `common.yml` `exclude_users` |
 | 6 | 選んだセットに必要な値: 自社メールドメイン(B4)、重要DB(B7)、要注意ユーザー(B8)、業務時間(B6) | `custom_checks.yml`, `caution_rules.yml` |
-| 7 | 実行時刻（日次・企業別） | entry digs `schedule:` |
+| 7 | 実行時刻（日次・企業別）／使わないモード（既定は全モードのスケジュール有効） | entry digs `schedule:` |
 
 Defaults are sensible. If the user has no preference, keep them and say so.
 
@@ -70,7 +82,8 @@ Defaults are sensible. If the user has no preference, keep them and say so.
   - `emergency_rules.*.enabled`
   - `caution_rules.*.enabled` / `caution_special.*.enabled`
   - `custom_checks.*.enabled`
-- Daily admin patterns run from `custom_check_daily.dig` (group `daily`).
+- Custom groups run from `custom_check_daily.dig` (`daily`), `custom_check.dig` (`weekly`) and `custom_check_monthly.dig` (`monthly`).
+- Mail subject is `[重要度] <subject_brand> - <title> N件` (`notification.yml`). Don't add 【緊急】 or the customer name to `modes.*.title`; the severity tag is added automatically.
 - Edit YAML in place and keep the comments; humans maintain these files. Put values in YAML lists.
 - Never write webhook URLs into files. Give the user the secret commands: `tdx wf secrets set <project> slack.webhook_url=...` (likewise `teams.webhook_url`, `google_chat.webhook_url`).
 - If you edit a `.dig`, wrap any `${...}` containing `: ` (e.g. a ternary `a ? b : c`) in double quotes. Otherwise TD's server-side YAML validation rejects the push with `mapping values are not allowed here`, for both `tdx wf push` and `tdx wf upload`; `--skip-validation` doesn't help. For `if>:` conditions, use `&&` / `||` instead of a ternary so no quoting is needed.
@@ -83,11 +96,11 @@ For each enabled rule, render its SQL by hand: substitute `${...}`, drop the `IN
 ## Step 7. Deploy and test (confirm before each run)
 
 1. Check `tdx.json` in the project folder. It's bundled with `{"workflow_project": "auditlog_alert"}`, and `tdx wf push` reads the target project name from it. Without it, push fails with `No tdx.json found`. Change `workflow_project` if the user wants another project name. Never copy a `workflow_project_id` from a different environment.
-   Then run `tdx wf push --dry-run ./auditlog_alert_<customer>` to check, and `tdx wf push ./auditlog_alert_<customer>`.
-2. `tdx wf run <project>.setup_tables` — creates tables and backfills activity history
+   Then run `tdx wf push --dry-run ./auditlog_alert_<customer>` to check. Before the real push, comment out the `schedule:` of every entry dig you don't want yet (schedules are active by default and start sending as soon as you push), then `tdx wf push ./auditlog_alert_<customer>`.
+2. (Optional) `tdx wf run <project>.setup_tables` — creates tables and backfills activity history. Each mode also does this automatically on its first run.
 3. Set `config/dev.yml`, push, then `tdx wf run <project>.dev_run`. Mail goes only to `dev_send_email_list.yml`, and results go to the `*_dev` tables.
 4. Check the received mail and chat with the user. Debug with `tdx wf timeline` and attempt logs; `+show_settings` echoes the effective values.
-5. Uncomment `schedule:` in the entry digs that are in use, then push.
+5. If you commented out schedules for testing, restore them and push.
 
 `tdx wf run` sends real notifications. State the recipients and channels, and wait for explicit approval each time. Don't use `-p` overrides; switch behavior through `config/dev.yml`.
 
@@ -101,12 +114,14 @@ For each enabled rule, render its SQL by hand: substitute `${...}`, drop the `IN
 - 想定通知量: 緊急 約x件/日, 日次レポート y件, 企業別 z件
 - メール: to=…（開発: …） / チャット: Slack ✅ Teams ❌ Google Chat ✅（Secret 要登録）
 - ホワイトリスト: N件 / 除外ユーザー: N件
-- 次の手順: push → setup_tables → dev_run → schedule 有効化
+- 次の手順: push（スケジュールは既定で有効） → dev_run で見た目確認
 ```
 
 ## Edge cases
 
-- **Whitelist empty** → A1 is skipped automatically. Warn the user that IP-based detection is off.
+- **Whitelist empty** (the default `cidrs: []`) → A1 is skipped automatically. Warn the user that IP-based detection is off.
+- **`watched_databases` / `watch_list_users.users` empty** → those checks are enabled but find nothing until values are added.
+- **External mail check** treats the workflow creator's own mail domain (and subdomains) as internal, so it works without `internal_domains`; add group-company domains there if needed.
 - **Whitelist incomplete** → a flood of A1 alerts. Do the Step 2-4 pre-check before enabling the schedule.
 - **Push errors**: `No tdx.json found` means recreate `tdx.json`. `mapping values are not allowed here` means an unquoted `${... ? ... : ...}` in a dig (see Step 5).
 - **AI-probe false positives** come from BI keep-alive `SELECT 1` or sanctioned AI tools (tdx/MCP). Exclude those accounts or raise `probe_query_min`.

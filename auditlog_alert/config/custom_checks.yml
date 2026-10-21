@@ -37,7 +37,8 @@ custom_checks:
     query: queries/custom/watched_table_access.sql
     params:
       # 監視したいデータベース名（resource_name / target_table に含まれるもの）
-      watched_databases: ["customer_master", "member_pii"]
+      # 例: ["customer_master", "member_pii"]。空 [] の間は何も検知しません
+      watched_databases: []
     enabled: true
 
   top_downloaders:
@@ -116,9 +117,11 @@ custom_checks:
     group: daily
     query: queries/custom/external_mail_send.sql
     params:
-      internal_domains: ["example.com"]           # 自社のメールドメイン（必ず変更）
+      # ワークフロー作成者のメールドメイン（とそのサブドメイン）は自動で社内扱いになります
+      # グループ会社など、ほかにも社内扱いにしたいドメインがあれば追加してください
+      internal_domains: []                        # 例: ["example.co.jp", "example-group.com"]
       allowed_external_domains: []                # 正規に送ってよい社外ドメイン
-    enabled: false             # internal_domains を設定してから true に
+    enabled: true
 
   watch_list_users:
     title: "要注意ユーザー（退職予定者・委託先など）の操作"
@@ -126,5 +129,6 @@ custom_checks:
     group: daily
     query: queries/custom/watch_list_users.sql
     params:
-      users: ["leaving-user@example.com"]         # 監視したいユーザー
-    enabled: false             # users を設定してから true に
+      # 監視したいユーザー。例: ["leaving-user@example.com"]。空 [] の間は何も検知しません
+      users: []
+    enabled: true

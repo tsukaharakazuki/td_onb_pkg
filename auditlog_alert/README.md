@@ -7,12 +7,39 @@ Treasure Data の **Premium Audit Log**（`td_audit_log.access`）を定期的�
 |---|---|---|---|
 | 1. 緊急情報漏洩チェック | `emergency_check.dig` | 10分ごと | ホワイトリスト外IPからのアクセス／休眠ユーザーのログインなし操作／AI・自動化ツールによる探索 |
 | 2. 要注意ログ報告 | `caution_daily_report.dig` | 1日1回 | 権限変更・APIキー操作・大量ダウンロード・ログイン失敗・新しいIP・業務時間外操作など |
-| 3. 企業別チェック | `custom_check.dig`（週次） / `custom_check_daily.dig`（日次） | 任意 | 企業ごとのチェック。日次は管理者向けおすすめパターン（総当たり成功・APIキー直後の新IP・権限付与直後の大量アクセス など） |
+| 3. 企業別チェック | `custom_check_daily.dig`（日次 08:30） / `custom_check.dig`（週次 月曜 09:00） / `custom_check_monthly.dig`（月次 1日 09:00） | 任意 | 企業ごとのチェック。日次は管理者向けおすすめパターン（総当たり成功・APIキー直後の新IP・権限付与直後の大量アクセス など） |
 | 開発モード | `dev_run.dig` | 手動 | 本番と同じロジックを開発用テーブル・開発用宛先で実行し、通知内容を確認 |
-| 初回セットアップ | `setup_tables.dig` | 最初に1回 | 出力テーブルの作成と、休眠ユーザー判定用の履歴の初期投入 |
+| 初回セットアップ | `setup_tables.dig` | 任意 | 出力テーブルの作成と、休眠ユーザー判定用の履歴の初期投入（各モードの初回実行時に自動で行われるため、通常は不要） |
 
 > Treasure AI Studio にこのリポジトリを読み込ませると、Skill `auditlog-alert-builder` が
 > ヒアリングしながら下記の設定を代行します。AI を使わずに人が設定する場合は、以下の手順どおりに進めてください。
+
+---
+
+## 0. デフォルトモード（クイックスタート）
+
+顧客から特に希望がない場合は、**このフォルダをそのまま使う「デフォルトモード」** で構築します。
+すべての検知ルール・すべてのモードが有効で、スケジュールも設定済みです。編集が必要なのは次の2ファイルだけです。
+
+| ファイル | 書くこと |
+|---|---|
+| `config/send_email_list.yml` | 通知メールの送信先（`to` は必須） |
+| `config/ip_whitelist.yml` | 許可するIP（CIDR）。`cidrs: []` のままだとホワイトリスト外IP検知だけスキップされます |
+
+```bash
+# 1. 上の2ファイルを編集
+# 2. push（これだけでスケジュールが動き始めます）
+tdx wf push ./auditlog_alert
+```
+
+- 出力DB・テーブル（`td_auditlog_alert`）は、各モードの初回実行時に自動で作成されます（`setup_tables.dig` の手動実行は不要）
+- 実行スケジュール: 緊急 10分ごと / 要注意ログ 毎日 09:00 / 企業別 日次 08:30・週次 月曜 09:00・月次 1日 09:00（JST）
+- 要注意ログ・企業別レポートは、検知0件でも毎回届きます（死活監視を兼ねます）
+- 任意で変更するとよい項目: `config/common.yml` の `console_url`（東京リージョンは `https://console.treasuredata.co.jp`）、`account_label`（本文の宛名）、`exclude_users`
+- 値を入れるまで何も検知しないチェック（有効のまま待機）: 重要テーブルへのアクセス（`watched_databases`）、要注意ユーザー（`users`）
+- 止めたいモードは、該当する dig の `schedule:` をコメントアウトして push してください
+
+> **push 前に IPホワイトリストを確認してください。** 漏れがあると初日から大量の緊急メールが届きます（下の「IPホワイトリストの事前確認」）。
 
 ---
 
@@ -22,13 +49,16 @@ Treasure Data の **Premium Audit Log**（`td_audit_log.access`）を定期的�
 auditlog_alert/
 ├── emergency_check.dig        # モード1（エントリ）
 ├── caution_daily_report.dig   # モード2（エントリ）
-├── custom_check.dig           # モード3（エントリ）
+├── custom_check_daily.dig     # モード3 日次（エントリ）
+├── custom_check.dig           # モード3 週次（エントリ）
+├── custom_check_monthly.dig   # モード3 月次（エントリ）
 ├── dev_run.dig                # 開発モード（エントリ）
-├── setup_tables.dig           # 初回セットアップ（エントリ）
+├── setup_tables.dig           # 初回セットアップ（エントリ・任意）
 ├── sub_*.dig                  # 部品（直接実行しない）
 │     sub_emergency / sub_caution / sub_custom … 各モードの処理本体
 │     sub_notify                               … 通知（メール・チャット）の共通処理
 │     sub_setup                                … テーブル作成
+│     sub_ensure_setup                         … テーブルが無いときだけ sub_setup を実行
 ├── config/                    # ★ 設定はすべてここ
 │   ├── common.yml               出力DB・アカウント名・除外ユーザーなど
 │   ├── send_email_list.yml      メール送信先（全モード共通）
@@ -42,6 +72,7 @@ auditlog_alert/
 ├── queries/                   # SQL（Trino）
 │   ├── setup/  emergency/  caution/  custom/  notify/
 ├── templates/mail_alert.html  # メール本文（HTML）
+├── templates/images/          # メールヘッダーの白抜きロゴ
 └── scripts/notify_chat.py     # Teams / Google Chat 送信（Custom Script）
 ```
 
@@ -76,10 +107,10 @@ auditlog_alert/
 
 ### 3-2. 設定ファイルを編集
 
-1. **`config/common.yml`** — `output_db`、`account_label`、`console_url`（リージョン）、`exclude_users`
+1. **`config/common.yml`** — `output_db`、`account_label`（本文の宛名・空なら非表示）、`console_url`（リージョン）、`exclude_users`、`mail_logo_url`
 2. **`config/send_email_list.yml`** — メール送信先（`to` は必須）
 3. **`config/ip_whitelist.yml`** — 許可するIPを CIDR で列挙（TD の IP Whitelist と同じ内容が基本）。**先に下の「IPホワイトリストの事前確認」を実施してください**
-4. **`config/notification.yml`** — 使うチャットを `enabled: true` に
+4. **`config/notification.yml`** — 使うチャットを `enabled: true` に。件名の `subject_brand`（既定 `TreasureData`）もここで変更できます
 5. 必要に応じて **`emergency_rules.yml` / `caution_rules.yml` / `custom_checks.yml`** のしきい値・ルールを調整
 6. **`config/dev_send_email_list.yml`** — 開発モードの送信先（自分のアドレス）
 
@@ -153,7 +184,10 @@ tdx wf secrets set auditlog_alert google_chat.webhook_url=https://chat.googleapi
 | Teams | チャンネルの「…」→「ワークフロー」→「Webhook 要求を受信したらチャネルに投稿する」 |
 | Google Chat | スペース名 →「アプリと統合」→「Webhook を追加」 |
 
-### 3-4. 初回セットアップを実行
+### 3-4. 初回セットアップ（任意）
+
+各モードの初回実行時に、出力テーブルが無ければ自動でセットアップされます。
+スケジュールを待たずに先に作っておきたい場合だけ、手動で実行してください。
 
 ```bash
 tdx wf run auditlog_alert.setup_tables
@@ -173,9 +207,10 @@ tdx wf run auditlog_alert.dev_run
 - `always_notify: true` にすると、検知0件でもメールの見た目を確認できます
 - 開発モードの値は `-p` で上書きせず、`config/dev.yml` を編集して push してください
 
-### 3-6. スケジュールを有効化
+### 3-6. スケジュール
 
-`emergency_check.dig` / `caution_daily_report.dig` / `custom_check.dig` の `schedule:` のコメントを外して push します。
+すべてのエントリ dig でスケジュールは既定で有効です（push した時点で動き始めます）。
+使わないモードは `schedule:` をコメントアウトして push してください。
 
 ---
 
@@ -215,7 +250,7 @@ caution_rules:
 
 1. `queries/custom/` に SQL を追加（書き方は `queries/custom/README.md`）
 2. `custom_checks` に登録し、`group`（実行スパン）を指定
-3. 別スパンで実行する場合は `custom_check.dig` をコピーし、`schedule` と `custom_group` を変更
+3. 別スパンで実行する場合は `custom_check.dig` をコピーし、`schedule` と `custom_group` を変更（日次・週次・月次は同梱済み）
 
 ---
 
@@ -245,3 +280,8 @@ caution_rules:
 ## 8. メールの見た目
 
 `docs/mail_preview_sample.html` はダミーデータで作成したメールのプレビューです（ブラウザで開けます）。
+
+- 件名: `[緊急] TreasureData - 情報漏洩チェック 3件`（重要度は自動で先頭に付きます。顧客名は件名に入れません）
+- ヘッダー: 左の濃紺 `#131023` から右の「最も高い重要度の色」へのグラデーション（treasure.ai と同じ `98deg`）＋左上に白抜きロゴ。
+  グラデーション非対応のメーラー（Outlook デスクトップ等）では重要度の色のベタ塗りになります
+- ロゴは `config/common.yml` の `mail_logo_url`（既定はこのリポジトリの `templates/images/treasure-ai-logo-white.png` の公開URL）

@@ -3,23 +3,29 @@
 # ---------------------------------------------------------------------
 # config/custom_checks.yml の custom_group = daily のチェック（管理者向けおすすめパターン）を実行します
 #
-# 別のスパン（例: 月次）でも実行したい場合は、このファイルをコピーして
-#   custom_check_monthly.dig を作り、schedule と custom_group を変更してください
+# 別のスパンでも実行したい場合は、このファイルをコピーして
+#   schedule と custom_group を変更してください（月次は custom_check_monthly.dig）
 #
-# 設定が完了したら schedule のコメントを外して push してください
+# 出力テーブルが無い場合は、最初に自動でセットアップします（setup_tables.dig の手動実行は不要）
+# スケジュールは既定で有効です。止めたい場合は schedule をコメントアウトして push してください
 # =====================================================================
 timezone: Asia/Tokyo
 
-#schedule:
-#  daily>: 08:30:00
+schedule:
+  daily>: 08:30:00
 
 _export:
   !include : 'config/common.yml'
   !include : 'config/notification.yml'
   !include : 'config/custom_checks.yml'
+  # emergency_rules.yml は自動セットアップ（休眠ユーザー判定用の履歴の初期投入）で使用
+  !include : 'config/emergency_rules.yml'
   run_env: prod
   table_suffix: ""
   custom_group: daily       # config/custom_checks.yml の custom_groups のキー
+
++ensure_setup:
+  call>: sub_ensure_setup.dig
 
 +custom:
   call>: sub_custom.dig

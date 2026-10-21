@@ -96,10 +96,10 @@ SELECT
   -- 送信判定
   (finding_count > 0 OR ${send_when_no_findings})   AS should_send,
 
-  -- 件名: [DEV] [緊急] 【緊急】情報漏洩チェック 3件 - Sample Inc.
+  -- 件名: [DEV] [緊急] TreasureData - 情報漏洩チェック 3件
   '${run_env == "dev" ? dev.subject_prefix : ""}'
   || CASE top_rank WHEN 1 THEN '[緊急] ' WHEN 2 THEN '[高] ' WHEN 3 THEN '[中] ' WHEN 4 THEN '[低] ' ELSE '[検知なし] ' END
-  || '${report_title} ' || CAST(finding_count AS VARCHAR) || '件 - ${account_label}'  AS subject,
+  || '${subject_brand} - ${report_title} ' || CAST(finding_count AS VARCHAR) || '件'  AS subject,
 
   finding_count,
   user_count,
