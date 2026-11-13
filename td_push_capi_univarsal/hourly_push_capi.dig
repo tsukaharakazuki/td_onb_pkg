@@ -2,9 +2,9 @@
 ## CAPI 送信ワークフロー - 毎時送信 (Hourly)
 ## ======================================================================
 ## 1. 共通ベースデータを1回作成（全PF分のカラムを網羅）
-## 2. 送信済み除外 → 送信対象テーブル作成
-## 3. 送信件数チェック
-## 4. for_each で各PFに送信（リネームして出力）
+## 2. ブランド・媒体ごとに未送信行を抽出（送信ログは brand_name + platform で判定）
+## 3. 件数チェック（0件ならスキップ）
+## 4. 媒体ごとに送信（リネームして出力）・送信ログ記録
 ## ======================================================================
 timezone: "Asia/Tokyo"
 
@@ -35,195 +35,277 @@ _export:
       td>: query/create_empty_hourly_base.sql
       create_table: capi_base
 
-## Step 2: 送信済み除外（テーブル存在確認込み）
-+check_push_log:
-  td>: query/check_push_log_exists.sql
-  store_last_results: true
-
-+exclude_already_sent:
-  if>: ${td.last_results.log_exists > 0}
-  _do:
-    +exclude_with_log:
-      td>: query/exclude_sent.sql
-      create_table: capi_send
-  _else_do:
-    +exclude_initial:
-      td>: query/exclude_sent_initial.sql
-      create_table: capi_send
-
-## Step 3: 送信件数チェック
-+check_count:
-  td>:
-  query: SELECT COUNT(*) AS cnt FROM capi_send
-  store_last_results: true
-
-## Step 4: 送信対象ありの場合のみ処理
-+process_if_exists:
-  if>: ${td.last_results.cnt > 0}
+## Step 2: ブランド・媒体ごとに送信（未送信の抽出 → 送信 → ログ記録）
++for_each_brands:
+  for_each>:
+    b: ${brand}
   _do:
 
-    ## 各PFに送信（送信済みチェック → 送信 → ログ記録）
-    +for_each_brands:
-      for_each>:
-        b: ${brand}
+    ## 未対応platformのtypoで未送信データを送信済みにしないよう先に停止
+    +validate_platform:
+      if>: ${b.platform != 'facebook' && b.platform != 'line' && b.platform != 'tiktok' && b.platform != 'yahoo' && b.platform != 'google_store_sales' && b.platform != 'google_enhanced_web' && b.platform != 'google_data_manager_for_conversions' && b.platform != 'pinterest' && b.platform != 'snapchat' && b.platform != 'x' && b.platform != 'openai'}
+      _do:
+        +invalid_platform:
+          fail>: "Unsupported platform: ${b.platform}"
+
+    +validate_yahoo_v2:
+      if>: ${(b.platform == 'yahoo' || b.platform == 'line') && (!b.tag_id || (b.event_type != 'page_view' && b.event_type != 'view_listing' && b.event_type != 'view_product' && b.event_type != 'view_cart' && b.event_type != 'add_cart' && b.event_type != 'search' && b.event_type != 'check_out' && b.event_type != 'purchase' && b.event_type != 'generate_lead' && b.event_type != 'login' && b.event_type != 'reservation' && b.event_type != 'sign_up' && b.event_type != 'payment_info' && b.event_type != 'add_wishlist'))}
+      _do:
+        +invalid_yahoo_v2:
+          fail>: "Yahoo/LINE v2 requires tag_id and a supported event_type"
+
+    +validate_openai:
+      if>: ${b.platform == 'openai' && (!b.openai_pixel_id || b.openai_event_type != 'order_created' || !(b.openai_amount_multiplier > 0) || ['web', 'mobile_app', 'offline', 'physical_store', 'phone_call', 'email', 'other'].indexOf(b.openai_action_source) < 0 || ['web', 'mobile_app', 'offline', 'physical_store', 'phone_call', 'email', 'other'].indexOf(b.openai_daily_action_source) < 0)}
+      _do:
+        +invalid_openai:
+          fail>: "OpenAI requires pixel_id, order_created, positive amount multiplier, and valid action sources"
+
+    ## 送信ログの存在確認（ブランドごとに実行。前のブランドの結果で上書きされるため）
+    +check_push_log:
+      td>: query/check_push_log_exists.sql
+      store_last_results: true
+
+    ## ブランド・媒体ごとの未送信行を抽出（送信ログは brand_name + platform + event_id で判定）
+    +stage_brand:
+      if>: ${td.last_results.log_exists > 0}
+      _do:
+        +stage_brand_with_log:
+          td>: query/stage_brand.sql
+          create_table: capi_send
+      _else_do:
+        +stage_brand_initial:
+          td>: query/stage_brand_initial.sql
+          create_table: capi_send
+
+    ## 送信件数チェック（0件ならこのブランドはスキップ）
+    +check_count:
+      td>:
+      query: SELECT COUNT(*) AS cnt FROM capi_send
+      store_last_results: true
+
+    +skip_or_send:
+      if>: ${td.last_results.cnt > 0}
       _do:
 
-        ## 送信済みチェック（リトライ時に成功済みPFをスキップ）
-        +check_brand_sent:
-          td>: query/check_brand_sent.sql
-          store_last_results: true
-
-        +skip_or_send:
-          if>: ${td.last_results.already_sent == 0}
+        ## PF別送信
+        +send_facebook:
+          if>: ${b.platform == 'facebook'}
           _do:
+            +send_facebook_exec:
+              td>: query/push_facebook.sql
+              result_connection: ${b.connector}
+              result_settings:
+                skip_invalid: true
 
-            ## PF別送信
-            +send_facebook:
-              if>: ${b.platform == 'facebook'}
-              _do:
-                +send_facebook_exec:
-                  td>: query/push_facebook.sql
-                  result_connection: ${b.connector}
-                  result_settings:
-                    skip_invalid: true
+        ## LINE向け: Yahoo! Ads Conversion API V2（Yahooとは別ブランド・別設定）
+        +send_line:
+          if>: ${b.platform == 'line'}
+          _do:
+            +prepare_line_send:
+              td>: query/prepare_yahoo_v2.sql
+              create_table: capi_yahoo_v2_send
 
-            +send_line:
-              if>: ${b.platform == 'line'}
+            +check_line_count:
+              td>:
+              query: SELECT COUNT(*) AS cnt FROM capi_yahoo_v2_send
+              store_last_results: true
+
+            +send_line_if_exists:
+              if>: ${td.last_results.cnt > 0}
               _do:
                 +send_line_exec:
-                  td>: query/push_line.sql
+                  td>: query/push_yahoo.sql
                   result_connection: ${b.connector}
                   result_settings:
-                    line_tag_id: ${b.line_tag_id}
-                    access_token: ${b.line_access_token}
-                    ignore_invalid_records: true
+                    tag_id: ${b.tag_id}
+                    channel_id: ${b.channel_id}
+                    skip_invalid_records: ${b.skip_invalid_records}
+                    stop_on_batch_failure: ${b.stop_on_batch_failure}
 
-            +send_tiktok:
-              if>: ${b.platform == 'tiktok'}
-              _do:
-                +send_tiktok_exec:
-                  td>: query/push_tiktok.sql
-                  result_connection: ${b.connector}
-                  result_settings:
-                    skip_invalid_record: true
-                    event_source: ${b.tiktok_event_data_source}
-                    event_source_id: ${b.tiktok_event_source_id}
+                +insert_line_push_log:
+                  if>: ${!b.test_flag}
+                  _do:
+                    +insert_line_push_log_exec:
+                      td>: query/insert_yahoo_v2_push_log.sql
+                      insert_into: capi_push_log
 
-            +send_yahoo:
-              if>: ${b.platform == 'yahoo'}
+        +send_tiktok:
+          if>: ${b.platform == 'tiktok'}
+          _do:
+            +send_tiktok_exec:
+              td>: query/push_tiktok.sql
+              result_connection: ${b.connector}
+              result_settings:
+                skip_invalid_record: true
+                event_source: ${b.tiktok_event_data_source}
+                event_source_id: ${b.tiktok_event_source_id}
+
+        ## Yahoo! Ads Conversion API V2
+        +send_yahoo:
+          if>: ${b.platform == 'yahoo'}
+          _do:
+            +prepare_yahoo_send:
+              td>: query/prepare_yahoo_v2.sql
+              create_table: capi_yahoo_v2_send
+
+            +check_yahoo_count:
+              td>:
+              query: SELECT COUNT(*) AS cnt FROM capi_yahoo_v2_send
+              store_last_results: true
+
+            +send_yahoo_if_exists:
+              if>: ${td.last_results.cnt > 0}
               _do:
                 +send_yahoo_exec:
                   td>: query/push_yahoo.sql
                   result_connection: ${b.connector}
                   result_settings:
-                    skip_invalid: true
+                    tag_id: ${b.tag_id}
+                    channel_id: ${b.channel_id}
+                    skip_invalid_records: ${b.skip_invalid_records}
+                    stop_on_batch_failure: ${b.stop_on_batch_failure}
 
-            +send_google_store_sales:
-              if>: ${b.platform == 'google_store_sales'}
-              _do:
-                +send_google_store_sales_exec:
-                  td>: query/push_google_store_sales.sql
-                  result_connection: ${b.connector}
-                  result_settings:
-                    customer_id: ${b.google_customer_id}
-                    conversion_type: upload_store_sales
-                    skip_invalid: true
-
-            +send_google_enhanced_web:
-              if>: ${b.platform == 'google_enhanced_web'}
-              _do:
-                +send_google_enhanced_web_exec:
-                  td>: query/push_google_enhanced_web.sql
-                  result_connection: ${b.connector}
-                  result_settings:
-                    customer_id: ${b.google_customer_id}
-                    conversion_type: upload_enhanced_for_web
-                    skip_invalid: true
-
-            +send_google_data_manager_for_conversions:
-              if>: ${b.platform == 'google_data_manager_for_conversions' && b.google_dm_conversion_type != 'STORE_SALES'}
-              _do:
-                +validate_google_dm_account:
-                  if>: ${b.google_dm_operating_account_id == '' || b.google_dm_conversion_action_id == ''}
+                +insert_yahoo_push_log:
+                  if>: ${!b.test_flag}
                   _do:
-                    +invalid_google_dm_account:
-                      fail>: "Google Data Manager requires operating_account_id and conversion_action_id"
+                    +insert_yahoo_push_log_exec:
+                      td>: query/insert_yahoo_v2_push_log.sql
+                      insert_into: capi_push_log
 
-                +validate_google_dm_conversion_type:
-                  if>: ${b.google_dm_conversion_type != 'OFFLINE' && b.google_dm_conversion_type != 'ONLINE'}
-                  _do:
-                    +invalid_google_dm_conversion_type:
-                      fail>: "Hourly Google Data Manager conversion_type must be OFFLINE or ONLINE"
+        ## OpenAI Ads Conversion API
+        +send_openai:
+          if>: ${b.platform == 'openai'}
+          _do:
+            +prepare_openai_send:
+              td>: query/prepare_openai.sql
+              create_table: capi_openai_send
 
-                +validate_google_dm_event_source:
-                  if>: ${b.google_dm_conversion_type == 'OFFLINE' && b.google_dm_event_source != 'WEB' && b.google_dm_event_source != 'APP' && b.google_dm_event_source != 'PHONE' && b.google_dm_event_source != 'MESSAGE' && b.google_dm_event_source != 'OTHER'}
-                  _do:
-                    +invalid_google_dm_event_source:
-                      fail>: "OFFLINE requires event_source: WEB, APP, PHONE, MESSAGE, or OTHER"
+            +check_openai_count:
+              td>:
+              query: SELECT COUNT(*) AS cnt FROM capi_openai_send
+              store_last_results: true
 
-                +send_google_data_manager_for_conversions_exec:
-                  td>: query/push_google_data_manager_for_conversions.sql
+            +send_openai_if_exists:
+              if>: ${td.last_results.cnt > 0}
+              _do:
+                +send_openai_exec:
+                  td>: query/push_openai.sql
                   result_connection: ${b.connector}
                   result_settings:
-                    conversion_type: ${b.google_dm_conversion_type}
-                    operating_account_id: ${b.google_dm_operating_account_id}
-                    login_account_id: ${b.google_dm_login_account_id}
-                    conversion_action_id: ${b.google_dm_conversion_action_id}
-                    ad_user_data_consent: ${b.google_dm_ad_user_data_consent}
-                    ad_personalization_consent: ${b.google_dm_ad_personalization_consent}
-                    skip_invalid_records: ${b.google_dm_skip_invalid_records}
-                    waiting_for_request_status: ${b.google_dm_waiting_for_request_status}
+                    pixel_id: ${b.openai_pixel_id}
+                    skip_invalid_records: ${b.openai_skip_invalid_records}
 
-            +send_pinterest:
-              if>: ${b.platform == 'pinterest'}
-              _do:
-                +send_pinterest_exec:
-                  td>: query/push_pinterest.sql
-                  result_connection: ${b.connector}
-                  result_settings:
-                    skip_invalid: true
-
-            +send_snapchat:
-              if>: ${b.platform == 'snapchat'}
-              _do:
-                +send_snapchat_exec:
-                  td>: query/push_snapchat.sql
-                  result_connection: ${b.connector}
-                  result_settings:
-                    skip_invalid: true
-
-            ## X (Twitter) はコネクタが存在しないため py> で直接 API 送信する
-            +send_x:
-              if>: ${b.platform == 'x'}
-              _do:
-                +send_x_exec:
-                  py>: py_scripts.push_x.PushX.run
-                  docker:
-                    image: "treasuredata/customscript-python:3.12.11-td1"
-                  brand_name: ${b.brand_name}
-                  database: ${common.database}
-                  x_pixel_id: ${b.x_pixel_id}
-                  x_event_id: ${b.x_event_id}
-                  x_consumer_key: ${b.x_consumer_key}
-                  x_consumer_secret: ${b.x_consumer_secret}
-                  x_access_token: ${b.x_access_token}
-                  x_access_token_secret: ${b.x_access_token_secret}
-                  email_hashed: ${common.email_hashed}
-                  phone_hashed: ${common.phone_hashed}
-                  _env:
-                    TD_API_KEY: ${secret:td.apikey}
-
-            ## 送信成功後に、実際の送信対象のみログ記録
-            +insert_google_data_manager_push_log:
-              if>: ${b.platform == 'google_data_manager_for_conversions' && b.google_dm_conversion_type != 'STORE_SALES'}
-              _do:
-                +insert_google_data_manager_push_log_exec:
-                  td>: query/insert_google_data_manager_push_log.sql
+                +insert_openai_push_log_exec:
+                  td>: query/insert_openai_push_log.sql
                   insert_into: capi_push_log
 
-            +insert_other_push_log:
-              if>: ${b.platform != 'google_data_manager_for_conversions'}
+        +send_google_store_sales:
+          if>: ${b.platform == 'google_store_sales'}
+          _do:
+            +send_google_store_sales_exec:
+              td>: query/push_google_store_sales.sql
+              result_connection: ${b.connector}
+              result_settings:
+                customer_id: ${b.google_customer_id}
+                conversion_type: upload_store_sales
+                skip_invalid: true
+
+        +send_google_enhanced_web:
+          if>: ${b.platform == 'google_enhanced_web'}
+          _do:
+            +send_google_enhanced_web_exec:
+              td>: query/push_google_enhanced_web.sql
+              result_connection: ${b.connector}
+              result_settings:
+                customer_id: ${b.google_customer_id}
+                conversion_type: upload_enhanced_for_web
+                skip_invalid: true
+
+        +send_google_data_manager_for_conversions:
+          if>: ${b.platform == 'google_data_manager_for_conversions' && b.google_dm_conversion_type != 'STORE_SALES'}
+          _do:
+            +validate_google_dm_account:
+              if>: ${b.google_dm_operating_account_id == '' || b.google_dm_conversion_action_id == ''}
               _do:
-                +insert_other_push_log_exec:
-                  td>: query/insert_push_log.sql
-                  insert_into: capi_push_log
+                +invalid_google_dm_account:
+                  fail>: "Google Data Manager requires operating_account_id and conversion_action_id"
+
+            +validate_google_dm_conversion_type:
+              if>: ${b.google_dm_conversion_type != 'OFFLINE' && b.google_dm_conversion_type != 'ONLINE'}
+              _do:
+                +invalid_google_dm_conversion_type:
+                  fail>: "Hourly Google Data Manager conversion_type must be OFFLINE or ONLINE"
+
+            +validate_google_dm_event_source:
+              if>: ${b.google_dm_conversion_type == 'OFFLINE' && b.google_dm_event_source != 'WEB' && b.google_dm_event_source != 'APP' && b.google_dm_event_source != 'PHONE' && b.google_dm_event_source != 'MESSAGE' && b.google_dm_event_source != 'OTHER'}
+              _do:
+                +invalid_google_dm_event_source:
+                  fail>: "OFFLINE requires event_source: WEB, APP, PHONE, MESSAGE, or OTHER"
+
+            +send_google_data_manager_for_conversions_exec:
+              td>: query/push_google_data_manager_for_conversions.sql
+              result_connection: ${b.connector}
+              result_settings:
+                conversion_type: ${b.google_dm_conversion_type}
+                operating_account_id: ${b.google_dm_operating_account_id}
+                login_account_id: ${b.google_dm_login_account_id}
+                conversion_action_id: ${b.google_dm_conversion_action_id}
+                ad_user_data_consent: ${b.google_dm_ad_user_data_consent}
+                ad_personalization_consent: ${b.google_dm_ad_personalization_consent}
+                skip_invalid_records: ${b.google_dm_skip_invalid_records}
+                waiting_for_request_status: ${b.google_dm_waiting_for_request_status}
+
+        +send_pinterest:
+          if>: ${b.platform == 'pinterest'}
+          _do:
+            +send_pinterest_exec:
+              td>: query/push_pinterest.sql
+              result_connection: ${b.connector}
+              result_settings:
+                skip_invalid: true
+
+        +send_snapchat:
+          if>: ${b.platform == 'snapchat'}
+          _do:
+            +send_snapchat_exec:
+              td>: query/push_snapchat.sql
+              result_connection: ${b.connector}
+              result_settings:
+                skip_invalid: true
+
+        ## X (Twitter) はコネクタが存在しないため py> で直接 API 送信する
+        +send_x:
+          if>: ${b.platform == 'x'}
+          _do:
+            +send_x_exec:
+              py>: py_scripts.push_x.PushX.run
+              docker:
+                image: "treasuredata/customscript-python:3.12.11-td1"
+              brand_name: ${b.brand_name}
+              database: ${common.database}
+              x_pixel_id: ${b.x_pixel_id}
+              x_event_id: ${b.x_event_id}
+              x_consumer_key: ${b.x_consumer_key}
+              x_consumer_secret: ${b.x_consumer_secret}
+              x_access_token: ${b.x_access_token}
+              x_access_token_secret: ${b.x_access_token_secret}
+              email_hashed: ${common.email_hashed}
+              phone_hashed: ${common.phone_hashed}
+              _env:
+                TD_API_KEY: ${secret:td.apikey}
+
+        ## 送信成功後に、実際の送信対象のみログ記録
+        +insert_google_data_manager_push_log:
+          if>: ${b.platform == 'google_data_manager_for_conversions' && b.google_dm_conversion_type != 'STORE_SALES'}
+          _do:
+            +insert_google_data_manager_push_log_exec:
+              td>: query/insert_google_data_manager_push_log.sql
+              insert_into: capi_push_log
+
+        ## Yahoo / LINE / OpenAI は各ブロック内で、実際の送信対象のみ記録済み
+        +insert_other_push_log:
+          if>: ${b.platform != 'google_data_manager_for_conversions' && b.platform != 'yahoo' && b.platform != 'line' && b.platform != 'openai'}
+          _do:
+            +insert_other_push_log_exec:
+              td>: query/insert_push_log.sql
+              insert_into: capi_push_log
