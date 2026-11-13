@@ -19,7 +19,9 @@ CASE WHEN '' \!= '' THEN  ELSE NULL END
 ### 対策
 **空カラムは `CASE WHEN` による動的分岐をやめ、`CAST(NULL AS VARCHAR)` に固定する。**
 現在の実装では `common` にカラム設定を集約し、存在するカラムは直接参照、
-存在しないカラム（phone, country, fbc, fbp等）は `CAST(NULL AS VARCHAR)` で固定している。
+存在しないカラムは `CAST(NULL AS VARCHAR)` で固定している。
+空文字の任意カラム（phone, country, fbc, fbp, ly_*, line_uid, ifa, referrer 等）は、
+`NULL` として出力される。
 
 ---
 
@@ -37,6 +39,13 @@ Cannot cast '75900.00' to BIGINT
 **2段階キャスト: `CAST(CAST(raw_amount AS DOUBLE) AS BIGINT)`**
 
 VARCHAR → DOUBLE → BIGINT の順で変換し、小数を切り捨てて整数化する。
+
+ただし、この整数化は **小数を切り捨てる** ため、Yahoo / OpenAI では金額の精度が失われます。
+そのため、次のように分けています。
+
+- 従来媒体: 整数の `value`（BIGINT）をそのまま使う（変更なし）
+- Yahoo / LINE: `value_decimal` を `custom_value` として送る（小数を保持）
+- OpenAI: `value_decimal` × `openai_amount_multiplier` を minor unit の整数にして `data_amount` として送る
 
 ---
 
@@ -108,20 +117,28 @@ result_settings:
 
 ---
 
-## 6. LINE コネクタの認証設定
+## 6. LINE 広告は yahoo_conversion_v2 に統合
 
-### 問題
-LINE Conversion API コネクタはコネクタの認証情報だけでは動作せず、
-`result_settings` で `line_tag_id` と `access_token` を渡す必要がある。
+### 旧方式の問題
+以前は LINE Conversion API コネクタに対して `result_settings` で `line_tag_id` と `access_token` を
+渡していた。認証情報を `params.yml` に置く必要があり、Yahoo とは別の送信経路だった。
 
-### 対策
+### 現行の対策
+LINE 広告も **Yahoo Ads Conversion Export v2 コネクタ（`yahoo_conversion_v2`）** を使う。
+
+- `platform: line` のブランドは、Yahoo と同じコネクタ種別で、設定を別々に持つ
+- 認証情報（`tag_access_token`）はコネクタ側に保存し、`params.yml` には置かない
+- LINE の識別子 `line_uid` を送る場合は `channel_id` が必須。`channel_id` が空なら、`line_uid` は送信データから外れる
+- 旧キー `line_tag_id` / `line_access_token` は削除済み（README の移行表を参照）
+
 ```yaml
-result_settings:
-  line_tag_id: ${b.line_tag_id}
-  access_token: ${b.line_access_token}
-  ignore_invalid_records: true
+brand:
+  - brand_name: brand_line
+    platform: line
+    connector: brand_line_conv_v2
+    tag_id: "87654321"
+    channel_id: "1234567890"     # line_uid を送るため必須
 ```
-params.yml のブランド設定に `line_tag_id` と `line_access_token` を記載する。
 
 ---
 
@@ -160,21 +177,23 @@ Please specify one of column gbraid, wbraid or gclid
 
 ---
 
-## 9. リトライ時のPFスキップ設計
+## 9. 送信ログの記録タイミングと対象
 
 ### 問題
 あるPFの送信がエラーになった場合、既に成功した他のPFを再送信してしまう。
 
 ### 対策
-**送信ログ記録（`insert_push_log`）を送信の後に配置。**
+**送信ログ記録（`insert_*`）を送信の後に配置。**
 
 ```
-check_brand_sent → skip_or_send → [PF送信] → insert_push_log
+check_brand_sent → skip_or_send → [PF送信] → 送信ログ記録
 ```
 
 - 送信成功 → ログ記録 → 次回スキップ
 - 送信失敗 → ログ未記録 → 次回リトライ
-- Google Data Managerは送信SQLと同じ適格条件を専用ログSQLにも適用し、SQLで除外した行を記録しない
+- Yahoo / LINE / OpenAI は、**送信対象テーブルに格納された行だけ** を送信し、同じ行だけをログへ記録する。送信対象外の行をログに残さない
+- Google Data Manager は、送信SQLと同じ適格条件を専用ログSQLにも適用し、SQLで除外した行を記録しない
+- 従来媒体（`capi_send` を使う媒体）は、現行の `insert_push_log.sql` が `capi_send` の全行を記録する（既知の制約は 18 を参照）
 
 ---
 
@@ -185,20 +204,22 @@ check_brand_sent → skip_or_send → [PF送信] → insert_push_log
 - PF固有設定が全ブランドに冗長に含まれる
 - 空文字カラムが `CASE WHEN` で展開エラーを起こす
 
-### 新構造
+### 現行の構造
 ```yaml
 common:          # データソース・カラム設定（全PF共通）
   js_has_email:       # Webログのメアド有無
   purchase_has_email: # 購買ログのメアド有無
+  member_db / member_tbl / member_id_col / member_email_col   # 4つがすべて揃った場合のみ会員マスタを JOIN
 
 brand:           # PF別送信先設定（そのPFに必要な設定のみ）
   - brand_name: xxx
-    platform: facebook
+    platform: yahoo           # 許可リストの値のみ
     connector: xxx
-    fb_test_event_code: ""  # Facebook固有のみ
+    tag_id: "..."             # Yahoo / LINE 固有
 ```
 
 **ベースデータは1回だけ作成し、各PF送信時にSQLでリネーム・フィルタする。**
+Yahoo / LINE / OpenAI は、ベースから自分の送信対象テーブルへ行を抽出し、その行だけを送信する。
 
 ---
 
@@ -231,6 +252,10 @@ X APIの `event_id` は Events Manager で作成した**固定の**イベントI
 ### レート制限
 60,000イベント/アカウント/15分。大量データを一度に流す場合は
 1000件程度のバッチに分割してリクエストする。
+
+### 注意: X の OAuth 値の保管
+現行の設計では X の OAuth 値を `params.yml` に記載する。このファイルを Git で管理する場合は、
+リポジトリの公開範囲とアクセス権を確認すること（Yahoo / OpenAI の認証情報は `params.yml` に置かない）。
 
 ---
 
@@ -271,3 +296,110 @@ email必須・日次WFのみとする。phone / address / mobile device ID等を
 
 `.dig` 内の式ではなく `query/*.sql` に記述する不等号は、Trinoへそのまま送られる。
 `\!=` と書くとバックスラッシュもSQLに含まれて構文エラーになるため、必ず `!=` を使用する。
+
+---
+
+## 14. Yahoo / LINE（yahoo_conversion_v2）の仕様
+
+### 必須と制限
+- `event_type` と `event_time` は必須。`event_time` は Unix 秒の10桁（13桁のミリ秒は使わない。ベースは秒で持つ）。Yahoo 側は直近90日以内のイベントのみ受け付ける
+- 識別子は1つ以上必須（`ly_su` / `ly_c` / `ly_r` / `line_uid` / `hashed_email` / `hashed_phone_number` / `ifa`）
+- `transaction_id` は最大64文字。使用できる文字は英数字と `-_.!~*'();/?:@&=+$,%#`
+- `custom_currency` は JPY または USD のみ（大文字小文字は区別しない）
+- `line_uid` を送る行には `channel_id` が必要（`channel_id` がなければ、ワークフローは `line_uid` を外す）
+
+### event_type
+Yahoo の許容値に従う: `page_view` / `view_listing` / `view_product` / `view_cart` / `add_cart` / `search` / `check_out` / `purchase` / `generate_lead` / `login` / `reservation` / `sign_up` / `payment_info` / `add_wishlist`。
+購買データは `purchase` を使う。テンプレートや TD のサンプルの値（他の名前）をそのまま使わない。
+
+### 識別子の値
+- `ly_su`: `_ly_su` Cookie の値を、そのまま渡す（`タイムスタンプ.サイトユーザーID` 形式）
+- `ly_c`: `_ly_c` Cookie の値はそのまま。**URL パラメータ由来の値は、先頭にタイムスタンプと `.` を付けてから渡す**（Yahoo の仕様）。`<timestamp>.<id>` の形式に合わない値は `prepare_yahoo_v2.sql` で空欄にする（行は他の識別子で送れる場合のみ残す）
+- `ly_r`: `_ly_r` Cookie の値（`タイムスタンプ.乱数` 形式）
+- `ifa`: IDFA は大文字、AAID は小文字
+- `hashed_email` / `hashed_phone_number`: 生値でも SHA-256 のハッシュ値（64桁 hex）でも可。生値は連携側でハッシュ化される。電話番号は国際形式（`+81...`）で渡すことを推奨（TD 側の正規化仕様は未記載）。生値はハイフン・スペース等を除去し、数字と先頭の `+` のみ送る（`prepare_yahoo_v2.sql`）
+
+---
+
+## 15. OpenAI の仕様
+
+### 必須と制限
+- `event_id`: 注文IDなど、**安定した一意の値**。再送しても同じ値を使う（重複排除に使われる）
+- `event_timestamp`: **ミリ秒**（ベースは秒で持つので、送信時に1000倍する）。過去7日以内、未来は10分以内
+- `action_source = web` の行は `source_url` が必須で、http(s) の URL でなければならない
+- `data_amount`: minor unit の整数。`data_currency` は ISO 4217 の3文字コードが必要
+- `skip_invalid_records`: TD の既定は `true`。推奨は `false`（16 を参照）
+
+### 金額と倍率
+- `data_amount` = `value_decimal` × `openai_amount_multiplier`（minor unit に換算し、`ROUND` で四捨五入して整数化）
+- JPY は `1`、USD は `100`。**他通貨を `100` と推測しない**。通貨ごとに最小単位を確認し、倍率を明示的に設定する
+- 倍率と `common.currency` が一致していないと、金額が桁違いになる（ワークフローは倍率が正の値であることを検証する）
+- 端数（minor unit 未満）の丸め規則は SQL 側で固定し、ブランドごとに変えない
+
+### action_source
+- 毎時（JS-SDK）データ: `openai_action_source`（既定 `web`）。URL（`col_url`）が必要
+- 日次（購買）データ: `openai_daily_action_source`。実際の発生元に合わせて `offline` か `web` を選ぶ。`web` の場合は `pcol_url` が必要
+- 1つの OpenAI ブランドで毎時と日次の両方を送る。ブランドを分ける必要はない
+
+### 識別子と対象外
+- メアド・電話番号・会員ID（`external_id`）は生値でも 64 桁 hex でも可。コネクタが正規化してハッシュ化する
+- `obref`（`col_obref`）は、値があり、かつ測定の同意がある場合のみ送る。同意を推測して既定値にしない
+- `oppref`（`col_oppref`）は値をそのまま渡す
+- IDFA は送らない。GAID（Android の広告ID）はテンプレートでマッピングしていない。`ifa` は Yahoo 専用
+- テンプレートが対応する `event_type` は `order_created` のみ
+
+---
+
+## 16. skip_invalid_records と stop_on_batch_failure の推奨値
+
+### 問題
+送信後に `capi_push_log` へ記録する仕組みでは、コネクタが不正レコードを黙って読み飛ばすと、
+その行は「送信済み」として記録されてしまう。次回以降は再送されない。
+
+### 対策
+- `skip_invalid_records: false` を推奨する。不正行はエラーとして表に出し、ログとの整合を保つ
+- `stop_on_batch_failure: true` を推奨する。バッチが失敗したら後続バッチを止め、送られていない行を広げない
+
+ログは「実際に送信対象として格納された行」と同じ集合に対して記録する。ただし、コネクタが部分的に受け付けた場合の扱いは、
+コネクタの仕様に依存する。`skip_invalid_records` を `true` にする場合は、不正行が送信済み扱いになることを理解したうえで決める。
+
+---
+
+## 17. test_flag: true の扱い
+
+- `test_flag: true` の Yahoo / LINE ブランドのエクスポートは、**送信ログ（`capi_push_log`）に記録しない**
+- これは意図した動作。テスト送信を本番の送信済み判定に混ぜないため
+- 本番に切り替えたら `test_flag: false` に戻す。テスト中の行は本番送信の対象として残る
+
+---
+
+## 18. 送信済み判定はブランド単位で行う（既知の制約）
+
+### 問題
+同じ注文（`event_id`）を Yahoo と LINE の両方へ送る場合、送信済み判定が `event_id` だけで行われると、
+先に一方のブランドがログに記録した時点で、もう一方のブランドは同じ注文を送信対象として扱えなくなる。
+
+### 対策（Yahoo / LINE / OpenAI の新しい送信対象テーブル）
+- 送信対象の除外は `brand_name` + `event_id` で判定する
+- 1ブランドが失敗しても、他のブランドの送信済み判定に影響しないこと
+
+### 既知の制約（従来媒体）
+現行の `exclude_sent.sql` は `capi_push_log` を `event_id` だけで突合するため、**従来媒体ではブランドをまたいで除外される**。
+また、従来媒体の `insert_push_log.sql` は `capi_send` の全行を記録する（送信できなかった行も含む）。
+同じ注文を複数の従来媒体ブランドへ送る構成では、この挙動を前提に運用してください。
+
+---
+
+## 19. dig の三項演算子は引用符で囲む
+
+`${a ? b : c}` のように三項演算子を引用符なしで書くと、`tdx wf push` がサーバー側で失敗する。
+`--dry-run` ではこのエラーを検出できないことがある。三項演算子を含む式は引用符で囲んで書き、push 後に実行前の確認を行う。
+
+---
+
+## 20. 会員マスタ JOIN の条件
+
+会員マスタの JOIN は、`member_db` / `member_tbl` / `member_id_col` / `member_email_col` の4つがすべて設定されている場合のみ行う。
+1つでも空なら JOIN せず、メアドは `NULL` になる。メアドを使わずに識別子（`ly_*` / `line_uid`）で送る設計では、JOIN を設定しなくてもよい。
+
+

@@ -2,24 +2,28 @@
 
 購買コンバージョンデータを各種広告プラットフォームの Conversion API (CAPI) へ送信する、パラメータ駆動型の汎用ワークフローです。
 
+- ローカルのフォルダ名: `td_push_capi_univarsal`
+- TD 上のワークフロープロジェクト名: `tdx.json` の `workflow_project`（`common_push_capi`）。フォルダ名を変えても TD 上の名前は変わりません。
+
 ## 対応プラットフォーム
 
-| プラットフォーム | platform 値 | 主な用途 |
-|---|---|---|
-| Meta (Facebook) | `facebook` | Facebook / Instagram 広告 CAPI |
-| Yahoo 広告 | `yahoo` | Yahoo ディスプレイ広告 コンバージョン |
-| LINE | `line` | LINE 広告 コンバージョン |
-| TikTok | `tiktok` | TikTok Events API |
-| Google Store Sales | `google_store_sales` | Google Enhanced Conversions (店舗売上) |
-| Google Enhanced Web | `google_enhanced_web` | Google Enhanced Conversions (ウェブ) |
-| Google Data Manager for Conversions | `google_data_manager_for_conversions` | Google AdsへのOffline / Online / Store Salesコンバージョン送信 |
-| Pinterest | `pinterest` | Pinterest CAPI |
-| Snapchat | `snapchat` | Snapchat CAPI |
-| X (Twitter) | `x` | X Ads Conversion API（コネクタ非対応、`py>` で直接送信） |
+| プラットフォーム | platform 値 | コネクタ種別 | 主な用途 |
+|---|---|---|---|
+| Meta (Facebook) | `facebook` | Facebook CAPI | Facebook / Instagram 広告 CAPI |
+| Yahoo 広告 | `yahoo` | `yahoo_conversion_v2` | Yahoo 広告 Conversion Export v2 |
+| LINE 広告 | `line` | `yahoo_conversion_v2` | LINE 広告 コンバージョン。Yahoo と同じコネクタ種別を使い、設定はブランドごとに分ける |
+| TikTok | `tiktok` | TikTok Events API | TikTok Events API |
+| Google Store Sales | `google_store_sales` | Google Enhanced Conversions (店舗売上) | 店舗売上の送信 |
+| Google Enhanced Web | `google_enhanced_web` | Google Enhanced Conversions (ウェブ) | Web のコンバージョン送信 |
+| Google Data Manager for Conversions | `google_data_manager_for_conversions` | Google Data Manager for Conversions | Google Ads への Offline / Online / Store Sales コンバージョン送信 |
+| Pinterest | `pinterest` | Pinterest CAPI | Pinterest CAPI |
+| Snapchat | `snapchat` | Snapchat CAPI | Snapchat CAPI |
+| X (Twitter) | `x` | なし（`py>` で直接送信） | X Ads Conversion API（コネクタ非対応） |
+| OpenAI | `openai` | OpenAI Conversion API Export | OpenAI 広告 コンバージョン（テンプレートは `order_created` のみ対応） |
 
 ## Treasure Studio で対話的にセットアップ
 
-Treasure Studio (または Claude Code) でこのリポジトリの README.md を読み込むだけで、対話形式で `config/params.yml` を自動生成できます。
+Treasure Studio (または Claude Code) でこのリポジトリの README.md を読み込むと、対話形式で `config/params.yml` を生成できます。
 
 ### 使い方
 
@@ -29,15 +33,15 @@ Treasure Studio のチャットで以下のように伝えてください:
 
 README.md が読み込まれると、AI が対話形式でヒアリングを開始し、以下を順番に質問します:
 
-1. 送信先プラットフォーム (Facebook / Yahoo / LINE / TikTok / Google / Google Data Manager for Conversions / Pinterest / Snapchat / X)
+1. 送信先プラットフォーム (Facebook / Yahoo / LINE / TikTok / Google / Google Data Manager for Conversions / Pinterest / Snapchat / X / OpenAI)
 2. ブランド名・コネクタ名
-3. JS-SDK の有無・データソース
-4. メアドの取得方法
-5. カラム名マッピング
+3. JS-SDK の有無・データソース（共通設定）
+4. メアドの取得方法・会員マスタ
+5. カラム名マッピング（識別子を含む）
 6. フィルタ条件
-7. プラットフォーム固有設定
+7. プラットフォーム固有設定（Yahoo / LINE / OpenAI を含む）
 
-最終的に `config/params.yml` が自動生成され、`tdx wf push` でデプロイできます。
+生成された `config/params.yml` のデプロイは、下記「デプロイ手順」（dry-run 確認 → 承認 → 実行）に従ってください。
 
 ### スキルとしてインストール（オプション）
 
@@ -51,36 +55,45 @@ cp SKILL.md ~/.cache/tdx/.claude/skills/capi-config-setup/SKILL.md
 ## ファイル構成
 
 ```
-common_push_capi/
-├── README.md                              # 本ファイル
-├── SKILL.md                               # Treasure Studio 対話設定スキル
-├── hourly_push_capi.dig                   # 毎時送信 (JS-SDKデータ)
-├── daily_push_capi.dig                    # 日次補完送信 (購買データ)
-├── tdx.json                               # tdx CLI 設定
+td_push_capi_univarsal/
+├── README.md                                  # 本ファイル
+├── SKILL.md                                   # Treasure Studio 対話設定スキル
+├── TIPS.md                                    # 実装上の注意点
+├── hourly_push_capi.dig                       # 毎時送信 (JS-SDKデータ)
+├── daily_push_capi.dig                        # 日次補完送信 (購買データ)
+├── tdx.json                                   # tdx CLI 設定 (workflow_project: common_push_capi)
 ├── config/
-│   └── params.yml                         # 全パラメータ設定 (★ 編集対象)
-└── query/
-    ├── create_hourly_base.sql             # 毎時: ベースデータ作成 (メアドあり)
-    ├── create_hourly_base_join_email.sql  # 毎時: ベースデータ作成 (メアドなし→JOIN)
-    ├── create_empty_hourly_base.sql       # js_enabled=false時の空ベース
-    ├── create_daily_base.sql              # 日次: ベースデータ作成 (メアドあり)
-    ├── create_daily_base_join_email.sql   # 日次: ベースデータ作成 (メアドなし→JOIN)
-    ├── exclude_sent.sql                   # 送信済みデータ除外
-    ├── insert_push_log.sql                # 共通送信ログ記録
-    ├── insert_google_data_manager_push_log.sql # Google Data Manager送信対象ログ記録
-    ├── push_facebook.sql                  # Facebook CAPI フォーマット
-    ├── push_yahoo.sql                     # Yahoo Ads フォーマット
-    ├── push_line.sql                      # LINE フォーマット
-    ├── push_tiktok.sql                    # TikTok フォーマット
-    ├── push_google_store_sales.sql        # Google Store Sales フォーマット
-    ├── push_google_enhanced_web.sql       # Google Enhanced Web フォーマット
-    ├── push_google_data_manager_for_conversions.sql # Google Data Manager for Conversions フォーマット
-    ├── push_pinterest.sql                 # Pinterest フォーマット
-    ├── push_snapchat.sql                  # Snapchat フォーマット
-    └── push_x.sql                         # X (Twitter) 送信対象抽出
+│   └── params.yml                             # 全パラメータ設定 (★ 編集対象)
+├── query/
+│   ├── create_hourly_base.sql                 # 毎時: ベースデータ作成 (メアドあり)
+│   ├── create_hourly_base_join_email.sql      # 毎時: ベースデータ作成 (メアドなし→会員マスタJOIN)
+│   ├── create_empty_hourly_base.sql           # js_enabled=false時の空ベース
+│   ├── create_daily_base.sql                  # 日次: ベースデータ作成 (メアドあり)
+│   ├── create_daily_base_join_email.sql       # 日次: ベースデータ作成 (メアドなし→会員マスタJOIN)
+│   ├── check_push_log_exists.sql              # 送信ログテーブルの存在確認
+│   ├── check_brand_sent.sql                   # ブランド別の送信済みチェック
+│   ├── exclude_sent.sql                       # 送信済みデータ除外
+│   ├── exclude_sent_initial.sql               # 初回用（送信ログなし）
+│   ├── insert_push_log.sql                    # 従来媒体の送信ログ記録
+│   ├── insert_google_data_manager_push_log.sql # Google Data Manager送信対象ログ記録
+│   ├── prepare_yahoo_v2.sql                   # Yahoo / LINE: 送信対象行の抽出・ly_*/電話番号の整形 (capi_yahoo_v2_send)
+│   ├── prepare_openai.sql                     # OpenAI: 送信対象行の抽出 (capi_openai_send)
+│   ├── insert_yahoo_v2_push_log.sql           # Yahoo / LINE: 実際の送信対象のみ送信ログ記録（test_flag=true は記録しない）
+│   ├── insert_openai_push_log.sql             # OpenAI: 実際の送信対象のみ送信ログ記録
+│   ├── push_facebook.sql                      # Facebook CAPI フォーマット
+│   ├── push_yahoo.sql                         # Yahoo / LINE 共通: yahoo_conversion_v2 フォーマット
+│   ├── push_openai.sql                        # OpenAI: Conversion API フォーマット
+│   ├── push_tiktok.sql                        # TikTok フォーマット
+│   ├── push_google_store_sales.sql            # Google Store Sales フォーマット
+│   ├── push_google_enhanced_web.sql           # Google Enhanced Web フォーマット
+│   ├── push_google_data_manager_for_conversions.sql # Google Data Manager for Conversions フォーマット
+│   ├── push_pinterest.sql                     # Pinterest フォーマット
+│   ├── push_snapchat.sql                      # Snapchat フォーマット
+│   └── push_x.sql                             # X (Twitter) 送信対象抽出
 ├── py_scripts/
-│   └── push_x.py                          # X Conversion API 送信（py> で直接API送信）
-└── requirements.txt                       # py> タスク用の依存パッケージ
+│   ├── __init__.py
+│   └── push_x.py                              # X Conversion API 送信（py> で直接API送信）
+└── requirements.txt                           # py> タスク用の依存パッケージ
 ```
 
 ## 動作概要
@@ -90,10 +103,10 @@ common_push_capi/
 JS-SDK で取得したページビュー/購買データを **1時間ごと** に送信します。
 
 ```
-毎時実行 → JS-SDKデータ抽出 → 重複排除 → 送信済み除外 → ログ記録 → CAPI送信
+毎時実行 → JS-SDKデータ抽出 → 共通ベース作成 → 送信対象の抽出 → 送信 → 送信ログ記録
 ```
 
-- 対象: `js_enabled: true` のブランドのみ
+- 対象: `common.js_enabled: true` の場合のみ。`false` の場合は空のベースになり、送信は行われません
 - 時間窓: スケジュール時刻の **2時間前〜1時間前** (データ遅延を考慮)
 - オーダーID をキーに重複排除・送信済み判定
 
@@ -102,115 +115,136 @@ JS-SDK で取得したページビュー/購買データを **1時間ごと** �
 購買テーブルから **毎日10:00 JST** に未送信分を補完送信します。
 
 ```
-毎日10:00 → 購買データ抽出 → 重複排除 → 送信済み除外 → ログ記録 → CAPI送信
+毎日10:00 → 購買データ抽出 → 共通ベース作成 → 送信対象の抽出 → 送信 → 送信ログ記録
 ```
 
-- 対象: **全ブランド** (js_enabled の値に関係なく)
-- `js_enabled: true` のブランド → 毎時で送れなかった分の補完
-- `js_enabled: false` のブランド → このWFが唯一の送信手段
+- 対象: **全ブランド** (`js_enabled` の値に関係なく)
+- `js_enabled: true` → 毎時で送れなかった分の補完
+- `js_enabled: false` → このWFが唯一の送信手段
 - 時間窓: 前日1日分 (`TD_INTERVAL -1d`)
 
-### 送信済み管理
+### 送信対象の抽出と送信済み管理
 
-- 送信したデータは `capi_push_log` テーブルにオーダーID付きで記録
-- 次回送信時に `LEFT JOIN` で突合し、未送信分のみ送信
-- hourly / daily 間での二重送信も防止
+- 従来媒体（facebook / tiktok / google_* / pinterest / snapchat / x）は `capi_send` を経由して送信し、送信後に `capi_push_log` へ記録します
+- Yahoo / LINE (`yahoo_conversion_v2`) と OpenAI は、それぞれ専用の送信対象テーブル `capi_yahoo_v2_send` / `capi_openai_send` に **送信対象として抽出された行だけ** を格納し、送信とログ記録はこのテーブルの行だけを対象にします
+- `test_flag: true` の Yahoo / LINE ブランドは、テスト送信として `capi_push_log` に記録しません（テスト送信を本番の送信済み判定に混ぜないため）
+- 送信済み判定は `capi_push_log` の event_id で行い、hourly / daily 間の二重送信を防ぎます。Yahoo と LINE を同じ注文に送る場合も、送信済み判定はブランド単位（`brand_name` + event_id）で行う必要があります（TIPS 参照）
 
 ## 設定方法
 
 ### 事前準備
 
-1. **Treasure Data コネクタの作成**: 各プラットフォームの Result Export コネクタを作成（X は不要、下記参照）
+1. **Treasure Data コネクタの作成** (Integration Hub):
+   - Yahoo 広告 / LINE 広告: **Yahoo Ads Conversion Export v2** コネクタ（コネクタ種別 `yahoo_conversion_v2`）。Yahoo と LINE で同じ種別を使います
+   - OpenAI 広告: **OpenAI Conversion API Export** コネクタ
+   - その他の媒体: 各プラットフォームの Result Export コネクタ（X は不要、下記参照）
+   - 認証情報（Yahoo の `tag_access_token`、OpenAI の Conversions API Key など）は **コネクタにのみ保存** し、`config/params.yml` には書きません
 2. **出力先データベースの作成**: `config/params.yml` の `common.database` で指定するDB
-3. **送信ログテーブルの作成**: `capi_push_log` テーブルを出力先DBに作成
+3. **送信ログテーブルの作成**: `capi_push_log` テーブルを出力先DBに作成（空テーブルでよい）
 4. **X (Twitter) を使う場合のみ**: `requirements.txt` がプロジェクトルートに配置されていることを確認（`py>` タスクが実行時に自動インストールする）
 
 ### config/params.yml の編集
 
 `config/params.yml` がこのワークフローの **唯一の編集対象** です。
 
-#### 共通設定
+#### 構造
 
 ```yaml
-common:
-  database: capi_database    # 中間テーブル・ログの出力先DB
-  currency: JPY              # 通貨コード (JPY / USD 等)
-  timezone: Asia/Tokyo
-```
+common:            # 全ブランド共通: データソース・カラム・フィルタ
+  database: td_capi_universal
+  currency: JPY
+  ...
 
-#### ブランド設定
-
-`brand` 配列にブランドを追加します。1つのブランド = 1つの送信先プラットフォームです。
-同じブランドを複数プラットフォームに送信する場合は、ブランド名を変えて複数エントリを作成してください。
-
-```yaml
-brand:
-  - brand_name: my_brand_fb        # テーブル名に使用される識別子
-    platform: facebook             # 送信先プラットフォーム
-    connector: my_brand_fb_capi    # TDコネクタ名
+brand:             # 送信先ごとの設定（1 ブランド = 1 送信先）
+  - brand_name: brand_yahoo
+    platform: yahoo
+    connector: brand_yahoo_conv_v2
     ...
 ```
 
-### パラメータ一覧
+- `common` の項目は全ブランドで共通です。ブランドごとの差は `brand` の項目だけで表現します
+- 存在しないカラムは `""`（空文字）にします。空文字のカラムは SQL 側で `NULL` として扱われます
+- 同じブランドを複数プラットフォームに送る場合は、ブランド名を変えて別エントリにします（例: `brand_yahoo` と `brand_line`）
 
-#### 基本設定
+#### 共通設定 (`common`)
 
 | パラメータ | 必須 | 説明 | 例 |
 |---|---|---|---|
-| `brand_name` | Yes | ブランド識別子 (テーブル名に使用、英数字とアンダースコアのみ) | `brand_a` |
-| `platform` | Yes | 送信先 (`facebook` / `yahoo` / `line` / `tiktok` / `google_store_sales` / `google_enhanced_web` / `google_data_manager_for_conversions` / `pinterest` / `snapchat` / `x`) | `facebook` |
-| `connector` | Yes | TDのResult Exportコネクタ名 | `brand_a_fb_capi` |
+| `database` | Yes | 中間テーブル・ログの出力先DB | `td_capi_universal` |
+| `currency` | Yes | 通貨コード (JPY / USD 等) | `JPY` |
+| `timezone` | Yes | タイムゾーン | `Asia/Tokyo` |
 
 #### データソース設定
 
 | パラメータ | 必須 | 説明 | 例 |
 |---|---|---|---|
 | `js_enabled` | Yes | JS-SDK のデータがあるか (`true` / `false`) | `true` |
-| `log_db` | js_enabled=true | JS-SDKログのDB名 | `brand_a_db` |
-| `log_tbl` | js_enabled=true | JS-SDKログのテーブル名 | `pageviews` |
-| `purchase_db` | Yes | 購買データのDB名 | `brand_a_db` |
-| `purchase_tbl` | Yes | 購買データのテーブル名 | `purchases` |
+| `log_db` | js_enabled=true | JS-SDKログのDB名 | `accesslogs` |
+| `log_tbl` | js_enabled=true | JS-SDKログのテーブル名 | `td_pageviews` |
+| `purchase_db` | 日次送信を使う場合 | 購買データのDB名 | `brand_a_db` |
+| `purchase_tbl` | 日次送信を使う場合 | 購買データのテーブル名 | `purchases` |
 
-#### メアド設定
+#### メアド・会員マスタ設定
 
 | パラメータ | 必須 | 説明 | 例 |
 |---|---|---|---|
-| `has_email` | Yes | データソースにメアドがあるか (`true` / `false`) | `true` |
-| `member_db` | has_email=false | 会員マスタDB | `master_db` |
-| `member_tbl` | has_email=false | 会員マスタテーブル | `members` |
-| `member_id_col` | has_email=false | 会員マスタの会員IDカラム | `member_id` |
-| `member_email_col` | has_email=false | 会員マスタのメアドカラム | `email` |
+| `js_has_email` | Yes | JS-SDKのデータにメアドがあるか (`true` / `false`) | `true` |
+| `purchase_has_email` | Yes | 購買データにメアドがあるか (`true` / `false`) | `false` |
+| `email_hashed` | Yes | メアドが事前ハッシュ済みか（X 用） | `false` |
+| `phone_hashed` | Yes | 電話番号が事前ハッシュ済みか（X 用） | `false` |
+| `member_db` | 会員マスタを使う場合 | 会員マスタDB | `brand_b_master` |
+| `member_tbl` | 会員マスタを使う場合 | 会員マスタテーブル | `members` |
+| `member_id_col` | 会員マスタを使う場合 | 会員マスタの会員IDカラム | `member_id` |
+| `member_email_col` | 会員マスタを使う場合 | 会員マスタのメアドカラム | `email` |
+| `member_phone_col` | 任意 | 会員マスタの電話番号カラム | `phone` |
 
-> **メアドなし (`has_email: false`) の場合**: 会員IDをキーに会員マスタテーブルを LEFT JOIN してメアドを取得します。新規登録直後で会員マスタにメアドが未登録の場合も、レコードは保持されます。
+> **会員マスタ JOIN の条件**: `member_db` / `member_tbl` / `member_id_col` / `member_email_col` の4つがすべて設定されている場合のみ、会員IDで会員マスタを LEFT JOIN してメアドを補完します。1つでも空の場合は JOIN せず、メアドは `NULL` になります。JOIN しない場合でも、レコードは保持されます（送信できるかは識別子の有無で決まります）。
 
-#### JS-SDK カラム名 (毎時送信用)
+#### JS-SDK カラム名 (毎時送信用 `common`)
 
-JS-SDKのカラム名はサイトごとに異なるため、設定で指定します。
-**カラムが存在しない場合は `""` (空文字) を設定** → SQL側で `NULL` として出力されます。
+カラムが存在しない場合は `""`（空文字）を設定します。
 
 | パラメータ | 説明 | 例 | 必須 |
 |---|---|---|---|
 | `col_order_id` | オーダーID | `transactionid` | Yes |
-| `col_email` | メアド (has_email=true時) | `hashedmailaddress` | has_email=true |
+| `col_email` | メアド | `hashedmailaddress` | js_has_email=true の場合 |
 | `col_amount` | 売上金額 | `amount` | Yes |
-| `col_member_id` | 会員ID | `userid` | Yes |
-| `col_phone` | 電話番号 | `hashed_user_global_phone_number` | `""` で省略可 |
-| `col_country` | 国コード | `hashed_user_country` | `""` で省略可 |
-| `col_user_agent` | ユーザーエージェント | `td_user_agent` | `""` で省略可 |
-| `col_ip` | IPアドレス | `td_ip` | `""` で省略可 |
-| `col_url` | ページURL | `td_path` | `""` で省略可 |
-| `col_fbc` | Facebook Click ID | `fbc` | Facebook以外は `""` |
-| `col_fbp` | Facebook Pixel ID | `fbp` | Facebook以外は `""` |
+| `col_member_id` | 会員ID | `userid` | 任意 |
+| `col_phone` | 電話番号 | `hashed_user_global_phone_number` | 任意 |
+| `col_country` | 国コード | `hashed_user_country` | 任意 |
+| `col_user_agent` | ユーザーエージェント | `td_user_agent` | 任意 |
+| `col_ip` | IPアドレス | `td_ip` | 任意 |
+| `col_url` | ページURL | `td_url` | 任意（OpenAI の web では必須） |
+| `col_referrer_url` | リファラURL | `td_referrer` | 任意 |
+| `col_fbc` | Facebook Click ID | `fbc` | Facebook 以外は `""` |
+| `col_fbp` | Facebook Pixel ID | `fbp` | Facebook 以外は `""` |
+| `col_ly_su` | Yahoo ユーザー識別子（`_ly_su` Cookie） | `ly_su` | 任意（Yahoo / LINE の識別子） |
+| `col_ly_c` | Yahoo クリック識別子（`_ly_c`） | `ly_c` | 任意（Yahoo / LINE の識別子） |
+| `col_ly_r` | Yahoo 追跡識別子（`_ly_r` Cookie） | `ly_r` | 任意（Yahoo / LINE の識別子） |
+| `col_line_uid` | LINE ユーザーID | `line_uid` | 任意（LINE の識別子。送る場合は `channel_id` が必要） |
+| `col_ifa` | 広告ID（IDFA / AAID） | `ifa` | 任意（Yahoo のみ。OpenAI へは送らない） |
+| `col_obref` | OpenAI の obref 値 | `obref` | 任意（OpenAI・毎時のみ。測定同意がある場合のみ送信） |
+| `col_oppref` | OpenAI の oppref 値 | `oppref` | 任意（OpenAI・毎時のみ） |
 
-#### 購買データ カラム名 (日次送信用)
+#### 購買データ カラム名 (日次送信用 `common`)
 
 | パラメータ | 説明 | 例 | 必須 |
 |---|---|---|---|
 | `pcol_order_id` | オーダーID | `order_id` | Yes |
-| `pcol_email` | メアド (has_email=true時) | `email` | has_email=true |
+| `pcol_email` | メアド | `email` | 任意（識別子がない日次データを送るなら設定） |
 | `pcol_amount` | 売上金額 | `amount` | Yes |
-| `pcol_member_id` | 会員ID | `member_id` | Yes |
-| `pcol_time` | TDのUnix秒タイムスタンプカラム（Google送信時にepoch msへ変換） | `time` | Yes |
+| `pcol_member_id` | 会員ID | `member_id` | 任意 |
+| `pcol_time` | TDのUnix秒タイムスタンプカラム | `time` | Yes |
+| `pcol_phone` | 電話番号 | `phone` | 任意 |
+| `pcol_url` | 購入ページURL（OpenAI の web では必須） | `page_url` | 任意 |
+| `pcol_referrer_url` | リファラURL | `referrer` | 任意 |
+| `pcol_ifa` | 広告ID（Yahoo のみ） | `ifa` | 任意 |
+| `pcol_ly_su` | Yahoo ユーザー識別子 | `ly_su` | 任意（メアドなしの日次送信用） |
+| `pcol_ly_c` | Yahoo クリック識別子 | `ly_c` | 任意（メアドなしの日次送信用） |
+| `pcol_ly_r` | Yahoo 追跡識別子 | `ly_r` | 任意（メアドなしの日次送信用） |
+| `pcol_line_uid` | LINE ユーザーID | `line_uid` | 任意（送る場合は `channel_id` が必要） |
+
+> 日次送信で `pcol_ly_*` または `pcol_line_uid` を設定すると、メアドがなくても識別子だけで Yahoo / LINE へ送信できます。Yahoo / LINE は、少なくとも1つの識別子が入っている行だけを送信します。
 
 #### フィルタ条件
 
@@ -219,15 +253,58 @@ JS-SDKのカラム名はサイトごとに異なるため、設定で指定し�
 | `cnv_conditions` | JS-SDKデータの抽出条件 (WHERE句に追加) | `"transactionid != '' AND transactionid NOT IN ('undefined')"` |
 | `purchase_conditions` | 購買データの抽出条件 (WHERE句に追加) | `"1=1"` (条件なし) |
 
-#### プラットフォーム固有設定
+#### ブランド設定 (`brand`) — 共通項目
+
+| パラメータ | 必須 | 説明 | 例 |
+|---|---|---|---|
+| `brand_name` | Yes | ブランド識別子（英数字とアンダースコアのみ） | `brand_yahoo` |
+| `platform` | Yes | 送信先（下記の許可リストの値のみ。それ以外はワークフローが停止します） | `yahoo` |
+| `connector` | Yes | TDのコネクタ名（X は `""`） | `brand_yahoo_conv_v2` |
+
+許可される `platform` 値: `facebook` / `yahoo` / `line` / `tiktok` / `google_store_sales` / `google_enhanced_web` / `google_data_manager_for_conversions` / `pinterest` / `snapchat` / `x` / `openai`
+
+#### Yahoo / LINE 固有設定 (`platform: yahoo` または `line`)
+
+Yahoo と LINE は **同じコネクタ種別 `yahoo_conversion_v2`** を使い、設定はブランドごとに別々に持ちます。
+
+| パラメータ | 必須 | 説明 | 例 |
+|---|---|---|---|
+| `tag_id` | Yes | 広告タグID（Yahoo 広告 / LINE 広告の各タグID） | `"12345678"` |
+| `channel_id` | line_uid を送る場合 Yes | LINE のチャネルID。`line_uid` を送らない場合は `""` | `"1234567890"` |
+| `event_type` | Yes | イベント種別。既定は `purchase`。下記の許容値のみ | `purchase` |
+| `event_snippet_id` | 任意 | イベントスニペットID（Yahoo 側の設定。不要なら `""`） | `""` |
+| `test_flag` | Yes | テスト送信フラグ。本番は `false`。`true` の送信は `capi_push_log` に記録されない | `false` |
+| `custom_label` | 任意 | カスタムラベル（不要なら `""`） | `""` |
+| `skip_invalid_records` | Yes | 不正レコードを読み飛ばすか。`false` 推奨（理由は TIPS 参照） | `false` |
+| `stop_on_batch_failure` | Yes | バッチ失敗時に後続バッチを止めるか。`true` 推奨 | `true` |
+
+Yahoo が受け付ける `event_type`: `page_view` / `view_listing` / `view_product` / `view_cart` / `add_cart` / `search` / `check_out` / `purchase` / `generate_lead` / `login` / `reservation` / `sign_up` / `payment_info` / `add_wishlist`。購買データは `purchase` を使います。
+
+ワークフローは `tag_id` が空でないこと、`event_type` が上記の値であることを検証し、違反する場合は送信前に停止します。
+
+#### OpenAI 固有設定 (`platform: openai`)
+
+| パラメータ | 必須 | 説明 | 例 |
+|---|---|---|---|
+| `openai_pixel_id` | Yes | OpenAI Ads Pixel ID | `"your_pixel_id"` |
+| `openai_action_source` | Yes | 毎時（JS-SDK）データの action_source。既定 `web` | `web` |
+| `openai_daily_action_source` | Yes | 日次（購買）データの action_source。実際の発生元に合わせて `offline`（例）または `web` | `offline` |
+| `openai_event_type` | Yes | イベント種別。テンプレートが対応するのは `order_created` のみ | `order_created` |
+| `openai_amount_multiplier` | Yes | 金額を minor unit（最小通貨単位）に換算する倍率。JPY は `1`、USD は `100`。他通貨は通貨ごとに確認して明示的に設定する（推測で `100` にしない）。0 以下は不可 | `1` |
+| `openai_skip_invalid_records` | Yes | 不正レコードを読み飛ばすか。`false` 推奨 | `false` |
+
+- `openai_daily_action_source` が `web` の場合、日次データに `pcol_url`（購入ページURL）の設定が必須です
+- `action_source` が `web` の行には、http(s) の URL が必要です（毎時は `col_url`、日次は `pcol_url`）
+- 1つの OpenAI ブランドで毎時と日次の両方を送信します。毎時と日次で別ブランドを作る必要はありません
+
+#### 既存媒体の固有設定
 
 該当しないプラットフォームのパラメータは `""` を設定してください。
 
 | パラメータ | 対象 | 説明 | 例 |
 |---|---|---|---|
-| `yahoo_ydn_conv_io` | Yahoo | コンバージョンIO | `"12345678"` |
-| `yahoo_ydn_conv_label` | Yahoo | コンバージョンラベル | `"abcdef"` |
-| `google_conversion_action_id` | Google (既存Store Sales / Enhanced Web) | コンバージョンアクションID | `"123456789"` |
+| `google_customer_id` | Google (Store Sales / Enhanced Web) | Google Ads の Customer ID（ハイフンなしの数値文字列） | `"1234567890"` |
+| `google_conversion_action_id` | Google (Store Sales / Enhanced Web) | コンバージョンアクションID | `"123456789"` |
 | `google_dm_conversion_type` | Google Data Manager | 送信種別 (`OFFLINE` / `ONLINE` / `STORE_SALES`) | `ONLINE` |
 | `google_dm_operating_account_id` | Google Data Manager | 送信先Google Ads Customer ID（ハイフン可） | `"123456789"` |
 | `google_dm_login_account_id` | Google Data Manager | MCC経由時のManager Account ID。直接アクセス時は `""` | `""` |
@@ -242,6 +319,82 @@ JS-SDKのカラム名はサイトごとに異なるため、設定で指定し�
 | `x_event_id` | X | Events Manager で作成した**固定**のイベントID（注文IDではない） | `"ol288"` |
 | `x_consumer_key` / `x_consumer_secret` | X | Developer Portal で発行するOAuth1.0a Consumer Key/Secret | - |
 | `x_access_token` / `x_access_token_secret` | X | Developer Portal で発行するOAuth1.0a Access Token/Secret | - |
+
+> X の OAuth 値は現行の設計どおり `params.yml` に記載します。このファイルを Git で管理する場合は、公開範囲に注意してください。
+
+#### 旧設定からの移行
+
+以下の旧キーは削除済みです。既存の `params.yml` に残っている場合は、移行先に置き換えてください。
+
+| 旧キー | 移行先 | 備考 |
+|---|---|---|
+| `yahoo_ydn_conv_io` | `tag_id` | 同じ値とは限りません。Yahoo 広告の管理画面で新しいタグIDを確認してください |
+| `yahoo_ydn_conv_label` | 対応する設定なし | `event_snippet_id` と同じ値とは限らないため、移行時に値を確認してください |
+| `yahoo_app_id` | 対応なし（削除） | Yahoo / LINE の v2 設定では使いません |
+| `line_tag_id` | `tag_id` | LINE のタグIDを移行 |
+| `line_access_token` | コネクタの認証情報 | `params.yml` には置きません。Integration Hub のコネクタに設定します。既に Git に記録された値は再発行を検討してください |
+
+### 送信データの仕様
+
+#### 金額 (`value` と `value_decimal`)
+
+- 従来媒体の `value` は整数（BIGINT）のまま変更しません
+- Yahoo / LINE と OpenAI 用に、小数を保持する `value_decimal` を別に作ります。Yahoo は `custom_value`、OpenAI は `data_amount`（minor unit）の元になります
+
+#### Yahoo / LINE（`yahoo_conversion_v2`）
+
+- **必須**: `event_type`、`event_time`（Unix 秒・10桁。Yahoo 側の制限により直近 90 日以内）、識別子 1 つ以上（`ly_su` / `ly_c` / `ly_r` / `line_uid` / `hashed_email` / `hashed_phone_number` / `ifa` のいずれか）
+- **識別子の扱い**: `line_uid` は `channel_id` が設定されている場合のみ有効です。`channel_id` が空の場合、ワークフローは `line_uid` を送信データから外します
+- **`transaction_id`**: 注文IDを使用。最大 64 文字、使用できる文字は英数字と `-_.!~*'();/?:@&=+$,%#` のみ
+- **金額**: `custom_value`（`value_decimal` 由来）と `custom_currency`。通貨は JPY または USD のみ
+- **メアド・電話番号**: 生値でも SHA-256 のハッシュ値（64桁 hex）でも可。生値はコネクタがハッシュ化します。電話番号は国際形式（例: `+819012345678`）で渡すことを推奨します（TD 側の正規化仕様は未記載のため）。生値はハイフン・スペース等を除去し、数字と先頭の `+` だけを送ります（ハッシュ値はそのまま）
+- **`ly_su` / `ly_c` / `ly_r`**: Cookie の値（`_ly_su` / `_ly_c` / `_ly_r`）をそのまま設定します。URL パラメータ由来の `_ly_c` は、Yahoo の仕様どおり先頭にタイムスタンプと `.` が必要です。`<timestamp>.<id>` の形式に合わない値は送信時に空欄扱いになります（その行は他の識別子があれば送信）
+- **`ifa`**: IDFA は大文字、AAID は小文字で渡します（Yahoo の仕様）
+- ワークフローは、以下に該当する行を送信前に除外します（集計・ログの対象からも外れます）: 識別子がない行、`transaction_id` が 64 文字を超える行、`event_time` が範囲外の行、通貨が JPY / USD 以外の行
+
+#### OpenAI（`openai`）
+
+- **必須**: `event_id`（注文IDなど安定した一意の値。再送時も同じ値を使う）、`event_type`（`order_created`）、`event_timestamp`（ミリ秒。過去 7 日以内・未来は 10 分以内）、`action_source`
+- **`action_source = web`**: `source_url` が必須（毎時は `col_url`、日次は `pcol_url`）。http(s) の URL を渡します
+- **金額**: `data_amount` は minor unit の整数です（`value_decimal` × `openai_amount_multiplier` を四捨五入（`ROUND`））。`data_currency` は ISO 4217 の 3 文字コード（`common.currency`）
+- **識別子**: メアド・電話番号・会員ID（`external_id`）。生値でも 64 桁 hex でも可（コネクタが正規化してハッシュ化）
+- **`obref`（`col_obref`）**: 値が空でなく、かつ測定の同意がある場合のみ送信します。同意状況をワークフロー側で推測して既定値にしないでください
+- **`oppref`（`col_oppref`）**: 値をそのまま渡します
+- IDFA は送りません。GAID（Android の広告ID）はテンプレートでマッピングしていません
+- テンプレートが対応するイベント種別は `order_created` のみです（OpenAI が受け付ける他のイベント種別は未対応）
+
+### 検証とデプロイ手順
+
+**原則**: 実際の `tdx wf run` の前に必ず dry-run を行い、送信範囲（対象ブランド・想定件数）を説明して、明示的な承認を得てから実行します。承認なしにスケジュールを有効化しないでください。
+
+#### デプロイと dry-run
+
+```bash
+# 1. プロジェクトフォルダへ移動（フォルダ名: td_push_capi_univarsal）
+cd td_push_capi_univarsal
+
+# 2. 変更内容の確認のみ（アップロードしない）
+tdx wf push --dry-run
+
+# 3. 承認後にアップロード（--skip-validation は使わない）
+tdx wf push
+
+# 4. スケジュールの状態を確認。push 後も無効のままであることを確認する
+tdx wf schedule list common_push_capi.hourly_push_capi
+tdx wf schedule list common_push_capi.daily_push_capi
+
+# 5. 実行の dry-run（タスクグラフと副作用の警告を表示。送信はしない）
+tdx wf run common_push_capi.daily_push_capi --dry-run
+tdx wf run common_push_capi.hourly_push_capi --dry-run
+
+# 6. 承認を得た後に実行（--param で動作を切り替えない。切り替えは params.yml で行う）
+tdx wf run common_push_capi.daily_push_capi
+```
+
+- 送信件数は dry-run では取得できない場合があります。取得できない場合は「件数不明」と明記してから承認を得てください
+- `tdx wf push --backfill` は、スケジュール停止中の期間を遡って送信するため、承認なしには使わないでください
+- スケジュールを有効化する場合は、`tdx wf schedule list` で確認した ID を指定して `tdx wf schedule enable <id>` を実行します（承認後のみ）
+- 既定のプロファイル（`tdx use profile` など）は切り替えず、必要な場合は `tdx -p <profile>` を各コマンドに付けてください
 
 ### Google Data Manager for Conversions 固有の注意事項
 
@@ -306,86 +459,112 @@ X にはTDのResult Exportコネクタが存在しないため、`py>` オペレ
 
 ## 設定例
 
+`common` の内容はブランドに共通です。以下の例では、各パターンで変わる項目だけを示します。
+
 ### パターン1: JS-SDK + メアドあり (Facebook)
 
 最も一般的なケース。JS-SDKでメアドも取得できる。
 
 ```yaml
-  - brand_name: brand_a
+common:
+  js_enabled: true
+  log_db: brand_a_db
+  log_tbl: pageviews
+  purchase_db: brand_a_db
+  purchase_tbl: purchases
+  js_has_email: true
+  purchase_has_email: true
+  member_db: ""
+  member_tbl: ""
+  member_id_col: ""
+  member_email_col: ""
+  col_order_id: transactionid
+  col_email: hashedmailaddress
+  col_amount: amount
+  col_member_id: userid
+  col_phone: hashed_user_global_phone_number
+  col_country: hashed_user_country
+  col_user_agent: td_user_agent
+  col_ip: td_ip
+  col_url: td_path
+  col_fbc: fbc
+  col_fbp: fbp
+  pcol_order_id: order_id
+  pcol_email: email
+  pcol_amount: amount
+  pcol_member_id: member_id
+  pcol_time: time
+  cnv_conditions: "transactionid != '' AND transactionid NOT IN ('undefined')"
+  purchase_conditions: "1=1"
+
+brand:
+  - brand_name: brand_fb
     platform: facebook
     connector: brand_a_fb_capi
-    js_enabled: true
-    log_db: brand_a_db
-    log_tbl: pageviews
-    purchase_db: brand_a_db
-    purchase_tbl: purchases
-    has_email: true
-    member_db: ""
-    member_tbl: ""
-    member_id_col: ""
-    member_email_col: ""
-    col_order_id: transactionid
-    col_email: hashedmailaddress
-    col_amount: amount
-    col_member_id: userid
-    col_phone: hashed_user_global_phone_number
-    col_country: hashed_user_country
-    col_user_agent: td_user_agent
-    col_ip: td_ip
-    col_url: td_path
-    col_fbc: fbc
-    col_fbp: fbp
-    pcol_order_id: order_id
-    pcol_email: email
-    pcol_amount: amount
-    pcol_member_id: member_id
-    pcol_time: time
-    cnv_conditions: "transactionid != '' AND transactionid NOT IN ('undefined')"
-    purchase_conditions: "1=1"
-    yahoo_ydn_conv_io: ""
-    yahoo_ydn_conv_label: ""
-    google_conversion_action_id: ""
 ```
 
-### パターン2: JS-SDK + メアドなし (LINE)
+### パターン2: JS-SDK + メアドなし → Yahoo と LINE を別ブランドで送信
 
-JSでメアドが取得できないため、会員マスタからJOIN。
+JSでメアドが取得できないため、会員マスタからJOIN。Yahoo と LINE は同じ注文データを、それぞれ別の設定で送信します。
 
 ```yaml
-  - brand_name: brand_b
+common:
+  js_enabled: true
+  log_db: brand_b_db
+  log_tbl: pageviews
+  purchase_db: brand_b_db
+  purchase_tbl: purchases
+  js_has_email: false
+  purchase_has_email: false
+  member_db: brand_b_master
+  member_tbl: members
+  member_id_col: member_id
+  member_email_col: email
+  col_order_id: transactionid
+  col_amount: amount
+  col_member_id: userid
+  col_user_agent: td_user_agent
+  col_ip: td_ip
+  col_url: td_path
+  col_ly_su: ly_su
+  col_ly_c: ly_c
+  col_ly_r: ly_r
+  col_line_uid: line_uid
+  pcol_order_id: order_id
+  pcol_amount: amount
+  pcol_member_id: member_id
+  pcol_time: time
+  pcol_ly_su: ly_su
+  pcol_ly_c: ly_c
+  pcol_ly_r: ly_r
+  pcol_line_uid: line_uid
+  cnv_conditions: "transactionid != ''"
+  purchase_conditions: "1=1"
+
+brand:
+  - brand_name: brand_yahoo
+    platform: yahoo
+    connector: brand_yahoo_conv_v2
+    tag_id: "12345678"
+    channel_id: ""
+    event_type: purchase
+    event_snippet_id: ""
+    test_flag: false
+    custom_label: ""
+    skip_invalid_records: false
+    stop_on_batch_failure: true
+
+  - brand_name: brand_line
     platform: line
-    connector: brand_b_line_conv
-    js_enabled: true
-    log_db: brand_b_db
-    log_tbl: pageviews
-    purchase_db: brand_b_db
-    purchase_tbl: purchases
-    has_email: false
-    member_db: brand_b_master
-    member_tbl: members
-    member_id_col: member_id
-    member_email_col: email
-    col_order_id: transactionid
-    col_email: ""
-    col_amount: amount
-    col_member_id: userid
-    col_phone: ""
-    col_country: ""
-    col_user_agent: td_user_agent
-    col_ip: td_ip
-    col_url: td_path
-    col_fbc: ""
-    col_fbp: ""
-    pcol_order_id: order_id
-    pcol_email: ""
-    pcol_amount: amount
-    pcol_member_id: member_id
-    pcol_time: time
-    cnv_conditions: "transactionid != ''"
-    purchase_conditions: "1=1"
-    yahoo_ydn_conv_io: ""
-    yahoo_ydn_conv_label: ""
-    google_conversion_action_id: ""
+    connector: brand_line_conv_v2
+    tag_id: "87654321"
+    channel_id: "1234567890"          # line_uid を送るため必須
+    event_type: purchase
+    event_snippet_id: ""
+    test_flag: false
+    custom_label: ""
+    skip_invalid_records: false
+    stop_on_batch_failure: true
 ```
 
 ### パターン3: JS-SDKなし・購買データのみ (Google Store Sales)
@@ -393,75 +572,113 @@ JSでメアドが取得できないため、会員マスタからJOIN。
 JSは使わず、日次の購買データのみで運用。
 
 ```yaml
-  - brand_name: brand_c
+common:
+  js_enabled: false
+  log_db: ""
+  log_tbl: ""
+  purchase_db: brand_c_db
+  purchase_tbl: purchases
+  js_has_email: false
+  purchase_has_email: true
+  member_db: ""
+  member_tbl: ""
+  member_id_col: ""
+  member_email_col: ""
+  pcol_order_id: order_id
+  pcol_email: email
+  pcol_amount: amount
+  pcol_member_id: member_id
+  pcol_time: time
+  cnv_conditions: "1=1"
+  purchase_conditions: "1=1"
+
+brand:
+  - brand_name: brand_c_google_ss
     platform: google_store_sales
     connector: brand_c_google_ss
-    js_enabled: false
-    log_db: ""
-    log_tbl: ""
-    purchase_db: brand_c_db
-    purchase_tbl: purchases
-    has_email: true
-    member_db: ""
-    member_tbl: ""
-    member_id_col: ""
-    member_email_col: ""
-    col_order_id: ""
-    col_email: ""
-    col_amount: ""
-    col_member_id: ""
-    col_phone: ""
-    col_country: ""
-    col_user_agent: ""
-    col_ip: ""
-    col_url: ""
-    col_fbc: ""
-    col_fbp: ""
-    pcol_order_id: order_id
-    pcol_email: email
-    pcol_amount: amount
-    pcol_member_id: member_id
-    pcol_time: time
-    cnv_conditions: ""
-    purchase_conditions: "1=1"
-    yahoo_ydn_conv_io: ""
-    yahoo_ydn_conv_label: ""
+    google_customer_id: "1234567890"
     google_conversion_action_id: "123456789"
 ```
 
-## デプロイ手順
+### パターン4: 購買データのみ・メアドなし (Yahoo / 識別子のみ)
 
-```bash
-# 1. プロジェクトディレクトリに移動
-cd common_push_capi
+日次の購買データにメアドがなく、Yahoo の識別子（`ly_*`）で送信する場合。会員マスタを設定しなければ JOIN は行われず、メアドは `NULL` になります。
 
-# 2. params.yml を編集
-vi config/params.yml
+```yaml
+common:
+  js_enabled: false
+  purchase_db: brand_d_db
+  purchase_tbl: purchases
+  js_has_email: false
+  purchase_has_email: false
+  pcol_order_id: order_id
+  pcol_amount: amount
+  pcol_member_id: member_id
+  pcol_time: time
+  pcol_ly_su: ly_su
+  pcol_ly_c: ly_c
+  pcol_ly_r: ly_r
+  cnv_conditions: "1=1"
+  purchase_conditions: "1=1"
 
-# 3. Treasure Data にプッシュ
-tdx wf push
+brand:
+  - brand_name: brand_d_yahoo
+    platform: yahoo
+    connector: brand_d_yahoo_conv_v2
+    tag_id: "12345678"
+    channel_id: ""
+    event_type: purchase
+    event_snippet_id: ""
+    test_flag: false
+    custom_label: ""
+    skip_invalid_records: false
+    stop_on_batch_failure: true
+```
+
+### パターン5: JS-SDK + OpenAI
+
+毎時の JS-SDK データは `web`、日次の購買データは `offline` として送信する例。
+
+```yaml
+brand:
+  - brand_name: brand_openai
+    platform: openai
+    connector: brand_openai_conv
+    openai_pixel_id: "your_pixel_id"
+    openai_action_source: web
+    openai_daily_action_source: offline
+    openai_event_type: order_created
+    openai_amount_multiplier: 1          # JPY の例（USD なら 100）
+    openai_skip_invalid_records: false
 ```
 
 ## 処理フロー詳細
 
 ```
-1. create_*_base.sql        ベースデータ作成 (capi_base_{brand_name})
-   ├─ has_email=true  → データソースから直接メアド取得
-   └─ has_email=false → 会員IDで会員マスタをLEFT JOIN
-2. exclude_sent.sql         送信済み除外 (capi_send_{brand_name})
-3. insert_push_log.sql      送信ログ記録 (Google Data Managerは専用ログSQL)
-4. COUNT(*) check           送信件数チェック (0件ならスキップ)
-5. push_{platform}.sql      プラットフォーム別フォーマットで送信
+1. 共通ベース作成 (create_*_base*.sql → capi_base)
+   ├─ 毎時: js_enabled=false → 空ベース
+   ├─ メアド: js_has_email / purchase_has_email で分岐
+   └─ 会員マスタ JOIN: member_db / member_tbl / member_id_col / member_email_col がすべて設定されている場合のみ
+2. 従来媒体 (facebook / tiktok / google_* / pinterest / snapchat / x)
+   exclude_sent.sql → capi_send → push_{platform}.sql → insert_push_log.sql
+3. Yahoo / LINE (yahoo_conversion_v2)
+   prepare_yahoo_v2.sql → capi_yahoo_v2_send → push_yahoo.sql → 同じ行を capi_push_log に記録
+   （test_flag: true の場合は記録しない）
+4. OpenAI
+   prepare_openai.sql → capi_openai_send → push_openai.sql → 同じ行を capi_push_log に記録
+5. 送信件数チェック（0件ならスキップ）
 ```
 
 ## 中間テーブル
 
-ワークフロー実行時に以下のテーブルが作成されます（ブランドごと）:
+ワークフロー実行時に以下のテーブルが作成されます:
 
 | テーブル名 | 用途 | 永続 |
 |---|---|---|
-| `capi_base_{brand_name}` | ベースデータ (create_table で毎回上書き) | No |
-| `capi_send_{brand_name}` | 送信対象データ (create_table で毎回上書き) | No |
+| `capi_base` | 共通ベースデータ (create_table で毎回上書き) | No |
+| `capi_send` | 従来媒体の送信対象データ (毎回上書き) | No |
+| `capi_yahoo_v2_send` | Yahoo / LINE の送信対象データ (毎回上書き) | No |
+| `capi_openai_send` | OpenAI の送信対象データ (毎回上書き) | No |
 | `capi_push_log` | 送信ログ (insert_into で追記) | **Yes** |
 
 ## トラブルシューティング
@@ -469,11 +686,21 @@ tdx wf push
 | 症状 | 原因 | 対処 |
 |---|---|---|
 | 送信件数が常に0 | 送信済み判定が効きすぎている | `capi_push_log` の該当ブランドのデータを確認 |
-| メアドが全て NULL | `has_email` の設定間違い、または会員マスタのJOINキー不一致 | params.yml の `member_*` 設定を確認 |
+| メアドが全て NULL | 会員マスタの JOIN 設定が不完全（4項目のどれかが空） | `member_db` / `member_tbl` / `member_id_col` / `member_email_col` を確認。メアドが不要な識別子設計なら問題なし |
 | 二重送信が発生 | `capi_push_log` テーブルが存在しない | 出力先DBに空テーブルを作成 |
-| コネクタエラー | TDコネクタ名の設定間違い、または認証切れ | `connector` の値とTDコンソールのコネクタ名を照合 |
-| hourly で何も処理されない | `js_enabled: false` になっている | params.yml の設定を確認 |
+| コネクタエラー | TDコネクタ名の設定間違い、または認証切れ | `connector` の値とTDコンソールのコネクタ名を照合。認証情報はコネクタ側で確認 |
+| hourly で何も処理されない | `common.js_enabled` が `false` | `params.yml` の設定を確認 |
 | 金額が0や NULL | `col_amount` / `pcol_amount` のカラム名が間違い | 実テーブルのカラム名を確認 |
+| 実行時に停止し `platform` のエラーが出る | 許可リスト外の `platform` 値 | 許可される値（対応プラットフォーム参照）に修正 |
+| Yahoo / LINE で識別子不足のエラー | 識別子（`ly_*` / `line_uid` / `hashed_*` / `ifa`）が1つもない行 | 列マッピング（`col_ly_*` / `pcol_ly_*` 等）を確認 |
+| LINE で `line_uid` が送られない | `channel_id` が空 | `channel_id` を設定する（空の場合は `line_uid` は送信データから外れる） |
+| Yahoo で行が送られない（期間外） | `event_time` が 90 日より前 | 購買データの `pcol_time` と処理時点を確認 |
+| Yahoo で `transaction_id` が拒否される | 64 文字超、または使用できない文字を含む | 注文IDの形式を確認 |
+| OpenAI で `source_url` のエラー | `action_source` が `web` で URL 列が空、または http(s) でない | `col_url` / `pcol_url` を確認。日次を `offline` にするなら `openai_daily_action_source` を見直す |
+| OpenAI の金額が桁違い | `openai_amount_multiplier` と `common.currency` の組み合わせが不一致 | 通貨ごとの倍率（JPY: 1、USD: 100 等）を確認 |
+| OpenAI で `event_timestamp` の範囲エラー | 7 日より前、または未来 10 分超のデータ | 時間窓とデータの日時を確認 |
+| 送信されず、ログにだけ残る（不正行） | `skip_invalid_records: true` の影響 | `skip_invalid_records` を `false` にする（TIPS 参照） |
+| テスト送信の行が本番の送信対象から消えない | `test_flag: true` の送信は `capi_push_log` に記録されない（想定どおり） | 本番に切り替えるときは `test_flag` を `false` にする |
 | X への送信が失敗する（401） | OAuth1.0a認証情報の間違い、またはトークンの権限不足（`AD_MANAGER`/`ACCOUNT_ADMIN` 権限が必要） | `x_consumer_key` 等をDeveloper Portalで再確認 |
 | X で計測されない | `x_event_id`（固定値）と `conversion_id`（注文ID）を混同している | `x_event_id` は全送信共通の固定値であることを確認 |
 
@@ -481,8 +708,9 @@ tdx wf push
 
 - **SQLエンジン**: Trino を使用しています（Hive ではありません）
 - **タイムゾーン**: JST (Asia/Tokyo) 基準で動作します
-- **ハッシュ処理**: 各プラットフォームの TD コネクタが自動でハッシュ・正規化を行います。SQL側で事前ハッシュは不要です
+- **ハッシュ処理**: Yahoo / LINE と OpenAI の識別子（メアド・電話番号など）は、各コネクタが生値をハッシュ化します。64 桁の hex 値もそのまま使えます。従来媒体についても、各 TD コネクタが自動で処理します。SQL 側での事前ハッシュは不要です（X を除く。X の扱いは上記参照）
 - **送信ログの肥大化**: `capi_push_log` は追記のみのため、長期運用時は定期的なクリーンアップを検討してください
+- **既知の制約（従来媒体）**: 従来媒体の送信対象は `capi_push_log` の event_id のみで除外されるため、ブランドをまたいで除外されます。詳細は TIPS を参照してください
 
 ---
 
@@ -493,83 +721,63 @@ tdx wf push
 
 ### 前提
 
-このREADME.mdを読み込んだ時点で、AIは以下の対話的セットアップを実行できる。スキルのローカルインストールは不要。
+このREADME.mdを読み込んだ時点で、AIは以下の対話的セットアップを実行できる。スキルのローカルインストールは不要。詳細な質問の進め方は同梱の `SKILL.md` に従う。
 
 ### セットアップフロー
-
-ユーザーがこのリポジトリのCAPI設定を行いたいと言った場合、以下の手順で対話的にヒアリングし、`config/params.yml` を生成する。
 
 #### Step 1: リポジトリ取得
 
 1. GitHub URL からリポジトリをクローン、または `config/params.yml` を取得する
-2. 現在の設定内容を把握する
+2. 現在の設定内容を把握する（`common` と `brand` の両方）
 
 #### Step 2: 対話的ヒアリング
 
 以下の情報を **段階的に** ユーザーに質問する。選択肢を提示し、1回の質問で3〜4項目までに収める。
 
-**2-1. プラットフォーム選択（複数選択可）**
+**2-1. プラットフォーム選択（複数選択可）**: 対応プラットフォーム表の `platform` 値から選ぶ（Yahoo と LINE は別ブランドにする）。
 
-| 選択肢 | platform 値 |
-|---|---|
-| Meta (Facebook/Instagram) | `facebook` |
-| Yahoo 広告 | `yahoo` |
-| LINE | `line` |
-| TikTok | `tiktok` |
-| Google Store Sales | `google_store_sales` |
-| Google Enhanced Web | `google_enhanced_web` |
-| Google Data Manager for Conversions | `google_data_manager_for_conversions` |
-| Pinterest | `pinterest` |
-| Snapchat | `snapchat` |
-| X (Twitter) | `x` |
+**2-2. ブランド基本情報（プラットフォームごとに）**: `brand_name`（英数字と_のみ）、`connector`（TDのコネクタ名。yahoo / line は `yahoo_conversion_v2` 種別、openai は OpenAI Conversion API Export 種別。X は `""`）。
 
-**X を選択した場合の注意:** X にはTDのResult Exportコネクタが存在しないため、`connector` は不要（`""` のままでよい）。`py>` オペレーターが `py_scripts/push_x.py` を実行し、X Ads API へ直接送信する。
+**2-3. データソース設定（`common`）**: JS-SDK のデータがあるか（`js_enabled`）。ある場合は `log_db`, `log_tbl`。購買データの `purchase_db`, `purchase_tbl`。
 
-**2-2. ブランド基本情報（プラットフォームごとに）**
-
-- `brand_name`: ブランド識別子（英数字と_のみ。テーブル名に使用）
-- `connector`: TDのResult Exportコネクタ名
-
-**2-3. データソース設定**
-
-- JS-SDK のデータがあるか？ → `js_enabled: true/false`
-- `js_enabled: true` → `log_db`, `log_tbl` を質問
-- 全ブランド共通で `purchase_db`, `purchase_tbl` を質問
-
-**2-4. テーブルスキーマ確認とカラム自動提案**
-
-DB名・テーブル名が確定したら、**ユーザーに許可を得た上で** 以下のコマンドを実行し、スキーマとサンプルデータを取得する:
+**2-4. テーブルスキーマ確認とカラム自動提案**: DB名・テーブル名が確定したら、ユーザーに許可を得た上で以下を実行する（SELECT のみ）:
 
 ```bash
 # スキーマ確認
 tdx describe {db}.{table}
 
 # サンプルデータ取得（最新10件）
-tdx query -e presto "SELECT * FROM {db}.{table} ORDER BY time DESC LIMIT 10" -f table
+tdx query -d {db} --limit 10 "SELECT * FROM {table} ORDER BY time DESC LIMIT 10"
 ```
 
-取得した結果から、以下のマッピング対象カラムを **AI が自動推定して提案** する:
+既定プロファイル以外を使う場合は `tdx -p <profile> ...` を各コマンドに付け、`tdx use profile` などで既定を切り替えない。
 
-**推定ロジック（カラム名とサンプル値の両方から判断）:**
+取得した結果から、以下の項目を **AI が自動推定して提案** する:
 
 | 設定項目 | カラム名のヒント | サンプル値のヒント |
 |---|---|---|
-| `col_order_id` / `pcol_order_id` | `transaction`, `order`, `receipt`, `tran` を含む | 英数字の一意な値 |
+| `col_order_id` / `pcol_order_id` | `transaction`, `order`, `receipt`, `tran` を含む | 英数字の一意な値（Yahoo は 64 文字以内） |
 | `col_email` / `pcol_email` | `email`, `mail`, `address` を含む | `@`を含む文字列、またはハッシュ値(64文字hex) |
-| `col_amount` / `pcol_amount` | `amount`, `price`, `revenue`, `sales`, `value` を含む | 数値 |
+| `col_amount` / `pcol_amount` | `amount`, `price`, `revenue`, `sales`, `value` を含む | 数値（小数がある場合は `value_decimal` 側で保持） |
 | `col_member_id` / `pcol_member_id` | `user`, `member`, `customer`, `cid`, `uid` を含む | IDらしい値 |
-| `col_phone` | `phone`, `tel` を含む | 電話番号形式またはハッシュ値 |
+| `col_phone` / `pcol_phone` | `phone`, `tel` を含む | 電話番号形式またはハッシュ値 |
 | `col_country` | `country`, `region`, `geo` を含む | 国コード (JP, US等) |
 | `col_user_agent` | `ua`, `user_agent`, `td_user_agent` を含む | ブラウザUA文字列 |
 | `col_ip` | `ip`, `td_ip`, `remote_addr` を含む | IPアドレス形式 |
-| `col_url` | `url`, `path`, `page`, `td_path`, `td_url` を含む | URL文字列 |
+| `col_url` / `pcol_url` | `url`, `path`, `page`, `td_path`, `td_url` を含む | URL文字列（OpenAI の web に必要） |
+| `col_referrer_url` / `pcol_referrer_url` | `referrer`, `referer`, `ref` を含む | URL文字列 |
 | `col_fbc` | `fbc`, `click_id` を含む | `fb.1.`で始まる文字列 |
 | `col_fbp` | `fbp`, `pixel` を含む | `fb.1.`で始まる文字列 |
-| `pcol_time` | `time`, `timestamp`, `created`, `date` を含む | TDのUnix秒タイムスタンプ（日時文字列は事前変換が必要） |
+| `col_ly_su` / `pcol_ly_su` | `ly_su` を含む | `タイムスタンプ.ID` 形式（`_ly_su` Cookie） |
+| `col_ly_c` / `pcol_ly_c` | `ly_c` を含む | `_ly_c` Cookie またはURLパラメータ由来（URL由来はタイムスタンプ付与が必要） |
+| `col_ly_r` / `pcol_ly_r` | `ly_r` を含む | `タイムスタンプ.乱数` 形式（`_ly_r` Cookie） |
+| `col_line_uid` / `pcol_line_uid` | `line_uid`, `lineuid` を含む | LINE のユーザーID |
+| `col_ifa` / `pcol_ifa` | `ifa`, `idfa`, `aaid`, `gaid` を含む | 広告ID（Yahoo のみに使う） |
+| `col_obref` | `obref` を含む | OpenAI の obref 値（測定同意がある場合のみ） |
+| `col_oppref` | `oppref` を含む | OpenAI の oppref 値 |
+| `pcol_time` | `time`, `timestamp`, `created`, `date` を含む | TDのUnix秒タイムスタンプ（日時文字列は事前変換） |
 
 **提案フォーマット:**
-
-スキーマとサンプルデータの分析結果をもとに、以下の形式で提案する:
 
 ```
 テーブル: {db}.{table} のスキーマを確認しました。
@@ -584,10 +792,7 @@ tdx query -e presto "SELECT * FROM {db}.{table} ORDER BY time DESC LIMIT 10" -f 
   col_order_id  → transactionid   (理由: "transaction"を含み、値が一意なID形式)
   col_email     → hashed_email    (理由: 64文字のhex値でハッシュ済みメアドと推定)
   col_amount    → amount          (理由: 数値で売上金額と推定)
-  col_member_id → userid          (理由: "user"を含むIDカラム)
   col_phone     → (該当なし)      → "" に設定
-  col_country   → (該当なし)      → "" に設定
-  ...
 
 この提案でよろしいですか？修正があれば指定してください。
 ```
@@ -597,46 +802,22 @@ tdx query -e presto "SELECT * FROM {db}.{table} ORDER BY time DESC LIMIT 10" -f 
 - 推定に自信がない場合は複数の候補を提示し、ユーザーに選択してもらう
 - 該当カラムが見つからない場合は `""` (NULL出力) を提案する
 - 購買テーブル、JS-SDKテーブル、会員マスタテーブルそれぞれに対して実行する
-- `has_email` の判定もスキーマから推定可能: メアドらしいカラムがなければ `has_email: false` を提案
 
-**2-5. メアド設定**
+**2-5. メアド・会員マスタ設定**: メアドカラムが見つかった場合は `js_has_email` / `purchase_has_email` を `true` に提案。見つからない場合は `false` を提案し、会員マスタ（`member_db`, `member_tbl`, `member_id_col`, `member_email_col`）を質問する。会員マスタの4項目がすべて揃わない場合は JOIN しない。
 
-Step 2-4 のスキーマ確認結果をもとに:
-- メアドカラムが見つかった場合 → `has_email: true` を提案
-- 見つからない場合 → `has_email: false` を提案し、会員マスタの情報を質問
-  - `member_db`, `member_tbl` を質問
-  - 会員マスタも `tdx describe` でスキーマ確認し、`member_id_col`, `member_email_col` を提案
+**2-6. カラムマッピング確定**: Step 2-4 の提案をユーザーが確認・修正した結果を最終的なカラムマッピングとして確定する。識別子だけで送るデータ（メアドなし）の場合は、`col_ly_*` / `pcol_ly_*` / `col_line_uid` / `pcol_line_uid` を確認する。
 
-**2-6. カラムマッピング確定**
+**2-7. フィルタ条件**: `cnv_conditions`（例: `"transactionid != '' AND transactionid NOT IN ('undefined')"`）、`purchase_conditions`（通常は `"1=1"`）。
 
-Step 2-4 の提案をユーザーが確認・修正した結果を最終的なカラムマッピングとして確定する。
+**2-8. プラットフォーム固有設定**:
+- **Yahoo / LINE** → `tag_id`、`channel_id`（line_uid を送る場合のみ必須）、`event_type`（既定 `purchase`。Yahoo の許容値のみ）、`event_snippet_id`、`test_flag`（既定 `false`）、`custom_label`、`skip_invalid_records`（既定 `false`）、`stop_on_batch_failure`（既定 `true`）。認証情報は質問せず、コネクタ側で設定すると案内する
+- **OpenAI** → `openai_pixel_id`、`openai_action_source`（毎時の既定 `web`）、`openai_daily_action_source`（日次の実際の発生元に合わせて `offline` または `web`。`web` なら `pcol_url` が必要）、`openai_event_type`（`order_created` 固定）、`openai_amount_multiplier`（通貨ごとに確認。JPY は 1、USD は 100。推測しない）、`openai_skip_invalid_records`（既定 `false`）。`obref` は測定同意がある場合のみ
+- **Google (Store Sales / Enhanced Web)** → `google_customer_id`, `google_conversion_action_id`
+- **Google Data Manager for Conversions** → `google_dm_conversion_type` (`OFFLINE` / `ONLINE` / `STORE_SALES`), `google_dm_operating_account_id`, `google_dm_login_account_id`（MCC経由時のみ）, `google_dm_conversion_action_id`, `google_dm_event_source`（OFFLINE時）, `google_dm_store_id`（STORE_SALES時）, `google_dm_ad_user_data_consent`, `google_dm_ad_personalization_consent`, `google_dm_skip_invalid_records`, `google_dm_waiting_for_request_status`
+- **X (Twitter)** → `x_pixel_id`（Events Managerで発行）, `x_event_id`（Events Managerで作成した固定イベントID。注文IDではない点に注意）, `x_consumer_key`, `x_consumer_secret`, `x_access_token`, `x_access_token_secret`（Developer Portal で発行するOAuth1.0a認証情報）
+- **その他** → 該当パラメータは `""` を自動設定
 
-確定するパラメータ:
-
-JS-SDK カラム（`js_enabled: true` の場合）:
-`col_order_id`, `col_email`, `col_amount`, `col_member_id`, `col_phone`, `col_country`, `col_user_agent`, `col_ip`, `col_url`, `col_fbc`, `col_fbp`
-
-購買データカラム:
-`pcol_order_id`, `pcol_email`, `pcol_amount`, `pcol_member_id`, `pcol_time`
-
-**2-7. フィルタ条件**
-
-サンプルデータを参考に、フィルタ条件も提案する:
-- `cnv_conditions`: 例えばオーダーIDに `undefined` や空文字が混在している場合 → `"transactionid != '' AND transactionid NOT IN ('undefined')"` を提案
-- `purchase_conditions`: 通常は `"1=1"` を提案。特殊な条件があればサンプルデータから推定
-
-**2-8. プラットフォーム固有設定**
-
-- Yahoo → `yahoo_ydn_conv_io`, `yahoo_ydn_conv_label` を質問
-- Google (既存Store Sales / Enhanced Web) → `google_conversion_action_id` を質問
-- Google Data Manager for Conversions → `google_dm_conversion_type`, `google_dm_operating_account_id`, `google_dm_login_account_id`（MCC経由時のみ）, `google_dm_conversion_action_id`, `google_dm_event_source`（OFFLINE時）, `google_dm_store_id`（STORE_SALES時）, 同意設定、無効レコード・ステータス待機設定を質問
-- X (Twitter) → `x_pixel_id`（Events Managerで発行）, `x_event_id`（Events Managerで作成した固定イベントID。注文IDではない点に注意）, `x_consumer_key`, `x_consumer_secret`, `x_access_token`, `x_access_token_secret`（Developer Portal で発行するOAuth1.0a認証情報）を質問
-- その他 → 該当パラメータは `""` を自動設定
-
-**2-9. 共通設定**
-
-- `common.database`: 中間テーブル・ログの出力先DB（デフォルト: `capi_database`）
-- `common.currency`: 通貨コード（デフォルト: `JPY`）
+**2-9. 共通設定**: `common.database`（`params.yml` の値。例: `td_capi_universal`）、`common.currency`（デフォルト: `JPY`）。`currency` と OpenAI の `openai_amount_multiplier` の組み合わせを必ず確認する。
 
 #### Step 3: params.yml 生成
 
@@ -647,72 +828,27 @@ JS-SDK カラム（`js_enabled: true` の場合）:
 - プラットフォームに関係ないパラメータも `""` で必ず含める（全ブランドが同じキー構造を持つこと）
 - コメントで各セクションを説明する
 - 設定例のコメントアウトされたブランドは削除し、実際のブランド設定のみ出力する
+- 認証情報（Yahoo の `tag_access_token`、OpenAI の Conversions API Key、LINE のアクセストークン）は `params.yml` に書かない
 
-**キー構造（全ブランド共通）:**
-```yaml
-brand:
-  - brand_name: ""
-    platform: ""
-    connector: ""
-    js_enabled: false
-    log_db: ""
-    log_tbl: ""
-    purchase_db: ""
-    purchase_tbl: ""
-    has_email: true
-    member_db: ""
-    member_tbl: ""
-    member_id_col: ""
-    member_email_col: ""
-    col_order_id: ""
-    col_email: ""
-    col_amount: ""
-    col_member_id: ""
-    col_phone: ""
-    col_country: ""
-    col_user_agent: ""
-    col_ip: ""
-    col_url: ""
-    col_fbc: ""
-    col_fbp: ""
-    pcol_order_id: ""
-    pcol_email: ""
-    pcol_amount: ""
-    pcol_member_id: ""
-    pcol_time: ""
-    cnv_conditions: "1=1"
-    purchase_conditions: "1=1"
-    yahoo_ydn_conv_io: ""
-    yahoo_ydn_conv_label: ""
-    google_conversion_action_id: ""
-    google_dm_conversion_type: ""
-    google_dm_operating_account_id: ""
-    google_dm_login_account_id: ""
-    google_dm_conversion_action_id: ""
-    google_dm_event_source: ""
-    google_dm_store_id: ""
-    google_dm_ad_user_data_consent: CONSENT_GRANTED
-    google_dm_ad_personalization_consent: CONSENT_GRANTED
-    google_dm_skip_invalid_records: false
-    google_dm_waiting_for_request_status: false
-    x_pixel_id: ""
-    x_event_id: ""
-    x_consumer_key: ""
-    x_consumer_secret: ""
-    x_access_token: ""
-    x_access_token_secret: ""
-```
+**キー構造:** `common` は上記の共通設定の全キー。`brand` の各エントリは `brand_name`, `platform`, `connector`, `tag_id`, `channel_id`, `event_type`, `event_snippet_id`, `test_flag`, `custom_label`, `skip_invalid_records`, `stop_on_batch_failure`, `openai_pixel_id`, `openai_action_source`, `openai_daily_action_source`, `openai_event_type`, `openai_amount_multiplier`, `openai_skip_invalid_records`, `google_customer_id`, `google_conversion_action_id`, `google_dm_*`（全項目）, `tiktok_event_data_source`, `tiktok_event_source_id`, `x_*`（全項目）を持つ。
 
 #### Step 4: 確認・修正
 
 生成した `params.yml` をユーザーに提示し、修正点がないか確認する。
 
-#### Step 5: デプロイ
+#### Step 5: デプロイ（承認制）
 
 ```bash
-cd common_push_capi
-tdx wf push
+cd td_push_capi_univarsal
+tdx wf push --dry-run      # 確認のみ
+tdx wf push                # 承認後
+tdx wf schedule list common_push_capi.daily_push_capi
+tdx wf run common_push_capi.daily_push_capi --dry-run   # 送信しない。承認を得てから実行
 ```
+
+- 送信範囲（対象ブランド・想定件数）を説明し、件数が不明な場合は「件数不明」と明記してから承認を得る
+- 承認なしに `tdx wf run` を実行しない。スケジュールを有効化しない
+- `--param` で動作を切り替えない（切り替えは `params.yml` で行う）
 
 ### ヒアリングのコツ
 
@@ -724,3 +860,9 @@ tdx wf push
 - **複数ブランドの場合**: 1ブランド目を詳細に設定し、2ブランド目以降は差分のみ質問する
 - **同じブランドを複数プラットフォームに送信する場合**: brand_name を `{brand}_{platform}` の形式で区別する
 <!-- AI_SETUP_INSTRUCTIONS_END -->
+
+
+
+
+
+

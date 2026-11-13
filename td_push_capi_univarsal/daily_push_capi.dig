@@ -61,6 +61,25 @@ _export:
         b: ${brand}
       _do:
 
+        ## 未対応platformのtypoで未送信データを送信済みにしないよう先に停止
+        +validate_platform:
+          if>: ${b.platform != 'facebook' && b.platform != 'line' && b.platform != 'tiktok' && b.platform != 'yahoo' && b.platform != 'google_store_sales' && b.platform != 'google_enhanced_web' && b.platform != 'google_data_manager_for_conversions' && b.platform != 'pinterest' && b.platform != 'snapchat' && b.platform != 'x' && b.platform != 'openai'}
+          _do:
+            +invalid_platform:
+              fail>: "Unsupported platform: ${b.platform}"
+
+        +validate_yahoo_v2:
+          if>: ${(b.platform == 'yahoo' || b.platform == 'line') && (!b.tag_id || (b.event_type != 'page_view' && b.event_type != 'view_listing' && b.event_type != 'view_product' && b.event_type != 'view_cart' && b.event_type != 'add_cart' && b.event_type != 'search' && b.event_type != 'check_out' && b.event_type != 'purchase' && b.event_type != 'generate_lead' && b.event_type != 'login' && b.event_type != 'reservation' && b.event_type != 'sign_up' && b.event_type != 'payment_info' && b.event_type != 'add_wishlist'))}
+          _do:
+            +invalid_yahoo_v2:
+              fail>: "Yahoo/LINE v2 requires tag_id and a supported event_type"
+
+        +validate_openai:
+          if>: ${b.platform == 'openai' && (!b.openai_pixel_id || b.openai_event_type != 'order_created' || !(b.openai_amount_multiplier > 0) || ['web', 'mobile_app', 'offline', 'physical_store', 'phone_call', 'email', 'other'].indexOf(b.openai_action_source) < 0 || ['web', 'mobile_app', 'offline', 'physical_store', 'phone_call', 'email', 'other'].indexOf(b.openai_daily_action_source) < 0)}
+          _do:
+            +invalid_openai:
+              fail>: "OpenAI requires pixel_id, order_created, positive amount multiplier, and valid action sources"
+
         ## 送信済みチェック（リトライ時に成功済みPFをスキップ）
         +check_brand_sent:
           td>: query/check_brand_sent.sql
@@ -80,16 +99,37 @@ _export:
                   result_settings:
                     skip_invalid: true
 
+            ## LINE向け: Yahoo! Ads Conversion API V2（Yahooとは別ブランド・別設定）
             +send_line:
               if>: ${b.platform == 'line'}
               _do:
-                +send_line_exec:
-                  td>: query/push_line.sql
-                  result_connection: ${b.connector}
-                  result_settings:
-                    line_tag_id: ${b.line_tag_id}
-                    access_token: ${b.line_access_token}
-                    ignore_invalid_records: true
+                +prepare_line_send:
+                  td>: query/prepare_yahoo_v2.sql
+                  create_table: capi_yahoo_v2_send
+
+                +check_line_count:
+                  td>:
+                  query: SELECT COUNT(*) AS cnt FROM capi_yahoo_v2_send
+                  store_last_results: true
+
+                +send_line_if_exists:
+                  if>: ${td.last_results.cnt > 0}
+                  _do:
+                    +send_line_exec:
+                      td>: query/push_yahoo.sql
+                      result_connection: ${b.connector}
+                      result_settings:
+                        tag_id: ${b.tag_id}
+                        channel_id: ${b.channel_id}
+                        skip_invalid_records: ${b.skip_invalid_records}
+                        stop_on_batch_failure: ${b.stop_on_batch_failure}
+
+                    +insert_line_push_log:
+                      if>: ${!b.test_flag}
+                      _do:
+                        +insert_line_push_log_exec:
+                          td>: query/insert_yahoo_v2_push_log.sql
+                          insert_into: capi_push_log
 
             +send_tiktok:
               if>: ${b.platform == 'tiktok'}
@@ -102,14 +142,64 @@ _export:
                     event_source: ${b.tiktok_event_data_source}
                     event_source_id: ${b.tiktok_event_source_id}
 
+            ## Yahoo! Ads Conversion API V2
             +send_yahoo:
               if>: ${b.platform == 'yahoo'}
               _do:
-                +send_yahoo_exec:
-                  td>: query/push_yahoo.sql
-                  result_connection: ${b.connector}
-                  result_settings:
-                    skip_invalid: true
+                +prepare_yahoo_send:
+                  td>: query/prepare_yahoo_v2.sql
+                  create_table: capi_yahoo_v2_send
+
+                +check_yahoo_count:
+                  td>:
+                  query: SELECT COUNT(*) AS cnt FROM capi_yahoo_v2_send
+                  store_last_results: true
+
+                +send_yahoo_if_exists:
+                  if>: ${td.last_results.cnt > 0}
+                  _do:
+                    +send_yahoo_exec:
+                      td>: query/push_yahoo.sql
+                      result_connection: ${b.connector}
+                      result_settings:
+                        tag_id: ${b.tag_id}
+                        channel_id: ${b.channel_id}
+                        skip_invalid_records: ${b.skip_invalid_records}
+                        stop_on_batch_failure: ${b.stop_on_batch_failure}
+
+                    +insert_yahoo_push_log:
+                      if>: ${!b.test_flag}
+                      _do:
+                        +insert_yahoo_push_log_exec:
+                          td>: query/insert_yahoo_v2_push_log.sql
+                          insert_into: capi_push_log
+
+            ## OpenAI Ads Conversion API
+            +send_openai:
+              if>: ${b.platform == 'openai'}
+              _do:
+                +prepare_openai_send:
+                  td>: query/prepare_openai.sql
+                  create_table: capi_openai_send
+
+                +check_openai_count:
+                  td>:
+                  query: SELECT COUNT(*) AS cnt FROM capi_openai_send
+                  store_last_results: true
+
+                +send_openai_if_exists:
+                  if>: ${td.last_results.cnt > 0}
+                  _do:
+                    +send_openai_exec:
+                      td>: query/push_openai.sql
+                      result_connection: ${b.connector}
+                      result_settings:
+                        pixel_id: ${b.openai_pixel_id}
+                        skip_invalid_records: ${b.openai_skip_invalid_records}
+
+                    +insert_openai_push_log_exec:
+                      td>: query/insert_openai_push_log.sql
+                      insert_into: capi_push_log
 
             +send_google_store_sales:
               if>: ${b.platform == 'google_store_sales'}
@@ -220,8 +310,9 @@ _export:
                   td>: query/insert_google_data_manager_push_log.sql
                   insert_into: capi_push_log
 
+            ## Yahoo / LINE / OpenAI は各ブロック内で、実際の送信対象のみ記録済み
             +insert_other_push_log:
-              if>: ${b.platform != 'google_data_manager_for_conversions'}
+              if>: ${b.platform != 'google_data_manager_for_conversions' && b.platform != 'yahoo' && b.platform != 'line' && b.platform != 'openai'}
               _do:
                 +insert_other_push_log_exec:
                   td>: query/insert_push_log.sql

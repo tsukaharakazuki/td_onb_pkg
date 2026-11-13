@@ -18,5 +18,14 @@ SELECT
     , CAST(NULL AS VARCHAR) AS fbp
     , CAST(NULL AS VARCHAR) AS member_id
     , CAST(NULL AS VARCHAR) AS source_type
+    , CAST(NULL AS VARCHAR) AS ly_su
+    , CAST(NULL AS VARCHAR) AS ly_c
+    , CAST(NULL AS VARCHAR) AS ly_r
+    , CAST(NULL AS VARCHAR) AS line_uid
+    , CAST(NULL AS VARCHAR) AS ifa
+    , CAST(NULL AS VARCHAR) AS referrer_url
+    , CAST(NULL AS VARCHAR) AS obref
+    , CAST(NULL AS VARCHAR) AS oppref
+    , CAST(NULL AS DECIMAL(30, 6)) AS value_decimal
 WHERE
     FALSE

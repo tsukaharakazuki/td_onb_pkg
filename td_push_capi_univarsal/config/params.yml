@@ -59,12 +59,34 @@ common:
   col_fbc: ""
   col_fbp: ""
 
+  ## --- Yahoo / LINE v2 の任意識別子・Web情報 ---
+  ## Cookie値は <timestamp>.<id> の形式を維持。LINE UID使用時は各送信先のchannel_id必須。
+  col_ly_su: ""
+  col_ly_c: ""
+  col_ly_r: ""
+  col_line_uid: ""
+  col_ifa: ""
+  col_referrer_url: ""
+
+  ## --- OpenAI の任意アトリビューション情報 ---
+  ## obrefは計測同意がある行だけに設定した列を指定する。自動的にCookieを取得しない。
+  col_obref: ""
+  col_oppref: ""
+
   ## --- 購買データ カラム名 ---
   pcol_order_id: ""
   pcol_email: ""
   pcol_amount: ""
   pcol_member_id: ""
   pcol_time: time
+  pcol_phone: ""
+  pcol_url: ""                 # OpenAIの日次Webイベントを使う場合は必須
+  pcol_ly_su: ""
+  pcol_ly_c: ""
+  pcol_ly_r: ""
+  pcol_line_uid: ""
+  pcol_ifa: ""
+  pcol_referrer_url: ""
 
   ## --- フィルタ条件 ---
   cnv_conditions: "1=1"
@@ -83,13 +105,21 @@ brand: []
   #   fb_test_event_code: ""
 
   ## ----------------------------------------------------------
-  ## LINE Conversion API
+  ## LINE向け（Yahoo! Ads Conversion API V2認証を使用）
+  ## Yahooとはbrand_name・connector・tag_idを独立して設定できる。
+  ## アクセストークンはIntegration Hub認証に保存し、ここには書かない。
   ## ----------------------------------------------------------
   # - brand_name: brand_line
   #   platform: line
-  #   connector: brand_line_conv
-  #   line_tag_id: ""
-  #   line_access_token: ""
+  #   connector: brand_line_yahoo_v2
+  #   tag_id: ""
+  #   channel_id: ""                # line_uidを送る場合は必須
+  #   event_type: purchase
+  #   event_snippet_id: ""          # Yahoo側の計測設定で必要な場合に指定
+  #   test_flag: false
+  #   custom_label: ""
+  #   skip_invalid_records: false   # 不正行を送信済みにしないため停止を推奨
+  #   stop_on_batch_failure: true
 
   ## ----------------------------------------------------------
   ## TikTok Events API
@@ -103,14 +133,34 @@ brand: []
   #   tiktok_test_event_code: ""
 
   ## ----------------------------------------------------------
-  ## Yahoo 広告 コンバージョン
+  ## Yahoo! Ads Conversion API V2（ディスプレイ広告。検索広告は対象外）
   ## ----------------------------------------------------------
   # - brand_name: brand_yahoo
   #   platform: yahoo
-  #   connector: brand_yahoo_conv
-  #   yahoo_ydn_conv_io: ""
-  #   yahoo_ydn_conv_label: ""
-  #   yahoo_app_id: ""
+  #   connector: brand_yahoo_v2
+  #   tag_id: ""
+  #   channel_id: ""                # line_uidを送る場合は必須
+  #   event_type: purchase
+  #   event_snippet_id: ""
+  #   test_flag: false
+  #   custom_label: ""
+  #   skip_invalid_records: false
+  #   stop_on_batch_failure: true
+
+  ## ----------------------------------------------------------
+  ## OpenAI Ads Conversion API
+  ## Conversions API KeyはIntegration Hub認証に保存する。
+  ## 現行テンプレートは購買(order_created)。他のイベントはSQLの個別設計が必要。
+  ## ----------------------------------------------------------
+  # - brand_name: brand_openai
+  #   platform: openai
+  #   connector: brand_openai_capi
+  #   openai_pixel_id: ""
+  #   openai_event_type: order_created
+  #   openai_action_source: web       # 毎時の送信元
+  #   openai_daily_action_source: offline  # 日次。実際の発生元に合わせ、webならpcol_url必須
+  #   openai_amount_multiplier: 1   # 元データが主要通貨単位ならJPY=1、USD=100
+  #   openai_skip_invalid_records: false
 
   ## ----------------------------------------------------------
   ## Google Enhanced Conversions (Store Sales)
