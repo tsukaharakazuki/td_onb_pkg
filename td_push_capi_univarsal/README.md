@@ -71,10 +71,9 @@ td_push_capi_univarsal/
 │   ├── create_daily_base.sql                  # 日次: ベースデータ作成 (メアドあり)
 │   ├── create_daily_base_join_email.sql       # 日次: ベースデータ作成 (メアドなし→会員マスタJOIN)
 │   ├── check_push_log_exists.sql              # 送信ログテーブルの存在確認
-│   ├── check_brand_sent.sql                   # ブランド別の送信済みチェック
-│   ├── exclude_sent.sql                       # 送信済みデータ除外
-│   ├── exclude_sent_initial.sql               # 初回用（送信ログなし）
-│   ├── insert_push_log.sql                    # 従来媒体の送信ログ記録
+│   ├── stage_brand.sql                        # ブランド・媒体ごとの未送信行の抽出（brand_name + platform で判定）
+│   ├── stage_brand_initial.sql                # 初回用（送信ログテーブルなし）
+│   ├── insert_push_log.sql                    # 従来媒体（メアドで送信するもの）の送信ログ記録（送信対象と同じ条件）
 │   ├── insert_google_data_manager_push_log.sql # Google Data Manager送信対象ログ記録
 │   ├── prepare_yahoo_v2.sql                   # Yahoo / LINE: 送信対象行の抽出・ly_*/電話番号の整形 (capi_yahoo_v2_send)
 │   ├── prepare_openai.sql                     # OpenAI: 送信対象行の抽出 (capi_openai_send)
@@ -125,10 +124,12 @@ JS-SDK で取得したページビュー/購買データを **1時間ごと** �
 
 ### 送信対象の抽出と送信済み管理
 
-- 従来媒体（facebook / tiktok / google_* / pinterest / snapchat / x）は `capi_send` を経由して送信し、送信後に `capi_push_log` へ記録します
+- ブランドごとに、送信ログ（`capi_push_log`）に無い行を `capi_send` に抽出してから送信します。新形式のログは `brand_name` + `platform` + `event_id` で判定します。`platform` がない旧ログは同一ブランドの全媒体に適用されるため、旧ブランド名を別媒体へ流用しないでください（移行手順参照）
+- facebook / tiktok / google_store_sales / google_enhanced_web / pinterest / snapchat / x は、送信SQLと同じ条件（メアドあり）を通過した行だけをログに記録します。SQLで除外した行は記録せず、次回の抽出対象に残します。Google Data Managerは専用の適格条件を送信・ログSQLの両方へ適用します
+- このログはエクスポートタスク成功後の入力行集合の記録であり、媒体側の行別受領確認ではありません。コネクタによるスキップ、非同期処理、送信成功後のログ失敗などの制約は残ります（TIPS 18）
 - Yahoo / LINE (`yahoo_conversion_v2`) と OpenAI は、それぞれ専用の送信対象テーブル `capi_yahoo_v2_send` / `capi_openai_send` に **送信対象として抽出された行だけ** を格納し、送信とログ記録はこのテーブルの行だけを対象にします
 - `test_flag: true` の Yahoo / LINE ブランドは、テスト送信として `capi_push_log` に記録しません（テスト送信を本番の送信済み判定に混ぜないため）
-- 送信済み判定は `capi_push_log` の event_id で行い、hourly / daily 間の二重送信を防ぎます。Yahoo と LINE を同じ注文に送る場合も、送信済み判定はブランド単位（`brand_name` + event_id）で行う必要があります（TIPS 参照）
+- hourly / daily 間の二重送信は、同じ `brand_name` + `platform` の送信ログで防ぎます（TIPS 18 参照）
 
 ## 設定方法
 
@@ -140,7 +141,7 @@ JS-SDK で取得したページビュー/購買データを **1時間ごと** �
    - その他の媒体: 各プラットフォームの Result Export コネクタ（X は不要、下記参照）
    - 認証情報（Yahoo の `tag_access_token`、OpenAI の Conversions API Key など）は **コネクタにのみ保存** し、`config/params.yml` には書きません
 2. **出力先データベースの作成**: `config/params.yml` の `common.database` で指定するDB
-3. **送信ログテーブルの作成**: `capi_push_log` テーブルを出力先DBに作成（空テーブルでよい）
+3. **送信ログテーブルの作成**: `capi_push_log` を出力先DBに作成する（列の並びは「送信ログテーブルの移行」を参照）。既存テーブルがある場合は `platform` 列の追加が必要です
 4. **X (Twitter) を使う場合のみ**: `requirements.txt` がプロジェクトルートに配置されていることを確認（`py>` タスクが実行時に自動インストールする）
 
 ### config/params.yml の編集
@@ -369,6 +370,8 @@ Yahoo が受け付ける `event_type`: `page_view` / `view_listing` / `view_prod
 
 #### デプロイと dry-run
 
+既存環境では、先に「送信ログテーブルの移行」の停止・実行完了待ち・スキーマ確認を行い、スケジュールを無効のままデプロイします。
+
 ```bash
 # 1. プロジェクトフォルダへ移動（フォルダ名: td_push_capi_univarsal）
 cd td_push_capi_univarsal
@@ -394,7 +397,7 @@ tdx wf run common_push_capi.daily_push_capi
 - 送信件数は dry-run では取得できない場合があります。取得できない場合は「件数不明」と明記してから承認を得てください
 - `tdx wf push --backfill` は、スケジュール停止中の期間を遡って送信するため、承認なしには使わないでください
 - スケジュールを有効化する場合は、`tdx wf schedule list` で確認した ID を指定して `tdx wf schedule enable <id>` を実行します（承認後のみ）
-- 既定のプロファイル（`tdx use profile` など）は切り替えず、必要な場合は `tdx -p <profile>` を各コマンドに付けてください
+- Treasure Workでは現在のTDアカウント・プロファイルを切り替えたり、コマンドで上書きしないでください
 
 ### Google Data Manager for Conversions 固有の注意事項
 
@@ -659,8 +662,9 @@ brand:
    ├─ 毎時: js_enabled=false → 空ベース
    ├─ メアド: js_has_email / purchase_has_email で分岐
    └─ 会員マスタ JOIN: member_db / member_tbl / member_id_col / member_email_col がすべて設定されている場合のみ
-2. 従来媒体 (facebook / tiktok / google_* / pinterest / snapchat / x)
-   exclude_sent.sql → capi_send → push_{platform}.sql → insert_push_log.sql
+2. ブランドごとに `stage_brand.sql` → `capi_send`（未送信の行）
+   従来媒体 (facebook / tiktok / google_* / pinterest / snapchat / x)
+   push_{platform}.sql → insert_push_log.sql（メアドのある行のみ記録）
 3. Yahoo / LINE (yahoo_conversion_v2)
    prepare_yahoo_v2.sql → capi_yahoo_v2_send → push_yahoo.sql → 同じ行を capi_push_log に記録
    （test_flag: true の場合は記録しない）
@@ -676,16 +680,62 @@ brand:
 | テーブル名 | 用途 | 永続 |
 |---|---|---|
 | `capi_base` | 共通ベースデータ (create_table で毎回上書き) | No |
-| `capi_send` | 従来媒体の送信対象データ (毎回上書き) | No |
+| `capi_send` | ブランドごとの未送信データ（ブランドの処理ごとに上書き） | No |
 | `capi_yahoo_v2_send` | Yahoo / LINE の送信対象データ (毎回上書き) | No |
 | `capi_openai_send` | OpenAI の送信対象データ (毎回上書き) | No |
-| `capi_push_log` | 送信ログ (insert_into で追記) | **Yes** |
+| `capi_push_log` | 送信ログ (insert_into で追記。`brand_name` + `platform` + `event_id` で送信済みを判定) | **Yes** |
+
+## 送信ログテーブルの移行（platform 列の追加）
+
+送信ログは `brand_name` と `platform`（媒体）の組で送信済みを判定します。既存の `capi_push_log` がある場合は、次の順序で移行してください。各リモート変更は事前承認が必要です。
+
+1. hourly / daily両方のスケジュールを停止する（無効化しても実行中のattemptは止まりません）
+2. 両WFの実行中attemptがすべて完了したことを確認し、移行中は手動実行・retryもしない
+3. `platform` 列を追加し、スキーマを確認する（既存データは消えません）
+4. スケジュールを無効のまま新版WFをデプロイし、両方が無効であることを再確認する
+5. dry-runと承認済みの少量送信で検証する
+6. 別途明示承認を得てスケジュールを再開する（hourly / dailyの同時実行を避ける）
+
+旧版のログ書き込みが走ったまま列を追加しないでください。旧版・新版で出力列数が異なり、外部送信後のログ失敗や再送につながる可能性があります。
+
+```sql
+ALTER TABLE <出力先DB>.capi_push_log ADD COLUMN platform varchar
+```
+
+- 追加前の行は `platform IS NULL` です。再送防止のため、同じ `brand_name` を持つすべての媒体に適用します。旧ブランド名を別媒体へ流用せず新しい名前を付けるか、旧設定から実際の送信先を確認して履歴を補完してから利用してください。NULL履歴から実際の媒体を自動推定しません
+- DDL は実行前に確認してください。実行後は `tdx describe <出力先DB>.capi_push_log` で `platform` 列が末尾にあることを確認します
+- 既存ログに `platform` 列がないまま新版を実行すると、送信前の `stage_brand.sql` で列参照エラーになります。事前にスキーマを確認してください
+- 新規に作る場合は、次の順で列を作成してください: `event_name, event_time, em, ph, fn, ln, country, value, currency, event_source_url, action_source, client_user_agent, client_ip_address, event_id, push_time, brand_name, source_type, platform`
+
+### 任意: 移行前に記録された「送信していない行」の整理
+
+移行前の従来媒体は、メアドのない行も送信済みとして記録されています。その注文は以後も従来媒体の対象外になります。メアドが後から補完される注文だけが影響を受けるため、通常は整理しなくてかまいません。整理する場合は、先に対象を確認してください（削除は取り消せません）。
+
+```sql
+-- 対象の確認（従来媒体のブランド名に置き換える）
+SELECT brand_name, COUNT(*) AS cnt
+FROM <出力先DB>.capi_push_log
+WHERE platform IS NULL
+  AND brand_name IN ('brand_meta', 'brand_tiktok')
+  AND (em IS NULL OR em = '')
+GROUP BY brand_name
+```
+
+DELETE の可否は環境によって異なるため、実行前に権限と方法を確認してください。
+
+## ローカル回帰テスト
+
+```bash
+python3 -I -m unittest discover -s tests -v
+```
+
+標準ライブラリのみを使用します。SQLiteで実際のstage/log SQLを実行し、SQL除外行の未記録、メールの後日補完、ブランド・媒体分離、部分的な既存ログ、失敗後の先頭再実行、旧ログを検証します。TDのTrino/Digdagおよび広告コネクタの実機テストではありません。
 
 ## トラブルシューティング
 
 | 症状 | 原因 | 対処 |
 |---|---|---|
-| 送信件数が常に0 | 送信済み判定が効きすぎている | `capi_push_log` の該当ブランドのデータを確認 |
+| 送信件数が常に0 | 送信済み判定が効きすぎている（同じ `brand_name` + `platform` で記録済み） | `capi_push_log` の `brand_name` と `platform` を確認 |
 | メアドが全て NULL | 会員マスタの JOIN 設定が不完全（4項目のどれかが空） | `member_db` / `member_tbl` / `member_id_col` / `member_email_col` を確認。メアドが不要な識別子設計なら問題なし |
 | 二重送信が発生 | `capi_push_log` テーブルが存在しない | 出力先DBに空テーブルを作成 |
 | コネクタエラー | TDコネクタ名の設定間違い、または認証切れ | `connector` の値とTDコンソールのコネクタ名を照合。認証情報はコネクタ側で確認 |
@@ -710,7 +760,7 @@ brand:
 - **タイムゾーン**: JST (Asia/Tokyo) 基準で動作します
 - **ハッシュ処理**: Yahoo / LINE と OpenAI の識別子（メアド・電話番号など）は、各コネクタが生値をハッシュ化します。64 桁の hex 値もそのまま使えます。従来媒体についても、各 TD コネクタが自動で処理します。SQL 側での事前ハッシュは不要です（X を除く。X の扱いは上記参照）
 - **送信ログの肥大化**: `capi_push_log` は追記のみのため、長期運用時は定期的なクリーンアップを検討してください
-- **既知の制約（従来媒体）**: 従来媒体の送信対象は `capi_push_log` の event_id のみで除外されるため、ブランドをまたいで除外されます。詳細は TIPS を参照してください
+- **既知の制約**: コネクタが `skip_invalid_records: true` で読み飛ばした行は TD からは判別できず、送信済みとして記録されます（TIPS 16 参照）。移行前に記録された不適格行は残ります（「送信ログテーブルの移行」参照）
 
 ---
 

@@ -53,22 +53,16 @@ VARCHAR → DOUBLE → BIGINT の順で変換し、小数を切り捨てて整�
 
 ### 問題
 初回実行時は `capi_push_log` テーブルが存在しないため、
-LEFT JOINやINNER JOINを含むSQLがテーブル不在エラーになる。
+LEFT JOINを含むSQLがテーブル不在エラーになる。
 
 ### 対策
-- **`check_push_log_exists.sql`**: `information_schema.tables` でテーブル存在を確認
-- **`exclude_sent_initial.sql`**: 初回用、JOINなしで全件を送信対象にコピー
-- **`check_brand_sent.sql`**: テーブル存在確認を SQL 内に組み込み（UNION ALL パターン）
+- **`check_push_log_exists.sql`**: `information_schema.tables` でテーブル存在を確認する。ブランドごとに実行し、結果を `store_last_results` で受け取る
+- **`stage_brand_initial.sql`**: テーブルがないとき、JOINなしで全件を未送信として抽出する
+- **`stage_brand.sql`**: テーブルがあるとき、`brand_name` + `platform` で送信済みを除外する
 
-```sql
--- テーブルありの場合のクエリ
-SELECT COALESCE((...), 0) AS already_sent
-WHERE (SELECT COUNT(*) FROM information_schema.tables ...) > 0
-UNION ALL
--- テーブルなしの場合は 0 を返す
-SELECT 0 AS already_sent
-WHERE (SELECT COUNT(*) FROM information_schema.tables ...) = 0
-```
+存在確認はブランドごとのタスクの中で行う。`td.last_results` は直前の `store_last_results` で上書きされるため、`_export` や別のループの外側に置くと値が失われる。
+
+注意: 初回でも `insert_into` の先の `capi_push_log` は必要です。README の手順どおり、空のテーブルを先に作成してください。
 
 ---
 
@@ -89,8 +83,7 @@ digdagの `_export` はトップレベルのステップでは後続タスクに
 
 ### 対策
 **`_export` ではなく、SQLクエリ自体に存在確認ロジックを組み込む。**
-`check_brand_sent.sql` のように、1つのSQLで `information_schema` チェックと
-ブランド別チェックを UNION ALL で組み合わせる。
+`check_push_log_exists.sql` のように、存在確認は独立したタスクにし、`store_last_results` で結果を受け渡す。ブランドごとの処理の中で実行する。
 
 ---
 
@@ -186,14 +179,14 @@ Please specify one of column gbraid, wbraid or gclid
 **送信ログ記録（`insert_*`）を送信の後に配置。**
 
 ```
-check_brand_sent → skip_or_send → [PF送信] → 送信ログ記録
+check_push_log → stage_brand → check_count → skip_or_send → [PF送信] → 送信ログ記録
 ```
 
 - 送信成功 → ログ記録 → 次回スキップ
 - 送信失敗 → ログ未記録 → 次回リトライ
 - Yahoo / LINE / OpenAI は、**送信対象テーブルに格納された行だけ** を送信し、同じ行だけをログへ記録する。送信対象外の行をログに残さない
 - Google Data Manager は、送信SQLと同じ適格条件を専用ログSQLにも適用し、SQLで除外した行を記録しない
-- 従来媒体（`capi_send` を使う媒体）は、現行の `insert_push_log.sql` が `capi_send` の全行を記録する（既知の制約は 18 を参照）
+- 従来媒体（メアドで送信する媒体）は、`insert_push_log.sql` が送信SQLと同じ条件（`em` が空でない）で絞った行だけを記録する（TIPS 18）
 
 ---
 
@@ -373,20 +366,27 @@ Yahoo の許容値に従う: `page_view` / `view_listing` / `view_product` / `vi
 
 ---
 
-## 18. 送信済み判定はブランド単位で行う（既知の制約）
+## 18. 送信済み判定はブランド・媒体ごとに行う
 
 ### 問題
-同じ注文（`event_id`）を Yahoo と LINE の両方へ送る場合、送信済み判定が `event_id` だけで行われると、
-先に一方のブランドがログに記録した時点で、もう一方のブランドは同じ注文を送信対象として扱えなくなる。
+送信済みを `event_id` だけで判定していたため、次の問題があった。
+- 同じ注文を複数のブランドへ送ると、先に記録されたブランドの影響で後のブランドが対象外になる（ワークフローを最初から再実行したときに起きやすい）
+- 従来媒体は、送信SQLの条件で除外された行（メアドなし等）も送信済みとして記録していた
 
-### 対策（Yahoo / LINE / OpenAI の新しい送信対象テーブル）
-- 送信対象の除外は `brand_name` + `event_id` で判定する
-- 1ブランドが失敗しても、他のブランドの送信済み判定に影響しないこと
+### 対策
+- 送信ログは `brand_name` + `platform` + `event_id` で判定する（`stage_brand.sql`）
+- ブランドごとに未送信の行を `capi_send` に抽出してから、その媒体へ送信する
+- 従来媒体は、送信SQLと同じ条件（メアドあり）を通過した行だけを `insert_push_log.sql` で記録する
+- `platform` が空の旧ログ行は `brand_name` で一致させ、移行後に再送しない
+- 送信ログの記録は送信の後（TIPS 9）。送信が失敗した場合は記録されず、次回の対象になる
 
-### 既知の制約（従来媒体）
-現行の `exclude_sent.sql` は `capi_push_log` を `event_id` だけで突合するため、**従来媒体ではブランドをまたいで除外される**。
-また、従来媒体の `insert_push_log.sql` は `capi_send` の全行を記録する（送信できなかった行も含む）。
-同じ注文を複数の従来媒体ブランドへ送る構成では、この挙動を前提に運用してください。
+### 残る制約
+- **コネクタが読み飛ばした行は判別できない**: `skip_invalid_records: true` でコネクタが読み飛ばした行も、TD からは送信済みとして記録される。Yahoo / LINE / OpenAI は送信前に検証して対象外の行を除くが、従来媒体は各コネクタの仕様に依存する（TIPS 16）
+- **移行前の記録**: 移行前に送信対象外として記録された行は、そのブランドでは以後も対象外のまま（README「送信ログテーブルの移行」の任意の整理を参照）
+- **移行順序**: 両スケジュールの停止 → 実行中attemptの完了待ち → スキーマ変更・確認 → 無効のまま新版デプロイ → 検証 → 別途承認後の再開。旧版の実行中に列を追加しない
+- **送信済みの意味**: SQLの適格条件を通った入力行集合を、エクスポートタスク成功後に記録する。媒体側の行別受領やexactly-once配信を保証するログではない
+- **ブランド名の付け方**: 新形式の履歴は `brand_name` + `platform` で分離する。ただし旧 `platform IS NULL` 履歴は同じブランドの全媒体へ適用される。旧ブランド名を別媒体へ流用しない。旧設定から送信先を確定して履歴を補完できない場合は、媒体別の新しいブランド名を使う
+- **同時実行**: hourly と daily が同時に `capi_base` / `capi_send` を作り直すと、互いの中間テーブルを壊す可能性がある。実行時刻をずらして運用する
 
 ---
 

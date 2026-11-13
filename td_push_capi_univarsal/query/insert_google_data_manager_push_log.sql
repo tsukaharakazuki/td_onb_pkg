@@ -37,6 +37,7 @@ SELECT
     , TD_SCHEDULED_TIME() AS push_time
     , '${b.brand_name}' AS brand_name
     , source_type
+    , '${b.platform}' AS platform
 FROM
     eligible
 WHERE
