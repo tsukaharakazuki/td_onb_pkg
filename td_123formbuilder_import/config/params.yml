@@ -1,9 +1,13 @@
 td:
   # 必ず実際の取り込み先DBに変更（DBは事前に作成してください）
   database: your_database_name
-  # Tokyo: api.treasuredata.co.jp / US: api.treasuredata.com
-  # td_ddl> と Python の両方で同じリージョンを使用します
-  endpoint: api.treasuredata.com
+
+# Pythonが書き込み・件数照合に使うTD APIのリージョン（アカウントのリージョンと一致させる）
+#   US: api.treasuredata.com / Tokyo: api.treasuredata.co.jp
+#   EU: api.eu01.treasuredata.com / Korea: api.ap02.treasuredata.com
+# td_ddl> はTD Workflowが自動で自アカウントのリージョンを使うため、ここでは指定しない
+# （td.endpoint に別リージョンを書くと td_ddl> がそのリージョンへ接続してしまう）
+td_api_server: api.treasuredata.com
 
 # 123FormBuilder EUアカウントは https://eu-api.123formbuilder.com/v2
 formbuilder_base_url: https://api.123formbuilder.com/v2

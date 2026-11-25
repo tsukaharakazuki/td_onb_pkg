@@ -1,5 +1,5 @@
 """Read-only 123FormBuilder form extraction."""
-from pyscript.common import ApiClient, run
+from pyscript.common import ApiClient, as_list, run
 
 
 class FormBuilderFormsClient(ApiClient):
@@ -8,11 +8,17 @@ class FormBuilderFormsClient(ApiClient):
         for form in self.items("forms"):
             form_id = form["id"]
             details = self.detail(f"forms/{form_id}")
-            with_fields = self.detail(f"forms/{form_id}/fields")
-            # Official schema: data.controls.data contains the controls.
-            fields = with_fields.get("controls", {}).get("data")
-            if not isinstance(fields, list):
-                raise RuntimeError(f"Form {form_id}: invalid controls.data field")
+            # Swagger documents data.controls.data. Also accept a plain list of
+            # controls or data.fields; reject any other shape.
+            data = self.get(f"forms/{form_id}/fields")["data"]
+            if isinstance(data, dict):
+                fields = as_list(data.get("controls"))
+                if fields is None:
+                    fields = as_list(data.get("fields"))
+            else:
+                fields = as_list(data)
+            if fields is None:
+                raise RuntimeError(f"Form {form_id}: unexpected forms/{{id}}/fields response shape")
             submissions = self.get(f"forms/{form_id}/submissions", page=1, per_page=10)
             sample = submissions["data"]
             if not isinstance(sample, list):

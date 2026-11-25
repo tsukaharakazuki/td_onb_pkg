@@ -21,7 +21,7 @@ _export:
     FORMBUILDER_BASE_URL: ${formbuilder_base_url}
     TD_API_KEY: ${secret:td.apikey}
     TD_DATABASE: ${td.database}
-    TD_API_SERVER: ${td.endpoint}
+    TD_API_SERVER: ${td_api_server}
 
 _error:
   echo>: "IMPORT_FAILED. Check +extract_users logs. Session ${session_id}"

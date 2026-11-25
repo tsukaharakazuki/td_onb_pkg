@@ -1,5 +1,5 @@
 """Read-only 123FormBuilder group extraction."""
-from pyscript.common import ApiClient, run
+from pyscript.common import ApiClient, as_list, run
 
 
 class FormBuilderGroupsClient(ApiClient):
@@ -8,11 +8,12 @@ class FormBuilderGroupsClient(ApiClient):
         for group in self.items("groups"):
             group_id = group["id"]
             details = self.detail(f"groups/{group_id}")
-            # Official schema: data is GroupWithForms, NOT a list of forms.
-            grouped = self.detail(f"groups/{group_id}/forms")
-            forms = grouped.get("forms")
-            if not isinstance(forms, list) or any(not isinstance(x, dict) for x in forms):
-                raise RuntimeError(f"Group {group_id}: invalid forms field")
+            # Swagger documents data as GroupWithForms ({"forms": [...]}), but the
+            # endpoint is described as a list. Accept both shapes; reject others.
+            data = self.get(f"groups/{group_id}/forms")["data"]
+            forms = as_list(data.get("forms")) if isinstance(data, dict) else as_list(data)
+            if forms is None:
+                raise RuntimeError(f"Group {group_id}: unexpected groups/{{id}}/forms response shape")
             records.append({**group, **details, "forms": forms, "forms_count": len(forms)})
         return records
 

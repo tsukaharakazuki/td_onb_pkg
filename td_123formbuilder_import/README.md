@@ -22,11 +22,12 @@
 ```yaml
 td:
   database: 実際の取り込み先DB
-  endpoint: api.treasuredata.com  # US。Tokyoはapi.treasuredata.co.jp
+td_api_server: api.treasuredata.com  # US。Tokyoはapi.treasuredata.co.jp
 formbuilder_base_url: https://api.123formbuilder.com/v2
 ```
 
-- APIリージョンは`td_ddl>`とPythonで共通です。見ているConsoleと同じアカウント・リージョンか確認してください。
+- `td_api_server`はPython（書き込み・件数照合）が使うTD APIです。**WFを登録するアカウントのリージョンと一致させてください。** 不一致の場合は認証エラーでWFが失敗します。
+- `td_ddl>`はTD Workflowが自アカウントのリージョンを自動で使います。`td.endpoint`は設定しないでください（設定すると`td_ddl>`の接続先も変わります）。
 - 123FormBuilder EUは`https://eu-api.123formbuilder.com/v2`。
 - Secrets: `formbuilder_username` / `formbuilder_password` / **`td.apikey`**（`td_apikey`ではない）。ファイルに値を記載しないでください。
 - `td.apikey`には、テーブル作成・bulk import・検証用Trino SELECTの権限が必要です。
@@ -51,7 +52,8 @@ IMPORT_SUCCESS target=your_db.formbuilder_groups fetched=10 verified=10 run_id=.
 ```
 
 - 成功は`IMPORT_SUCCESS`で判定します。`IMPORT_FAILED`ならWFも失敗します。
-- 取り込み対象全体が0件の場合は明示的に失敗させます。元データが本当に0件か、権限により見えないかを確認してください。投稿0件のフォームが混在する場合は、そのフォームだけをスキップし、他のフォームの取得を続けます。
+- 取り込み対象全体が0件の場合は明示的に失敗させます。元データが本当に0件か、権限により見えないかを確認してください。投稿0件のフォームが混在する場合は、そのフォームだけをスキップし、他のフォームの取得を続けます。グループを使っていないアカウントでは`td_groups`は毎回0件で失敗するため、実行対象から外してください。
+- 123FormBuilder APIのGETは、429・5xx・通信エラー時に最大3回まで再試行します（`Retry-After`を尊重、最大60秒）。ログインは、アカウントロックを避けるため再試行しません。
 - HTTP/APIエラーはステータスを表示し、認証情報付きURLやレスポンス全文・回答データはログへ出しません。
 - 件数照合は最大6回（不一致時10秒待機）。各回でtimeを指定した小範囲SELECTを実行し、TDのクエリ負荷・費用が発生します。
 - **書込完了後に検証が失敗する場合もあります。再実行前に`run_id`の取込済データを確認してください。** 全件appendなので、無条件の再実行は重複します。
@@ -63,6 +65,8 @@ IMPORT_SUCCESS target=your_db.formbuilder_groups fetched=10 verified=10 run_id=.
 - `import_run_id`: 1回のロードを識別するUUID。検証で使用。
 - NULLを含む整数はpandasのfloat推論を避け、符号付き64bit整数として保持。64bitを超える整数・精度損失を起こす混合型は文字列として保持します。
 - パスワード等の認証情報は前後の空白も変更せず使用します。
+- APIのキー名はTDの列名規則（小文字・数字・`_`）に合わせて変換します（例: `createdAt`→`created_at`）。元データの`time`・`extracted_at`・`import_run_id`は`source_`付きの列名へ改名します。変換後に列名が重複した場合だけ失敗します。
+- 型が混在する列（数値と文字列など）は文字列で保存し、NULLはNULLのまま保持します。
 - APIのトップレベル項目は維持し、配列・オブジェクトは**JSON文字列**で格納。旧版の`json_normalize`によるドット付き列の展開は行いません。既存BI等で旧列を参照していた場合は移行が必要です。既存データの削除はしません。
 - Groups APIの`data.forms`、Fields APIの`data.controls.data`を公式のレスポンス構造に合わせて読み取ります。
 - Usersは仕様にある`GET /users`のみ使用。未定義の`GET /user`・`GET /users/{id}`を廃止。推測の`user_type`ではなく`user_parent`等の返却値を維持。

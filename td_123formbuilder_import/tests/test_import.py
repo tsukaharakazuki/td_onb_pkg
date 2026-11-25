@@ -61,6 +61,52 @@ class RuntimeTests(unittest.TestCase):
                 self.assertEqual([item["parent_id"] for item in payloads], expected)
                 self.assertIsNone(payloads[-1]["parent_id"])
 
+    def writer_payloads(self, records):
+        from pytd.writer import _cast_dtypes, _replace_pd_na
+        frame = common.prepare_dataframe(records, "batch", 1700000000)
+        _cast_dtypes(frame)
+        _replace_pd_na(frame)
+        return frame.to_dict(orient="records")
+
+    def test_mixed_type_column_keeps_null_through_real_writer(self):
+        payloads = self.writer_payloads([
+            {"active_days": 5}, {"active_days": "mon"}, {"active_days": None},
+            {"active_days": True}])
+        self.assertEqual([p["active_days"] for p in payloads], ["5", "mon", None, "true"])
+
+    def test_column_names_are_normalized_not_rejected(self):
+        frame = common.prepare_dataframe(
+            [{"createdAt": "x", "Form-Name": "y", "2fa": 1, "time": "source"}], "batch", 1700000000)
+        self.assertEqual(frame.loc[0, "created_at"], "x")
+        self.assertEqual(frame.loc[0, "form_name"], "y")
+        self.assertEqual(frame.loc[0, "_2fa"], 1)
+        # A source "time" must not overwrite the import time.
+        self.assertEqual(frame.loc[0, "source_time"], "source")
+        self.assertEqual(int(frame.loc[0, "time"]), 1700000000)
+
+    def test_column_name_collision_fails(self):
+        with self.assertRaisesRegex(RuntimeError, "both map to column"):
+            common.prepare_dataframe([{"createdAt": 1, "created_at": 2}], "batch", 1700000000)
+
+    def test_logging_is_visible_even_if_root_is_configured(self):
+        common.configure_logging()
+        self.assertEqual(common.logger.level, common.logging.INFO)
+        self.assertTrue(common.logger.handlers)
+        self.assertFalse(common.logger.propagate)
+
+    def test_install_adds_user_site_created_by_pip(self):
+        import sys, tempfile
+        user_site = tempfile.mkdtemp(prefix="user_site_")
+        saved = list(sys.path)
+        try:
+            with patch.object(common.subprocess, "run") as pip, \
+                    patch.object(common.site, "getusersitepackages", return_value=user_site):
+                common.install_dependencies()
+            self.assertEqual(sys.path[0], user_site)
+            self.assertTrue(pip.call_args.kwargs["check"])
+        finally:
+            sys.path[:] = saved
+
     def test_placeholder_db_fails_before_api(self):
         os.environ["TD_DATABASE"] = "your_database_name"
         with self.assertRaisesRegex(RuntimeError, "real td.database"):
@@ -219,22 +265,100 @@ class ApiTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "repeated page"):
             list(client.items("groups"))
 
-    def test_group_object_response_not_treated_as_list(self):
+    def group_client(self, forms_payload):
         client = self.client_without_network(FormBuilderGroupsClient)
         client.items = MagicMock(return_value=iter([{"id": 1, "name": "group"}]))
-        client.detail = MagicMock(side_effect=[{"id": 1}, {"id": 1, "forms": [{"id": 2}]}])
-        records = client.fetch_all_groups_data()
-        self.assertEqual(records[0]["forms"], [{"id": 2}])
-        self.assertEqual(records[0]["forms_count"], 1)
+        client.detail = MagicMock(return_value={"id": 1})
+        client.get = MagicMock(return_value={"data": forms_payload})
+        return client
 
-    def test_form_controls_and_total(self):
+    def test_group_forms_accepts_documented_object_and_list_shapes(self):
+        for payload in ({"id": 1, "forms": [{"id": 2}]},
+                        {"id": 1, "forms": {"data": [{"id": 2}]}},
+                        [{"id": 2}]):
+            with self.subTest(payload=payload):
+                record = self.group_client(payload).fetch_all_groups_data()[0]
+                self.assertEqual(record["forms"], [{"id": 2}])
+                self.assertEqual(record["forms_count"], 1)
+
+    def test_group_forms_rejects_unknown_shape(self):
+        for payload in ({"id": 1}, {"forms": "x"}, ["x"]):
+            with self.subTest(payload=payload):
+                with self.assertRaisesRegex(RuntimeError, "unexpected"):
+                    self.group_client(payload).fetch_all_groups_data()
+
+    def form_client(self, fields_payload):
         client = self.client_without_network(FormBuilderFormsClient)
         client.items = MagicMock(return_value=iter([{"id": 1}]))
-        client.detail = MagicMock(side_effect=[{"id": 1}, {"controls": {"data": [{"id": 3}]}}])
-        client.get = MagicMock(return_value={"data": [], "meta": {"pagination": {"total": 12}}})
-        record = client.fetch_all_forms_data()[0]
-        self.assertEqual(record["fields"], [{"id": 3}])
-        self.assertEqual(record["submissions_count"], 12)
+        client.detail = MagicMock(return_value={"id": 1})
+        def get(endpoint, **params):
+            if endpoint == "forms/1/fields":
+                return {"data": fields_payload}
+            if endpoint == "forms/1/submissions":
+                return {"data": [], "meta": {"pagination": {"total": 12}}}
+            self.fail(f"Unexpected endpoint {endpoint}")
+        client.get = get
+        return client
+
+    def test_form_fields_accepts_documented_and_alternative_shapes(self):
+        for payload in ({"controls": {"data": [{"id": 3}]}},
+                        {"controls": [{"id": 3}]},
+                        {"fields": [{"id": 3}]},
+                        [{"id": 3}]):
+            with self.subTest(payload=payload):
+                record = self.form_client(payload).fetch_all_forms_data()[0]
+                self.assertEqual(record["fields"], [{"id": 3}])
+                self.assertEqual(record["submissions_count"], 12)
+
+    def test_form_fields_rejects_unknown_shape(self):
+        with self.assertRaisesRegex(RuntimeError, "unexpected"):
+            self.form_client({"id": 1}).fetch_all_forms_data()
+
+    def retry_client(self, responses):
+        client = self.client_without_network()
+        client.requests = __import__("requests")
+        client.base_url, client.token = "https://api.123formbuilder.com/v2", "test_token"
+        client.session = MagicMock()
+        client.session.request.side_effect = responses
+        return client
+
+    def test_get_retries_transient_errors_then_succeeds(self):
+        import requests
+        client = self.retry_client([
+            MagicMock(status_code=429, headers={"Retry-After": "3"}),
+            requests.ConnectionError("JWT=secret_token"),
+            MagicMock(status_code=503, headers={}),
+            self.response({"data": [{"id": 1}], "status_code": 200}),
+        ])
+        with patch.object(common.time, "sleep") as sleep:
+            self.assertEqual(client.get("groups")["data"], [{"id": 1}])
+        self.assertEqual(client.session.request.call_count, 4)
+        self.assertEqual(sleep.call_args_list[0].args[0], 3.0)
+
+    def test_get_does_not_retry_client_errors(self):
+        client = self.retry_client([MagicMock(status_code=401, headers={})])
+        with patch.object(common.time, "sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError, "HTTP 401"):
+                client.get("groups")
+        sleep.assert_not_called()
+        self.assertEqual(client.session.request.call_count, 1)
+
+    def test_get_retries_are_bounded_and_hide_secrets(self):
+        import requests
+        client = self.retry_client([requests.ConnectionError("JWT=secret_token")] * 10)
+        with patch.object(common.time, "sleep"):
+            with self.assertRaisesRegex(RuntimeError, "ConnectionError") as caught:
+                client.get("groups")
+        self.assertEqual(client.session.request.call_count, common.GET_ATTEMPTS)
+        self.assertNotIn("secret_token", str(caught.exception))
+
+    def test_login_is_not_retried(self):
+        with patch("requests.Session") as factory, patch.object(common.time, "sleep") as sleep:
+            factory.return_value.request.return_value = MagicMock(status_code=503, headers={})
+            with self.assertRaisesRegex(RuntimeError, "HTTP 503"):
+                common.ApiClient("user", "password")
+        self.assertEqual(factory.return_value.request.call_count, 1)
+        sleep.assert_not_called()
 
     def test_users_only_documented_list(self):
         client = self.client_without_network(FormBuilderUsersClient)
@@ -267,10 +391,13 @@ class WorkflowTests(unittest.TestCase):
             task = doc[f"+extract_{name}"]
             self.assertEqual(task["docker"]["image"], "treasuredata/customscript-python:3.12.11-td4")
             self.assertEqual(task["_env"]["TD_API_KEY"], "${secret:td.apikey}")
-            self.assertEqual(task["_env"]["TD_API_SERVER"], "${td.endpoint}")
+            self.assertEqual(task["_env"]["TD_API_SERVER"], "${td_api_server}")
+            self.assertNotIn("endpoint", doc["+create_table"])
             self.assertNotIn("+store_", text)
             self.assertNotIn("schedule", doc)
-        self.assertIn("endpoint", params["td"])
+        # td.endpoint would also redirect td_ddl>; keep it out of the shared td config.
+        self.assertNotIn("endpoint", params["td"])
+        self.assertIn("td_api_server", params)
 
 
 if __name__ == "__main__":

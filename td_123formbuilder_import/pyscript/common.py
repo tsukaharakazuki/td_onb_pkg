@@ -5,6 +5,7 @@ import logging
 import os
 from pathlib import Path
 import re
+import site
 import subprocess
 import sys
 import time
@@ -12,6 +13,22 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 logger = logging.getLogger(__name__)
+
+# Columns added by this workflow. Source keys with these names are renamed.
+RESERVED_COLUMNS = ("time", "extracted_at", "import_run_id")
+RETRY_STATUSES = (429, 500, 502, 503, 504)
+GET_ATTEMPTS = 4
+
+
+def configure_logging():
+    # Digdag may pre-configure the root logger; keep our status lines visible.
+    logging.basicConfig(level=logging.INFO)
+    if not logger.handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(logging.Formatter("%(levelname)s %(message)s"))
+        logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
 
 
 def install_dependencies():
@@ -21,6 +38,11 @@ def install_dependencies():
          "--disable-pip-version-check", "-r", str(requirements)],
         check=True,
     )
+    # A non-root pip falls back to the user site. If that directory did not
+    # exist when Python started, it is not on sys.path yet.
+    user_site = site.getusersitepackages()
+    if os.path.isdir(user_site) and user_site not in sys.path:
+        sys.path.insert(0, user_site)
     importlib.invalidate_caches()
 
 
@@ -44,12 +66,21 @@ def safe_error(exc):
     return message[:1000]
 
 
+def as_list(value):
+    """Accept a plain list or a transformer-style {"data": [...]} wrapper."""
+    if isinstance(value, dict) and "data" in value:
+        value = value["data"]
+    if isinstance(value, list) and all(isinstance(item, dict) for item in value):
+        return value
+    return None
+
+
 class ApiClient:
     def __init__(self, username, password, base_url=None):
         import requests
         self.requests = requests
         self.base_url = (base_url or os.environ.get(
-            "FORMBUILDER_BASE_URL", "https://api.123formbuilder.com/v2")).rstrip("/")
+            "FORMBUILDER_BASE_URL", "https://api.123formbuilder.com/v2")).strip().rstrip("/")
         if self.base_url not in ("https://api.123formbuilder.com/v2",
                                  "https://eu-api.123formbuilder.com/v2"):
             raise RuntimeError("FORMBUILDER_BASE_URL must be an official HTTPS v2 API URL")
@@ -58,16 +89,31 @@ class ApiClient:
         self.session = requests.Session()
         self.token = self._login()
 
-    def _request(self, method, endpoint, **kwargs):
-        # Do not propagate requests exceptions containing a credential-bearing URL.
-        try:
-            response = self.session.request(
-                method, f"{self.base_url}/{endpoint}", timeout=(10, 120),
-                allow_redirects=False, **kwargs)
-        except self.requests.RequestException as exc:
-            raise RuntimeError(f"123FormBuilder {endpoint}: {type(exc).__name__}") from None
-        if not 200 <= response.status_code < 300:
-            raise RuntimeError(f"123FormBuilder {endpoint}: HTTP {response.status_code}")
+    def _request(self, method, endpoint, attempts=1, **kwargs):
+        for attempt in range(1, attempts + 1):
+            retry_after = None
+            # Do not propagate requests exceptions containing a credential-bearing URL.
+            try:
+                response = self.session.request(
+                    method, f"{self.base_url}/{endpoint}", timeout=(10, 120),
+                    allow_redirects=False, **kwargs)
+            except self.requests.RequestException as exc:
+                error = f"123FormBuilder {endpoint}: {type(exc).__name__}"
+            else:
+                if 200 <= response.status_code < 300:
+                    break
+                error = f"123FormBuilder {endpoint}: HTTP {response.status_code}"
+                if response.status_code not in RETRY_STATUSES:
+                    raise RuntimeError(error)
+                retry_after = response.headers.get("Retry-After")
+            if attempt == attempts:
+                raise RuntimeError(error) from None
+            try:
+                wait = min(float(retry_after), 60.0) if retry_after else 2.0 ** attempt
+            except ValueError:
+                wait = 2.0 ** attempt
+            logger.warning("%s; retrying in %.0fs (%d/%d)", error, wait, attempt, attempts - 1)
+            time.sleep(wait)
         try:
             payload = response.json()
         except ValueError:
@@ -80,6 +126,7 @@ class ApiClient:
         return payload
 
     def _login(self):
+        # Login is not retried: repeated failed logins could lock the account.
         payload = self._request("POST", "token", params={
             "username": self.username, "password": self.password})
         token = payload.get("token")
@@ -89,7 +136,9 @@ class ApiClient:
         return token
 
     def get(self, endpoint, **params):
-        payload = self._request("GET", endpoint, params={**params, "JWT": self.token})
+        # GET is read-only, so transient 429/5xx/network errors are retried.
+        payload = self._request("GET", endpoint, attempts=GET_ATTEMPTS,
+                                params={**params, "JWT": self.token})
         if "data" not in payload:
             raise RuntimeError(f"123FormBuilder {endpoint}: missing data field")
         return payload
@@ -140,37 +189,72 @@ class ApiClient:
         self.session.close()
 
 
+def column_name(key):
+    """Map a source key to a valid TD column name (lowercase snake_case)."""
+    name = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", str(key)).lower()
+    name = re.sub(r"[^a-z0-9_]+", "_", name).strip("_")
+    name = re.sub(r"_+", "_", name) or "column"
+    if name[0].isdigit():
+        name = "_" + name
+    if name in RESERVED_COLUMNS:
+        name = "source_" + name
+    return name
+
+
+def _scalar_kind(value):
+    if isinstance(value, bool):
+        return "bool"
+    if isinstance(value, (int, float)):
+        return "number"
+    if isinstance(value, str):
+        return "str"
+    return "other"
+
+
+def _as_text(value):
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return value if isinstance(value, str) else str(value)
+
+
 def prepare_dataframe(records, batch_id, imported_at):
     import pandas as pd
     # Preserve nested structures as JSON, not invalid dotted TD column names.
     rows = []
     for record in records:
-        row = {}
+        row, sources = {}, {}
         for key, value in record.items():
-            if not re.fullmatch(r"[a-z_][a-z0-9_]*", key):
-                raise RuntimeError(f"Unsupported source column name: {key}")
-            row[key] = json.dumps(value, ensure_ascii=False) if isinstance(value, (dict, list)) else value
+            name = column_name(key)
+            if name in sources:
+                raise RuntimeError(
+                    f"Source keys {sources[name]!r} and {key!r} both map to column {name!r}")
+            sources[name] = key
+            row[name] = json.dumps(value, ensure_ascii=False) if isinstance(value, (dict, list)) else value
         row.update(time=imported_at, extracted_at=datetime.fromtimestamp(
             imported_at, timezone.utc).isoformat(), import_run_id=batch_id)
         rows.append(row)
-    # Build integer columns before pandas can infer float64 for int + None.
-    # Passing a previously inferred float column to Int64 would be too late.
+    # Build each column explicitly. Letting pandas infer types would turn
+    # int + None into float64, and pytd would turn None in a mixed column
+    # into the string "None".
     columns = {}
     for key in dict.fromkeys(key for row in rows for key in row):
         values = [row.get(key) for row in rows]
         present = [value for value in values if value is not None]
+        kinds = {_scalar_kind(value) for value in present}
         if present and all(type(value) is int for value in present):
             if all(-(2**63) <= value < 2**63 for value in present):
                 dtype = "Int64" if len(present) != len(values) else "int64"
                 columns[key] = pd.Series(values, dtype=dtype)
             else:
                 # TD bigint is signed 64-bit. Preserve larger values as text.
-                columns[key] = pd.Series(
-                    [str(value) if value is not None else None for value in values], dtype=object)
-        elif any(type(value) is int and abs(value) > 2**53 for value in present):
-            # Mixed numeric types can also trigger lossy float inference.
-            columns[key] = pd.Series(
-                [str(value) if value is not None else None for value in values], dtype=object)
+                columns[key] = pd.Series([_as_text(value) for value in values], dtype=object)
+        elif len(kinds) > 1 or "other" in kinds or any(
+                type(value) is int and abs(value) > 2**53 for value in present):
+            # Mixed types or float-unsafe integers: keep non-null values as
+            # text and NULL as NULL.
+            columns[key] = pd.Series([_as_text(value) for value in values], dtype=object)
         else:
             columns[key] = pd.Series(values)
     return pd.DataFrame(columns)
@@ -214,7 +298,7 @@ def upload(records, table, database, api_key, endpoint):
 
 
 def run(client_type, fetch_method, table):
-    logging.basicConfig(level=logging.INFO)
+    configure_logging()
     try:
         # Validate configuration BEFORE calling the source API or installing packages.
         username, password = required_env("FORMBUILDER_USERNAME"), required_env("FORMBUILDER_PASSWORD")
