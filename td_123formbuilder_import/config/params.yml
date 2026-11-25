@@ -1,5 +1,9 @@
 td:
+  # 必ず実際の取り込み先DBに変更（DBは事前に作成してください）
   database: your_database_name
-  
-# 使用方法:
-# td wf push forms --project your-project-name -p td.database=your_actual_database
+  # Tokyo: api.treasuredata.co.jp / US: api.treasuredata.com
+  # td_ddl> と Python の両方で同じリージョンを使用します
+  endpoint: api.treasuredata.com
+
+# 123FormBuilder EUアカウントは https://eu-api.123formbuilder.com/v2
+formbuilder_base_url: https://api.123formbuilder.com/v2

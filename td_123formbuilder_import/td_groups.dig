@@ -1,39 +1,28 @@
-timezone: "Asia/Tokyo"
+timezone: Asia/Tokyo
 
 _export:
-  !include : 'config/params.yml'
-  # 123FormBuilder API設定
-  formbuilder:
-    username: ${secret:formbuilder_username}
-    password: ${secret:formbuilder_password}
+  !include : config/params.yml
 
 #schedule:
-#  daily>: 02:30:00
+#  daily>: "02:30:00"
 
-+start:
-  echo>: "Starting 123FormBuilder groups data extraction..."
-
-# 取り込み先テーブルを事前に作成（既に存在する場合は何もしない）
 +create_table:
   td_ddl>:
   create_tables: [formbuilder_groups]
   database: ${td.database}
 
+# API取得 → bulk import → TD上の実行ID別件数照合。失敗はWFに伝播。
 +extract_groups:
   py>: pyscript.groups_fetcher.main
   docker:
     image: "treasuredata/customscript-python:3.12.11-td1"
   _env:
-    FORMBUILDER_USERNAME: ${formbuilder.username}
-    FORMBUILDER_PASSWORD: ${formbuilder.password}
+    FORMBUILDER_USERNAME: ${secret:formbuilder_username}
+    FORMBUILDER_PASSWORD: ${secret:formbuilder_password}
+    FORMBUILDER_BASE_URL: ${formbuilder_base_url}
     TD_API_KEY: ${secret:td.apikey}
     TD_DATABASE: ${td.database}
-
-+store_groups:
-  echo>: "Groups data has been output by the Python script and stored in TD"
-
-+cleanup:
-  echo>: "123FormBuilder groups data extraction completed successfully"
+    TD_API_SERVER: ${td.endpoint}
 
 _error:
-  echo>: "123FormBuilder groups data extraction failed. Workflow: ${session_id}, Time: ${session_time}"
+  echo>: "IMPORT_FAILED. Check +extract_groups logs. Session ${session_id}"
