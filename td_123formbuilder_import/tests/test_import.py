@@ -265,7 +265,7 @@ class WorkflowTests(unittest.TestCase):
             doc = yaml.load(text, Loader=Loader)
             self.assertEqual(doc["+create_table"]["create_tables"], [f"formbuilder_{name}"])
             task = doc[f"+extract_{name}"]
-            self.assertEqual(task["docker"]["image"], "treasuredata/customscript-python:3.12.11-td1")
+            self.assertEqual(task["docker"]["image"], "treasuredata/customscript-python:3.12.11-td4")
             self.assertEqual(task["_env"]["TD_API_KEY"], "${secret:td.apikey}")
             self.assertEqual(task["_env"]["TD_API_SERVER"], "${td.endpoint}")
             self.assertNotIn("+store_", text)

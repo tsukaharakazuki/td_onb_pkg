@@ -52,4 +52,4 @@ notification:
     enabled: false       # Custom Script（Python）で送信
 
 # Custom Script（Teams / Google Chat 送信）で使う Docker イメージ
-custom_script_image: "digdag/digdag-python:3.10"
+custom_script_image: "treasuredata/customscript-python:3.12.11-td4"

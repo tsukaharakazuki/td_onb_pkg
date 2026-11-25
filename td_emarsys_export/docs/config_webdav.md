@@ -81,7 +81,7 @@ targets:
 
 | 項目 | 仕様 |
 |------|------|
-| 実行イメージ | `digdag/digdag-python:3.10` |
+| 実行イメージ | `treasuredata/customscript-python:3.12.11-td4` |
 | 追加パッケージ | `td-client`, `requests`（実行時に pip install） |
 | データ取得 | `td-client` でジョブ結果をストリーミング取得（全件をメモリに載せない） |
 | ヘッダー | ジョブ結果のカラム名（= SQL の `AS` 名）を 1 行目に出力 |

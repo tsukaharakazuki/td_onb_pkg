@@ -78,6 +78,6 @@ digdag run td_lda_recommend.dig
 
 ## 注意事項
 
-- Digdag環境でPython 3.9が利用可能である必要があります
+- Digdag環境でPython 3.12が利用可能である必要があります
 - Treasure DataのAPIキーが適切に設定されている必要があります
 - 十分なデータ量がないと学習が適切に行われない可能性があります

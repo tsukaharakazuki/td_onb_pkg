@@ -13,7 +13,7 @@
 5. `bulk_import`のappendでTDへ保存。
 6. `import_run_id`と`time`で今回分の件数をSELECTし、取得件数と一致した場合だけ`IMPORT_SUCCESS`を表示。
 
-実行イメージは`treasuredata/customscript-python:3.12.11-td1`。スケジュールは無効のままです。
+実行イメージは`treasuredata/customscript-python:3.12.11-td4`。スケジュールは無効のままです。
 
 ## 設定（最初に確認）
 

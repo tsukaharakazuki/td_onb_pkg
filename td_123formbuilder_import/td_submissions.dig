@@ -14,7 +14,7 @@ _export:
 +extract_submissions:
   py>: pyscript.submissions_fetcher.main
   docker:
-    image: "treasuredata/customscript-python:3.12.11-td1"
+    image: "treasuredata/customscript-python:3.12.11-td4"
   _env:
     FORMBUILDER_USERNAME: ${secret:formbuilder_username}
     FORMBUILDER_PASSWORD: ${secret:formbuilder_password}

@@ -226,7 +226,7 @@ store_last_results: true
 # https://plazma.red/user_engagement/howto/0108
 +python:
   docker:
-    image: "digdag/digdag-python:3.9"
+    image: "treasuredata/customscript-python:3.12.11-td4"
   _env:
     TD_API_KEY: ${secret:td.apikey}
     ENDPOINT: ${td.endpoint}

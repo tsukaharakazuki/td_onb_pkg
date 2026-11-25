@@ -87,4 +87,4 @@ _export:
                 WEBDAV_USER: ${secret:emarsys.webdav_user}
                 WEBDAV_PASSWORD: ${secret:emarsys.webdav_password}
               docker:
-                image: "digdag/digdag-python:3.10"
+                image: "treasuredata/customscript-python:3.12.11-td4"
