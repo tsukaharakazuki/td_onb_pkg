@@ -1,77 +1,84 @@
 # td_123formbuilder_import
 
-123FormBuilder（API v2）からフォーム・グループ・ユーザー・フォーム投稿（submissions）を取得し、Treasure Data のテーブルに取り込む Workflow です。4 つの WF はそれぞれ独立して実行します。
+123FormBuilder API v2からフォーム・グループ・ユーザー・投稿をTreasure Dataへ取り込むWorkflow。
 
-> ⚠ **既知の課題があります**（後述「既知の課題」）。認証まわりが API 仕様と合っていないため、修正前に本番で実行すると失敗する可能性があります。
+## 2026-11-25 修正
+
+従来版はpytdのimport失敗・TD書込失敗・APIの部分失敗を握りつぶし、`+store_*`の固定文を表示していました。修正版は固定成功メッセージとstdoutへのデータ退避を廃止しています。
+
+1. `td_ddl>`で対象テーブルを事前作成（既存なら維持）。DB自体は事前作成が必要。
+2. Custom Script内で`requirements.txt`をインストールしてから、requests・pytd・pandasをimport。
+3. 公開Swaggerどおり`POST /token`のqueryでログインし、GET時に`JWT` queryを指定。
+4. APIから全データを取得。途中のエラーは伝播し、取得完了前にはTDへ書き込まない。
+5. `bulk_import`のappendでTDへ保存。
+6. `import_run_id`と`time`で今回分の件数をSELECTし、取得件数と一致した場合だけ`IMPORT_SUCCESS`を表示。
+
+実行イメージは`treasuredata/customscript-python:3.12.11-td4`。スケジュールは無効のままです。
+
+## 設定（最初に確認）
+
+`config/params.yml`を編集してください。`-p`による実行時上書きは使いません。
+
+```yaml
+td:
+  database: 実際の取り込み先DB
+  endpoint: api.treasuredata.com  # US。Tokyoはapi.treasuredata.co.jp
+formbuilder_base_url: https://api.123formbuilder.com/v2
+```
+
+- APIリージョンは`td_ddl>`とPythonで共通です。見ているConsoleと同じアカウント・リージョンか確認してください。
+- 123FormBuilder EUは`https://eu-api.123formbuilder.com/v2`。
+- Secrets: `formbuilder_username` / `formbuilder_password` / **`td.apikey`**（`td_apikey`ではない）。ファイルに値を記載しないでください。
+- `td.apikey`には、テーブル作成・bulk import・検証用Trino SELECTの権限が必要です。
+- Secretsは各`py>`の`_env`に直接展開します。
 
 ## 構成
 
-```
-td_123formbuilder_import/
-├── tdx.json                  # tdx wf push 用（workflow_project）
-├── td_forms.dig              # フォーム情報   → formbuilder_forms
-├── td_groups.dig             # グループ情報   → formbuilder_groups
-├── td_users.dig              # ユーザー情報   → formbuilder_users
-├── td_submissions.dig        # フォーム投稿   → formbuilder_submissions
-├── config/
-│   └── params.yml            # 取り込み先データベース（td.database）
-├── pyscript/
-│   ├── forms_fetcher.py
-│   ├── groups_fetcher.py
-│   ├── users_fetcher.py
-│   └── submissions_fetcher.py
-└── requirements.txt
-```
+- `td_forms.dig` → `formbuilder_forms`
+- `td_groups.dig` → `formbuilder_groups`
+- `td_users.dig` → `formbuilder_users`
+- `td_submissions.dig` → `formbuilder_submissions`
+- `pyscript/common.py`: 依存関係導入・API通信・TD書込・件数照合
+- `pyscript/*_fetcher.py`: リソース別の取得処理
+- `tests/test_import.py`: 外部通信なしのモックテスト
+- `tdx.json`: pushするプロジェクト名
 
-## 処理の流れ
+## ログの判定
 
-各 `.dig` は次の順に実行されます。
-
-1. `+create_table`：`td_ddl>` で出力先テーブルを作成します（既に存在する場合は何もしません）。
-2. `+extract_*`：`py>` で 123FormBuilder API から取得し、pytd で TD に追記（`if_exists='append'`）します。
-
-## 事前準備
-
-1. 取り込み先のデータベースを作成し、`config/params.yml` の `td.database` を設定します。
-2. シークレットを設定します（値はファイルに書かないでください）。
-   - `formbuilder_username` / `formbuilder_password`：123FormBuilder のログイン情報
-   - `td.apikey`：TD の Master API Key（`ACCOUNT_ID/KEY` 形式）。TD operator と `py>` の両方で使用します
-
-   ```
-   tdx wf secrets set <project> formbuilder_username=<値> formbuilder_password=<値> td.apikey=<値>
-   ```
-
-3. `py>` の実行イメージは `treasuredata/customscript-python:3.12.11-td4` を使用します。
-
-## 実行方法
-
-```
-cd td_123formbuilder_import
-tdx wf push
+```text
+IMPORT_START target=your_db.formbuilder_groups fetched=10 run_id=...
+IMPORT_SUCCESS target=your_db.formbuilder_groups fetched=10 verified=10 run_id=...
 ```
 
-設定を変える場合は `config/params.yml` を編集してください（`tdx wf push` 時の `-p` 上書きは使いません）。スケジュールは各 `.dig` でコメントアウトしているため、現状は手動実行です。
+- 成功は`IMPORT_SUCCESS`で判定します。`IMPORT_FAILED`ならWFも失敗します。
+- 取り込み対象全体が0件の場合は明示的に失敗させます。元データが本当に0件か、権限により見えないかを確認してください。投稿0件のフォームが混在する場合は、そのフォームだけをスキップし、他のフォームの取得を続けます。
+- HTTP/APIエラーはステータスを表示し、認証情報付きURLやレスポンス全文・回答データはログへ出しません。
+- 件数照合は最大6回（不一致時10秒待機）。各回でtimeを指定した小範囲SELECTを実行し、TDのクエリ負荷・費用が発生します。
+- **書込完了後に検証が失敗する場合もあります。再実行前に`run_id`の取込済データを確認してください。** 全件appendなので、無条件の再実行は重複します。
 
-## 出力テーブル
+## データ形式と旧版との差分
 
-| テーブル | 内容 | 備考 |
-|---|---|---|
-| `formbuilder_forms` | フォーム情報・項目 | 実行のたびに追記 |
-| `formbuilder_groups` | グループ情報・配下フォーム | 同上 |
-| `formbuilder_users` | マスター・サブユーザー情報 | 同上 |
-| `formbuilder_submissions` | フォーム投稿 | 同上（現状は全件取得のため重複します） |
+- `time`: 取得処理後のUNIX秒（投稿日時ではありません）。pytd自体もtime省略時に自動付与しますが、本WFでは検証用に明示。
+- `extracted_at`: UTCのISO日時。旧版のNULLを修正。
+- `import_run_id`: 1回のロードを識別するUUID。検証で使用。
+- NULLを含む整数はpandasのfloat推論を避け、符号付き64bit整数として保持。64bitを超える整数・精度損失を起こす混合型は文字列として保持します。
+- パスワード等の認証情報は前後の空白も変更せず使用します。
+- APIのトップレベル項目は維持し、配列・オブジェクトは**JSON文字列**で格納。旧版の`json_normalize`によるドット付き列の展開は行いません。既存BI等で旧列を参照していた場合は移行が必要です。既存データの削除はしません。
+- Groups APIの`data.forms`、Fields APIの`data.controls.data`を公式のレスポンス構造に合わせて読み取ります。
+- Usersは仕様にある`GET /users`のみ使用。未定義の`GET /user`・`GET /users/{id}`を廃止。推測の`user_type`ではなく`user_parent`等の返却値を維持。
+- Submissionsは`submission_data`（全体JSON）、`submission_content`（APIのcontent）、`submission_date`を保存。回答項目の列展開はしません。取得不能なフォーム作成・更新日時の旧NULL列は生成しません。`form_status`はAPIの`active`値です。
 
-## 既知の課題
+**すべて全件取得＋追記のままです。** 増分化・洗い替えは本修正に含みません。大量データは全件をメモリに保持するため分割設計が別途必要です。
 
-2026-11 時点の確認で見つかった課題です。仕様の根拠は 123FormBuilder API v2 の Swagger（`swagger-4.json`、2024/01 公開版）です。
+## 反映・検証
 
-1. **認証の渡し方が仕様と異なります。** 仕様では `JWT` をクエリ（GET）またはフォーム（POST）で渡し、ログインは `POST /token?username=&password=` です。現コードは `Authorization: Bearer` ヘッダと JSON body を使っています。
-2. **仕様にない API を呼んでいます。** `GET /user` と `GET /users/{id}` は仕様に定義がありません（ユーザー一覧は `GET /users`）。
-3. **投稿の回答データが展開されていません。** Submission の `content` は「全フィールドを含む JSON 文字列」ですが、現コードでは文字列のまま格納されます。
-4. **投稿が毎回全件 append されます。** `formbuilder_submissions` は日次で重複が積み上がります。`start_submission_id` / `start_date` で増分取得できます。
-5. **`extracted_at` は常に NULL です。** TD が自動で埋めるものではないため、取得時刻は実行側で設定する必要があります。
-6. **`time` 列を設定していません。** pytd の `load_table_from_dataframe` は `time`（UNIX 秒）を自前で用意する必要があります。
-7. **エラーを握りつぶすことがあります。** フォーム単位の取得失敗は読み飛ばし、TD への書き込み失敗は stdout に出して成功扱いになります。
-8. **依存パッケージの導入が不足しています。** `requirements.txt` に `pandas` がなく、Custom Script イメージは `requirements.txt` を自動インストールしません。実行時の `pip install` が必要です。
-9. **`_error` のメール通知は未実装です。** 現状は `echo>` のみです。
-10. **シークレット名の表記が揺れています。** 旧 README は `td_apikey` と記載していましたが、コードは `td.apikey` を参照します。本 README は `td.apikey` に統一しています。
+修正版は`.dig`だけでなく**フォルダ一式**をアップロードしてください。
+
+- フォルダを指定した`tdx wf push`等で反映。アカウント/profileは切り替えないでください。
+- WF実行はdry-runで対象を確認し、人の承認後に実行してください。
+- この修正の検証はモックと静的チェックのみ。実API・TD上の成功は未確認です。
+- 通知メールは未実装です（`_error`はログ表示のみ）。
+
+参照: https://www.123formbuilder.com/developer/api-v2/ および同ページの公開Swagger（swagger-4.json、2024/01掲載）。
+
+Generated with Treasure Work.
