@@ -79,7 +79,7 @@ _export:
         DATABASE: ${td.database}
         SESSION_UNIXTIME: ${session_unixtime}
       docker:
-        image: "digdag/digdag-python:3.9"
+        image: "treasuredata/customscript-python:3.12.11-td4"
 
     +output:
       +init:

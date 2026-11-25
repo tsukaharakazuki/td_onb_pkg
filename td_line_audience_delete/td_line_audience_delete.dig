@@ -10,7 +10,7 @@ _export:
   py>: line_audience_deleter.main
   requirements: ['requests', 'pytd', 'pandas']
   docker:
-    image: "digdag/digdag-python:3.9"
+    image: "treasuredata/customscript-python:3.12.11-td4"
   _env:
     LINE_CHANNEL_ACCESS_TOKEN: ${secret:line.channel_access_token}
     TD_ENDPOINT: ${td.endpoint}

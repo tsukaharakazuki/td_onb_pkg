@@ -280,7 +280,7 @@ _export:
             +send_x_exec:
               py>: py_scripts.push_x.PushX.run
               docker:
-                image: "treasuredata/customscript-python:3.12.11-td1"
+                image: "treasuredata/customscript-python:3.12.11-td4"
               brand_name: ${b.brand_name}
               database: ${common.database}
               x_pixel_id: ${b.x_pixel_id}

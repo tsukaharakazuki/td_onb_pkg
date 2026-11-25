@@ -41,7 +41,7 @@ td_123formbuilder_import/
    tdx wf secrets set <project> formbuilder_username=<値> formbuilder_password=<値> td.apikey=<値>
    ```
 
-3. `py>` の実行イメージは `treasuredata/customscript-python:3.12.11-td1` を使用します。
+3. `py>` の実行イメージは `treasuredata/customscript-python:3.12.11-td4` を使用します。
 
 ## 実行方法
 
