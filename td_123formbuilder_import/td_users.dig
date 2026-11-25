@@ -1,0 +1,39 @@
+timezone: "Asia/Tokyo"
+
+_export:
+  !include : 'config/params.yml'
+  # 123FormBuilder API設定
+  formbuilder:
+    username: ${secret:formbuilder_username}
+    password: ${secret:formbuilder_password}
+
+#schedule:
+#  daily>: 03:00:00
+
++start:
+  echo>: "Starting 123FormBuilder users data extraction..."
+
+# 取り込み先テーブルを事前に作成（既に存在する場合は何もしない）
++create_table:
+  td_ddl>:
+  create_tables: [formbuilder_users]
+  database: ${td.database}
+
++extract_users:
+  py>: pyscript.users_fetcher.main
+  docker:
+    image: "treasuredata/customscript-python:3.12.11-td1"
+  _env:
+    FORMBUILDER_USERNAME: ${formbuilder.username}
+    FORMBUILDER_PASSWORD: ${formbuilder.password}
+    TD_API_KEY: ${secret:td.apikey}
+    TD_DATABASE: ${td.database}
+
++store_users:
+  echo>: "Users data has been output by the Python script and stored in TD"
+
++cleanup:
+  echo>: "123FormBuilder users data extraction completed successfully"
+
+_error:
+  echo>: "123FormBuilder users data extraction failed. Workflow: ${session_id}, Time: ${session_time}"

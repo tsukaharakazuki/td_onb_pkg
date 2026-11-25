@@ -1,0 +1,5 @@
+td:
+  database: your_database_name
+  
+# 使用方法:
+# td wf push forms --project your-project-name -p td.database=your_actual_database
